@@ -19,7 +19,7 @@ var backupCmd = &cobra.Command{
 
 		// Step 1: Run mackup backup
 		fmt.Println("Running mackup backup...")
-		mackup := exec.Command("mackup", "backup", "dotfiles-custom")
+		mackup := exec.Command("mackup", "backup", "dotfiles-custom", "--force")
 		mackup.Stdout = os.Stdout
 		mackup.Stderr = os.Stderr
 		if err := mackup.Run(); err != nil {
