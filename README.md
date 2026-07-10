@@ -45,6 +45,7 @@ dotfiles update
 | `dotfiles list` | List all available tools in the manifest |
 | `dotfiles doctor` | Check health of installed tools and symlinks |
 | `dotfiles cleanup` | Remove `.backup` files from symlink operations |
+| `dotfiles backup` | Mackup sync + commit & push dotfiles changes |
 
 ## What's Included
 
@@ -111,6 +112,7 @@ dotfiles update
 - **Misc** — No .DS_Store on network stores, disable Handoff
 
 ### Utilities
+- **mackup** — Backup sensitive configs (SSH, shell aliases) to cloud storage
 - **Finetune** — Per-app volume mixer
 
 ### Backup & Sync
