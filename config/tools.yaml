@@ -535,6 +535,9 @@ categories:
         steps:
           - type: brew
             package: mackup
+          - type: symlink
+            from: "config/mackup/dotfiles-custom.cfg"
+            to: "${HOME}/.mackup/dotfiles-custom.cfg"
 
       - name: "Finetune"
         description: "Per-app volume mixer"
