@@ -40,7 +40,11 @@ dotfiles update
 |---------|-------------|
 | `dotfiles install` | Launch interactive TUI with category checklist |
 | `dotfiles install --all` | Non-interactive batch install of all tools |
+| `dotfiles install --all --dry-run` | Preview what would be installed |
 | `dotfiles update` | `git pull` + `brew update && brew upgrade` + re-sync symlinks |
+| `dotfiles list` | List all available tools in the manifest |
+| `dotfiles doctor` | Check health of installed tools and symlinks |
+| `dotfiles cleanup` | Remove `.backup` files from symlink operations |
 
 ## What's Included
 
@@ -88,6 +92,13 @@ dotfiles update
 
 ### Backup & Sync
 - **mackup** — Backup app configs
+
+### macOS Defaults
+- **Finder** — Show all extensions, pathbar, full path in title
+- **Dock** — Autohide, no recents, left position
+- **Screenshots** — PNG format, save to Desktop
+- **Text & Input** — Fast key repeat, always show scrollbars
+- **Misc** — No .DS_Store on network stores, disable Handoff
 
 ### Other
 - **Finetune** — Per-app volume mixer
@@ -140,6 +151,7 @@ These files are loaded by `.zshrc` but remain in the dotfiles directory:
 | `template-symlink` | Render Go template with vars, then symlink | Checks rendered file matches |
 | `git-clone` | `git clone --depth=N <repo> <dest>` | Checks dest exists |
 | `run` | Execute shell command | `skip:` command exits 0 if done |
+| `defaults` | `defaults write <domain> <key> -<type> <value>` | `defaults read` matches expected value |
 
 ## Adding a New Tool
 
