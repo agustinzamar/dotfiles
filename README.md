@@ -70,7 +70,6 @@ go build -o dotfiles .
 - **DBngin** — Database manager
 - **OrbStack** — Docker & Linux VMs
 - **Composer** — PHP package manager
-- **mysql-client** — MySQL CLI tools (client only, DBngin runs the server)
 - **pipx** — Python package runner
 - **VS Code** — Settings + keybindings + extensions
 - **PhpStorm** — JetBrains PHP IDE

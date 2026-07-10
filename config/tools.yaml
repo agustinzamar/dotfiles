@@ -242,13 +242,6 @@ categories:
           - type: brew
             package: composer
 
-      - name: "mysql-client"
-        description: "MySQL CLI tools (client only, DBngin runs the server)"
-        checked: true
-        steps:
-          - type: brew
-            package: mysql-client
-
       - name: "mysql-to-sqlite3"
         description: "MySQL to SQLite converter"
         checked: false
