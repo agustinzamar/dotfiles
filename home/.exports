@@ -11,8 +11,8 @@ esac
 # pipx
 export PATH="$PATH:$HOME/.local/bin"
 
-# DBngin MySQL
-export PATH="/usr/local/mysql/bin:$PATH"
+# DBngin MySQL (client via brew mysql-client)
+export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"
 
 export LANG=en_US.UTF-8
 
