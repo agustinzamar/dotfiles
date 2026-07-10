@@ -96,6 +96,10 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.KeyMsg:
+		if m.state == stateDone {
+			return m, tea.Quit
+		}
+
 		if m.state == stateInstalling {
 			if msg.String() == "ctrl+c" {
 				return m, tea.Quit
@@ -179,7 +183,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if len(m.stepQueue) == 0 {
 			m.state = stateDone
-			return m, tea.Quit
+			return m, nil
 		}
 		return m, installNextStep(m)
 	}
@@ -310,7 +314,7 @@ func (m *model) installingView() string {
 			b.WriteString(fmt.Sprintf("  %s 0 errors", SuccessStyle.Render("\u2713")))
 		}
 		b.WriteString("\n\n")
-		b.WriteString(HelpStyle.Render("Restart your terminal to apply changes."))
+		b.WriteString(HelpStyle.Render("Press any key to exit."))
 	}
 	return b.String()
 }
