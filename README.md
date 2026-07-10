@@ -247,10 +247,10 @@ lt                  eza tree view
 
 ## Tech Stack
 
-- **Go 1.22+** — Single static binary
-- **Cobra** — CLI framework
-- **Bubble Tea + Bubbles + Lipgloss** — Interactive TUI with Catppuccin theme
-- **YAML (gopkg.in/yaml.v3)** — Tool manifest
+- **[Go 1.22+](https://go.dev/)** — Single static binary
+- **[Cobra](https://github.com/spf13/cobra)** — CLI framework
+- **[Bubble Tea](https://github.com/charmbracelet/bubbletea) + [Bubbles](https://github.com/charmbracelet/bubbles) + [Lipgloss](https://github.com/charmbracelet/lipgloss)** — Interactive TUI with Catppuccin theme
+- **[YAML](https://pkg.go.dev/gopkg.in/yaml.v3) (gopkg.in/yaml.v3)** — Tool manifest
 - **Go templates** — Config file rendering
 
 ## Credits
