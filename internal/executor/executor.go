@@ -44,6 +44,8 @@ func Run(step manifest.Step, dotfilesDir string, vars map[string]string, dryRun 
 		return execGitClone(step, expand)
 	case "run":
 		return execRun(step, expand)
+	case "defaults":
+		return execDefaults(step, expand)
 	default:
 		return Result{Status: "error", Msg: "unknown step type: " + step.Type}
 	}

@@ -434,6 +434,99 @@ categories:
             package: finetune
             skip: "/Applications/Finetune.app"
 
+  # ── macOS Defaults ───────────────────────────────────
+  - name: "macOS Defaults"
+    tools:
+      - name: "Finder"
+        description: "Show all extensions, pathbar, full path in title"
+        checked: true
+        steps:
+          - type: defaults
+            domain: com.apple.finder
+            key: AppleShowAllExtensions
+            value: "true"
+            valueType: bool
+          - type: defaults
+            domain: com.apple.finder
+            key: ShowPathbar
+            value: "true"
+            valueType: bool
+          - type: defaults
+            domain: com.apple.finder
+            key: _FXShowPosixPathInTitle
+            value: "true"
+            valueType: bool
+
+      - name: "Dock"
+        description: "Autohide, no recents, left position"
+        checked: true
+        steps:
+          - type: defaults
+            domain: com.apple.dock
+            key: autohide
+            value: "true"
+            valueType: bool
+          - type: defaults
+            domain: com.apple.dock
+            key: show-recents
+            value: "false"
+            valueType: bool
+          - type: defaults
+            domain: com.apple.dock
+            key: orientation
+            value: "left"
+            valueType: string
+
+      - name: "Screenshots"
+        description: "PNG format, save to Desktop"
+        checked: true
+        steps:
+          - type: defaults
+            domain: com.apple.screencapture
+            key: type
+            value: "png"
+            valueType: string
+          - type: defaults
+            domain: com.apple.screencapture
+            key: location
+            value: "${HOME}/Desktop"
+            valueType: string
+
+      - name: "Text & Input"
+        description: "Fast key repeat, always show scrollbars"
+        checked: true
+        steps:
+          - type: defaults
+            domain: NSGlobalDomain
+            key: AppleShowScrollBars
+            value: "Always"
+            valueType: string
+          - type: defaults
+            domain: NSGlobalDomain
+            key: KeyRepeat
+            value: "2"
+            valueType: int
+          - type: defaults
+            domain: NSGlobalDomain
+            key: InitialKeyRepeat
+            value: "15"
+            valueType: int
+
+      - name: "Misc"
+        description: "No .DS_Store on network stores, disable Handoff"
+        checked: true
+        steps:
+          - type: defaults
+            domain: com.apple.desktopservices
+            key: DSDontWriteNetworkStores
+            value: "true"
+            valueType: bool
+          - type: defaults
+            domain: com.apple.coreservices.useractivityd
+            key: ActivityCacheAllowed
+            value: "false"
+            valueType: bool
+
   # ── Backup & Sync ────────────────────────────────────
   - name: "Backup & Sync"
     tools:

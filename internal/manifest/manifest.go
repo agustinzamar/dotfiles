@@ -37,6 +37,10 @@ type Step struct {
 	Command   string            `yaml:"command,omitempty"`
 	Env       map[string]string `yaml:"env,omitempty"`
 	Skip      string            `yaml:"skip,omitempty"`
+	Domain    string            `yaml:"domain,omitempty"`
+	Key       string            `yaml:"key,omitempty"`
+	Value     string            `yaml:"value,omitempty"`
+	ValueType string            `yaml:"valueType,omitempty"`
 }
 
 func Load(path string) (*Manifest, error) {

@@ -163,3 +163,35 @@ func execRun(step manifest.Step, expand func(string) string) Result {
 	}
 	return Result{Status: "installed", Msg: "ok"}
 }
+
+func execDefaults(step manifest.Step, expand func(string) string) Result {
+	domain := expand(step.Domain)
+	key := expand(step.Key)
+	value := expand(step.Value)
+
+	out, err := exec.Command("defaults", "read", domain, key).Output()
+	if err == nil {
+		current := strings.TrimSpace(string(out))
+		if current == value {
+			return Result{Status: "skipped", Msg: domain + " " + key + " already set"}
+		}
+	}
+
+	var flag string
+	switch step.ValueType {
+	case "bool":
+		flag = "-bool"
+	case "int":
+		flag = "-int"
+	default:
+		flag = "-string"
+	}
+
+	cmd := exec.Command("defaults", "write", domain, key, flag, value)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	if err := cmd.Run(); err != nil {
+		return Result{Status: "error", Msg: fmt.Sprintf("defaults write %s %s: %v", domain, key, err)}
+	}
+	return Result{Status: "installed", Msg: domain + " " + key}
+}
