@@ -17,6 +17,11 @@ func LinkWithResult(src, dst string) (LinkResult, error) {
 		if existing == src {
 			return result, nil
 		}
+		// Resolve through intermediate symlinks (e.g., ~/.dotfiles -> ~/Documents/repos/dotfiles)
+		resolved, err := filepath.EvalSymlinks(dst)
+		if err == nil && resolved == src {
+			return result, nil
+		}
 		target, _ := os.Readlink(dst)
 		return result, fmt.Errorf("%s is already symlinked to %s (not %s) — skipping", dst, target, src)
 	}

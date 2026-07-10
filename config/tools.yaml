@@ -118,7 +118,7 @@ categories:
             repo: "muxy-app/tap"
           - type: cask
             package: "muxy-app/tap/muxy"
-            skip: "/Applications/Muxy.app"
+            skip: "test -d /Applications/Muxy.app"
           - type: symlink
             from: "config/muxy/conf.hjson"
             to: "${HOME}/.config/muxy/conf.hjson"
@@ -239,7 +239,7 @@ categories:
         steps:
           - type: cask
             package: herd
-            skip: "/Applications/Herd.app"
+            skip: "test -d /Applications/Herd.app"
           - type: symlink
             from: "config/herd/herd.json"
             to: "${HOME}/Library/Application Support/Herd/config/herd.json"
@@ -257,7 +257,7 @@ categories:
         steps:
           - type: cask
             package: dbngin
-            skip: "/Applications/DBngin.app"
+            skip: "test -d /Applications/DBngin.app"
 
       - name: "OrbStack"
         description: "Docker & Linux VMs"
@@ -265,7 +265,7 @@ categories:
         steps:
           - type: cask
             package: orbstack
-            skip: "/Applications/OrbStack.app"
+            skip: "test -d /Applications/OrbStack.app"
           - type: symlink
             from: "config/orbstack/config.json"
             to: "${HOME}/.orbstack/config"
@@ -334,7 +334,7 @@ categories:
         steps:
           - type: cask
             package: visual-studio-code
-            skip: "/Applications/Visual Studio Code.app"
+            skip: "test -d /Applications/Visual Studio Code.app"
           - type: symlink
             from: "config/vscode/settings.json"
             to: "${HOME}/Library/Application Support/Code/User/settings.json"
@@ -380,7 +380,7 @@ categories:
         steps:
           - type: cask
             package: phpstorm
-            skip: "/Applications/PhpStorm.app"
+            skip: "test -d /Applications/PhpStorm.app"
 
   # ── AI Tools ─────────────────────────────────────────
   - name: "AI Tools"
@@ -542,4 +542,4 @@ categories:
         steps:
           - type: cask
             package: finetune
-            skip: "/Applications/Finetune.app"
+            skip: "test -d /Applications/Finetune.app"

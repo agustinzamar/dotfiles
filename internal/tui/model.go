@@ -51,6 +51,9 @@ type model struct {
 	currentStep    string
 	stepsDone      int
 	totalSteps     int
+	installed      int
+	skipped        int
+	errors         int
 }
 
 type stepQueueItem struct {
@@ -163,8 +166,12 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.result.Status {
 		case "skipped":
 			icon = "\u2022"
+			m.skipped++
 		case "error":
 			icon = "\u2717"
+			m.errors++
+		default:
+			m.installed++
 		}
 		m.stepsDone++
 		m.messages = append(m.messages, fmt.Sprintf("  %s %s: %s", icon, msg.toolName, msg.result.Msg))
@@ -243,7 +250,8 @@ func (m *model) selectionView() string {
 		if m.cursor == i {
 			name = CursorStyle.Render(item.tool.Name)
 		}
-		b.WriteString(CheckboxStyle.Render(fmt.Sprintf("%s %s %s", cursor, checkbox, name)))
+		desc := HelpStyle.Render(item.tool.Description)
+		b.WriteString(CheckboxStyle.Render(fmt.Sprintf("%s %s %s %s", cursor, checkbox, name, desc)))
 		b.WriteString("\n")
 	}
 
@@ -290,7 +298,19 @@ func (m *model) installingView() string {
 	}
 
 	if m.state == stateDone {
-		b.WriteString("\n" + SuccessStyle.Render("Done. Restart your terminal."))
+		b.WriteString("\n" + SuccessStyle.Render("Installation Complete"))
+		b.WriteString("\n\n")
+		b.WriteString(fmt.Sprintf("  %s %d installed", SuccessStyle.Render("\u2713"), m.installed))
+		b.WriteString("\n")
+		b.WriteString(fmt.Sprintf("  %s %d skipped (already done)", HelpStyle.Render("\u2022"), m.skipped))
+		b.WriteString("\n")
+		if m.errors > 0 {
+			b.WriteString(fmt.Sprintf("  %s %d errors", ErrorStyle.Render("\u2717"), m.errors))
+		} else {
+			b.WriteString(fmt.Sprintf("  %s 0 errors", SuccessStyle.Render("\u2713")))
+		}
+		b.WriteString("\n\n")
+		b.WriteString(HelpStyle.Render("Restart your terminal to apply changes."))
 	}
 	return b.String()
 }

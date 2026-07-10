@@ -138,6 +138,10 @@ alias catcopy='bat -p --paging=never | pbcopy'
 alias ls='eza -la --icons --group-directories-first'
 alias ll='eza -la --icons --git'
 alias lt='eza --tree --icons'
+alias grep='rg'
+alias find='fd'
+alias diff='delta'
+alias top='btm'
 
 # Local Development aliases
 alias ar="php artisan"
