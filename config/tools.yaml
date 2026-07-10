@@ -529,13 +529,3 @@ categories:
           - type: cask
             package: finetune
             skip: "/Applications/Finetune.app"
-
-  # ── Backup & Sync ────────────────────────────────────
-  - name: "Backup & Sync"
-    tools:
-      - name: "mackup"
-        description: "Backup app configs"
-        checked: true
-        steps:
-          - type: brew
-            package: mackup

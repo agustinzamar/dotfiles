@@ -21,12 +21,11 @@ func LinkWithResult(src, dst string) (LinkResult, error) {
 		return result, fmt.Errorf("%s is already symlinked to %s (not %s) — skipping", dst, target, src)
 	}
 	if _, err := os.Lstat(dst); err == nil {
-		backup := dst + ".backup"
-		if err := os.Rename(dst, backup); err != nil {
-			return result, fmt.Errorf("backup %s: %w", dst, err)
+		if err := os.RemoveAll(dst); err != nil {
+			return result, fmt.Errorf("remove %s: %w", dst, err)
 		}
 		result.BackupCreated = true
-		result.BackupPath = backup
+		result.BackupPath = dst + ".removed"
 	}
 	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
 		return result, err

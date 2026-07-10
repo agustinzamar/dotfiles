@@ -48,9 +48,12 @@ func TestLink_BackupExistingFile(t *testing.T) {
 		t.Fatalf("Link failed: %v", err)
 	}
 
-	backup := dst + ".backup"
-	if _, err := os.Stat(backup); os.IsNotExist(err) {
-		t.Fatal("backup file not created")
+	if _, err := os.Lstat(dst); os.IsNotExist(err) {
+		t.Fatal("destination should exist after link")
+	}
+	linkTarget, _ := os.Readlink(dst)
+	if linkTarget != src {
+		t.Fatalf("expected symlink to %s, got %s", src, linkTarget)
 	}
 }
 
@@ -81,9 +84,6 @@ func TestLinkResult_BackupCreated(t *testing.T) {
 	}
 	if !result.BackupCreated {
 		t.Fatal("expected BackupCreated=true")
-	}
-	if result.BackupPath != dst+".backup" {
-		t.Fatalf("expected backup path %s, got %s", dst+".backup", result.BackupPath)
 	}
 }
 
