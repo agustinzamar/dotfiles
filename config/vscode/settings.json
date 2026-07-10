@@ -1,0 +1,159 @@
+{
+  "terminal.integrated.fontSize": 14,
+  "terminal.integrated.tabs.enabled": true,
+  "terminal.integrated.profiles.windows": {
+    "Git Bash": {
+      "path": "C:\\Program Files\\Git\\bin\\bash.exe"
+    }
+  },
+  "terminal.integrated.defaultProfile.windows": "Git Bash",
+  "explorer.confirmDelete": false,
+  "explorer.confirmDragAndDrop": false,
+  "workbench.iconTheme": "material-icon-theme",
+  "workbench.colorTheme": "Atom One Dark",
+  "workbench.startupEditor": "none",
+  "emmet.showSuggestionsAsSnippets": true,
+  "emmet.showAbbreviationSuggestions": true,
+  "emmet.triggerExpansionOnTab": true,
+  "emmet.showExpandedAbbreviation": "always",
+  "emmet.includeLanguages": {
+    "javascript": "javascriptreact"
+  },
+  "editor.cursorBlinking": "phase",
+  "editor.fontSize": 14,
+  "editor.lineHeight": 22,
+  "editor.detectIndentation": false,
+  "editor.rulers": [
+    120
+  ],
+  "editor.insertSpaces": true,
+  "editor.fontFamily": "JetBrains Mono",
+  "editor.fontLigatures": true,
+  "editor.quickSuggestions": {
+    "strings": true,
+    "comments": false,
+    "other": true
+  },
+  "editor.acceptSuggestionOnEnter": "smart",
+  "editor.suggestOnTriggerCharacters": true,
+  "editor.tabCompletion": "on",
+  "editor.suggest.localityBonus": false,
+  "editor.autoClosingBrackets": "always",
+  "editor.formatOnSave": true,
+  "editor.formatOnPaste": true,
+  "editor.renderWhitespace": "all",
+  "editor.quickSuggestionsDelay": 0,
+  "editor.suggestSelection": "recentlyUsedByPrefix",
+  "editor.parameterHints.enabled": true,
+  "editor.snippetSuggestions": "bottom",
+  "editor.linkedEditing": true,
+  "editor.showUnused": true,
+  "editor.autoClosingQuotes": "always",
+  "editor.bracketPairColorization.enabled": true,
+  "editor.suggest.snippetsPreventQuickSuggestions": false,
+  "editor.suggest.insertMode": "replace",
+  "editor.gotoLocation.multipleTypeDefinitions": "goto",
+  "editor.autoIndent": "advanced",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "editor.trimAutoWhitespace": true,
+  "editor.tabSize": 2,
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "json"
+  ],
+  "eslint.alwaysShowStatus": true,
+  "javascript.updateImportsOnFileMove.enabled": "always",
+  "javascript.referencesCodeLens.enabled": true,
+  "security.workspace.trust.untrustedFiles": "open",
+  "security.workspace.trust.startupPrompt": "never",
+  "editor.inlineSuggest.enabled": true,
+  "extensions.ignoreRecommendations": true,
+  "[xml]": {
+    "editor.defaultFormatter": "redhat.vscode-xml"
+  },
+  "redhat.telemetry.enabled": true,
+  "[yaml]": {
+    "editor.formatOnSave": false,
+    "editor.formatOnType": false,
+    "editor.formatOnPaste": false
+  },
+  "xml.server.binary.trustedHashes": [
+    "df9d4e4bb37d291396983519e0fc0115e7dfef3ed755e359a2480e3e86b1ed4d"
+  ],
+  "git.suggestSmartCommit": true,
+  "[blade]": {
+    "editor.defaultFormatter": "shufo.vscode-blade-formatter"
+  },
+  "errorLens.excludeBySource": [
+    "eslint(no-undef)"
+  ],
+  "[astro]": {
+    "editor.defaultFormatter": "astro-build.astro-vscode"
+  },
+  "git.confirmSync": false,
+  "explorer.confirmPasteNative": false,
+  "editor.accessibilitySupport": "off",
+  "terminal.integrated.fontFamily": "JetBrains Mono",
+  "[javascriptreact]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  },
+  "update.showReleaseNotes": false,
+  "gitlens.advanced.messages": {
+    "suppressFileNotUnderSourceControlWarning": true
+  },
+  "git.openRepositoryInParentFolders": "always",
+  "chat.mcp.gallery.enabled": true,
+  "chat.tools.terminal.autoApprove": {
+    "find": true,
+    "npm install": true,
+    "composer": true,
+    "pest": true,
+    "./vendor/bin/pest": true,
+    "/^php artisan optimize:clear$/": {
+      "approve": true,
+      "matchCommandLine": true
+    }
+  },
+  "github.copilot.nextEditSuggestions.enabled": true,
+  "github.copilot.chat.anthropic.thinking.enabled": true,
+  "chat.agent.maxRequests": 100,
+  "chat.tools.global.autoApprove": true,
+  "biome.suggestInstallingGlobally": false,
+  "json.schemaDownload.trustedDomains": {
+    "https://biomejs.dev": true,
+    "https://developer.microsoft.com/json-schemas/": true,
+    "https://json-schema.org/": true,
+    "https://json.schemastore.org/": true,
+    "https://models.dev": true,
+    "https://opencode.ai": true,
+    "https://raw.githubusercontent.com/devcontainers/spec/": true,
+    "https://raw.githubusercontent.com/microsoft/vscode/": true,
+    "https://schemastore.azurewebsites.net/": true,
+    "https://www.schemastore.org/": true
+  },
+  "files.autoSave": "afterDelay",
+  "git.autofetch": true,
+  "git.enableCommitSigning": true,
+  "window.zoomLevel": 1.2,
+  "window.zoomPerWindow": false,
+  "settingsSync.ignoredSettings": [
+    "-window.zoomLevel"
+  ],
+  "chat.editor.fontSize": 14,
+  "chat.fontSize": 14,
+  "terminal.integrated.fontLigatures.enabled": true,
+  "git.allowForcePush": true,
+  "gitblame.ignoreWhitespace": true,
+  "gitblame.inlineMessageEnabled": true,
+  "intelliphp.inlineSuggestionsEnabled": true,
+  "[php]": {
+    "editor.defaultFormatter": "laravel.vscode-laravel"
+  },
+  "window.confirmSaveUntitledWorkspace": false,
+  "window.nativeTabs": true,
+  "workbench.editor.enablePreview": false,
+  "editor.suggest.preview": true
+}

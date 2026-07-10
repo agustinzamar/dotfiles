@@ -1,0 +1,41 @@
+# System
+alias sudo='sudo '
+alias hostfile="sudo vi /etc/hosts"
+alias sshconfig="vi ~/.ssh/config"
+alias o="open ."
+alias flushdns="sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder"
+
+# Editors
+alias phpstorm='open -a "PhpStorm.app" "\`pwd\`"'
+
+# Essentials
+alias cd='z'
+alias cat='bat --paging=never'
+alias catcopy='bat -p --paging=never | pbcopy'
+alias ls='eza -la --icons --group-directories-first'
+alias ll='eza -la --icons --git'
+alias lt='eza --tree --icons'
+
+# Laravel
+alias ar="php artisan"
+alias mfs="php artisan migrate:fresh --seed"
+alias pest='./vendor/bin/pest'
+alias pint='./vendor/bin/pint'
+
+# Git
+alias nah="git reset --hard;git clean -df"
+alias push="git push"
+alias pull="git pull"
+alias gpo="git push origin"
+alias uncommit="git reset --soft HEAD~1"
+
+# Composer
+alias cu="composer update"
+alias cr="composer require"
+alias ci="composer install"
+alias cda="composer dump-autoload -o"
+
+# Config editing
+alias zshconfig="code ~/.zshrc"
+alias ohmyzsh="code ~/.oh-my-zsh"
+alias opencodeconfig="code ~/.config/opencode/opencode.json"

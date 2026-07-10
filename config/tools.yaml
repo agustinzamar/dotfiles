@@ -1,0 +1,453 @@
+# config/tools.yaml
+categories:
+  # ── Core ──────────────────────────────────────────────
+  - name: "Core"
+    tools:
+      - name: "Homebrew"
+        description: "Package manager"
+        checked: true
+        steps:
+          - type: run
+            command: '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
+            skip: "which brew"
+
+      - name: "Oh My Zsh"
+        description: "Zsh framework"
+        checked: true
+        steps:
+          - type: run
+            command: 'sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"'
+            env:
+              RUNZSH: "no"
+              CHSH: "no"
+              KEEP_ZSHRC: "yes"
+            skip: "test -d ${HOME}/.oh-my-zsh"
+
+  # ── Shell & Terminal ─────────────────────────────────
+  - name: "Shell & Terminal"
+    tools:
+      - name: "Shell Config (.zshrc)"
+        description: "Zsh config with OMZ plugins and custom loader"
+        checked: true
+        steps:
+          - type: symlink
+            from: "config/zsh/.zshrc"
+            to: "${HOME}/.zshrc"
+
+      - name: "Powerlevel10k"
+        description: "Prompt theme (robbyrussell style)"
+        checked: true
+        steps:
+          - type: git-clone
+            repo: "https://github.com/romkatv/powerlevel10k.git"
+            dest: "${HOME}/.oh-my-zsh/custom/themes/powerlevel10k"
+            depth: 1
+          - type: symlink
+            from: "config/p10k/.p10k.zsh"
+            to: "${HOME}/.p10k.zsh"
+
+      - name: "zsh-autosuggestions"
+        description: "Fish-like autosuggestions"
+        checked: true
+        steps:
+          - type: omz-plugin
+            repo: "https://github.com/zsh-users/zsh-autosuggestions"
+
+      - name: "fzf-tab"
+        description: "Fuzzy tab completion"
+        checked: true
+        steps:
+          - type: omz-plugin
+            repo: "https://github.com/Aloxaf/fzf-tab"
+
+      - name: "fast-syntax-highlighting"
+        description: "Syntax highlighting in shell"
+        checked: true
+        steps:
+          - type: omz-plugin
+            repo: "https://github.com/zdharma-continuum/fast-syntax-highlighting"
+
+      - name: "Starship"
+        description: "Cross-shell prompt (optional, p10k is default)"
+        checked: false
+        steps:
+          - type: brew
+            package: starship
+          - type: symlink
+            from: "config/starship/starship.toml"
+            to: "${HOME}/.config/starship.toml"
+
+      - name: "Ghostty"
+        description: "Terminal emulator"
+        checked: true
+        steps:
+          - type: cask
+            package: ghostty
+          - type: symlink
+            from: "config/ghostty/config"
+            to: "${HOME}/.config/ghostty/config"
+
+      - name: "Shell Aliases & Functions"
+        description: "Custom aliases and shell functions"
+        checked: true
+        steps:
+          - type: symlink
+            from: "home/.aliases"
+            to: "${HOME}/.dotfiles-home/.aliases"
+          - type: symlink
+            from: "home/.functions"
+            to: "${HOME}/.dotfiles-home/.functions"
+          - type: symlink
+            from: "home/.exports"
+            to: "${HOME}/.dotfiles-home/.exports"
+
+  # ── CLI Tools ────────────────────────────────────────
+  - name: "CLI Tools"
+    tools:
+      - name: "bat"
+        description: "cat with syntax highlighting"
+        checked: true
+        steps:
+          - type: brew
+            package: bat
+
+      - name: "eza"
+        description: "Modern ls replacement"
+        checked: true
+        steps:
+          - type: brew
+            package: eza
+
+      - name: "fzf"
+        description: "Fuzzy finder"
+        checked: true
+        steps:
+          - type: brew
+            package: fzf
+          - type: run
+            command: "$(brew --prefix)/opt/fzf/install --all --no-bash --no-fish"
+            skip: "test -f ${HOME}/.fzf.zsh"
+
+      - name: "zoxide"
+        description: "Smarter cd"
+        checked: true
+        steps:
+          - type: brew
+            package: zoxide
+
+      - name: "ripgrep"
+        description: "Fast grep"
+        checked: true
+        steps:
+          - type: brew
+            package: ripgrep
+
+      - name: "fd"
+        description: "Fast find alternative"
+        checked: true
+        steps:
+          - type: brew
+            package: fd
+
+      - name: "git-delta"
+        description: "Better git diffs"
+        checked: true
+        steps:
+          - type: brew
+            package: git-delta
+
+      - name: "jq"
+        description: "JSON processor"
+        checked: true
+        steps:
+          - type: brew
+            package: jq
+
+      - name: "yq"
+        description: "YAML processor"
+        checked: true
+        steps:
+          - type: brew
+            package: yq
+
+      - name: "bottom (btm)"
+        description: "System monitor"
+        checked: true
+        steps:
+          - type: brew
+            package: bottom
+
+      - name: "direnv"
+        description: "Per-directory env vars"
+        checked: true
+        steps:
+          - type: brew
+            package: direnv
+
+      - name: "tree"
+        description: "Directory tree view"
+        checked: true
+        steps:
+          - type: brew
+            package: tree
+
+      - name: "unar"
+        description: "Multi-format unarchiver"
+        checked: true
+        steps:
+          - type: brew
+            package: unar
+
+      - name: "yazi"
+        description: "Terminal file manager"
+        checked: true
+        steps:
+          - type: brew
+            package: yazi
+
+      - name: "spotify_player"
+        description: "Terminal Spotify client"
+        checked: false
+        steps:
+          - type: brew
+            package: spotify_player
+
+      - name: "sshpass"
+        description: "Non-interactive SSH auth"
+        checked: false
+        steps:
+          - type: brew
+            package: sshpass
+
+  # ── Development ──────────────────────────────────────
+  - name: "Development"
+    tools:
+      - name: "Herd"
+        description: "Laravel dev environment"
+        checked: true
+        steps:
+          - type: cask
+            package: herd
+            skip: "/Applications/Herd.app"
+          - type: symlink
+            from: "config/herd/herd.json"
+            to: "${HOME}/Library/Application Support/Herd/config/herd.json"
+
+      - name: "DBngin"
+        description: "Database manager"
+        checked: true
+        steps:
+          - type: cask
+            package: dbngin
+            skip: "/Applications/DBngin.app"
+
+      - name: "OrbStack"
+        description: "Docker & Linux VMs"
+        checked: true
+        steps:
+          - type: cask
+            package: orbstack
+            skip: "/Applications/OrbStack.app"
+          - type: symlink
+            from: "config/orbstack/config.json"
+            to: "${HOME}/.orbstack/config"
+
+      - name: "Composer"
+        description: "PHP package manager"
+        checked: true
+        steps:
+          - type: brew
+            package: composer
+
+      - name: "mysql-client"
+        description: "MySQL CLI tools"
+        checked: true
+        steps:
+          - type: brew
+            package: mysql-client
+
+      - name: "mysql-to-sqlite3"
+        description: "MySQL to SQLite converter"
+        checked: false
+        steps:
+          - type: brew
+            package: mysql-to-sqlite3
+
+      - name: "pipx"
+        description: "Python package runner"
+        checked: true
+        steps:
+          - type: brew
+            package: pipx
+
+  # ── Git & GitHub ─────────────────────────────────────
+  - name: "Git & GitHub"
+    tools:
+      - name: "gh (GitHub CLI)"
+        description: "GitHub command-line tool"
+        checked: true
+        steps:
+          - type: brew
+            package: gh
+
+      - name: "Git Config"
+        description: ".gitconfig with delta + gh auth"
+        checked: true
+        steps:
+          - type: template-symlink
+            from: "config/git/.gitconfig"
+            to: "${HOME}/.gitconfig"
+            vars: ["GitName", "GitEmail"]
+
+      - name: ".npmrc"
+        description: "npm configuration"
+        checked: true
+        steps:
+          - type: symlink
+            from: "config/npm/.npmrc"
+            to: "${HOME}/.npmrc"
+
+  # ── Editors ──────────────────────────────────────────
+  - name: "Editors"
+    tools:
+      - name: "VS Code"
+        description: "Editor + settings + extensions"
+        checked: true
+        steps:
+          - type: cask
+            package: visual-studio-code
+            skip: "/Applications/Visual Studio Code.app"
+          - type: symlink
+            from: "config/vscode/settings.json"
+            to: "${HOME}/Library/Application Support/Code/User/settings.json"
+          - type: symlink
+            from: "config/vscode/keybindings.json"
+            to: "${HOME}/Library/Application Support/Code/User/keybindings.json"
+          - type: vscode
+            extension: "aaron-bond.better-comments"
+          - type: vscode
+            extension: "bmewburn.vscode-intelephense-client"
+          - type: vscode
+            extension: "bradlc.vscode-tailwindcss"
+          - type: vscode
+            extension: "catppuccin.catppuccin-vsc"
+          - type: vscode
+            extension: "christian-kohler.path-intellisense"
+          - type: vscode
+            extension: "laravel.vscode-laravel"
+          - type: vscode
+            extension: "mechatroner.rainbow-csv"
+          - type: vscode
+            extension: "naumovs.color-highlight"
+          - type: vscode
+            extension: "pkief.material-icon-theme"
+          - type: vscode
+            extension: "redhat.vscode-xml"
+          - type: vscode
+            extension: "redhat.vscode-yaml"
+          - type: vscode
+            extension: "usernamehw.errorlens"
+          - type: vscode
+            extension: "waderyan.gitblame"
+          - type: vscode
+            extension: "xdebug.php-debug"
+          - type: vscode
+            extension: "yoavbls.pretty-ts-errors"
+          - type: vscode
+            extension: "biomejs.biome"
+
+      - name: "PhpStorm"
+        description: "JetBrains PHP IDE"
+        checked: true
+        steps:
+          - type: cask
+            package: phpstorm
+            skip: "/Applications/PhpStorm.app"
+
+  # ── AI Tools ─────────────────────────────────────────
+  - name: "AI Tools"
+    tools:
+      - name: "Claude Code"
+        description: "Claude AI coding agent"
+        checked: true
+        steps:
+          - type: brew
+            package: claude-code
+          - type: symlink
+            from: "config/claude/settings.json"
+            to: "${HOME}/.claude/settings.json"
+          - type: symlink
+            from: "config/claude/skills/"
+            to: "${HOME}/.claude/skills/"
+          - type: symlink
+            from: "config/claude/agents/"
+            to: "${HOME}/.claude/agents/"
+          - type: symlink
+            from: "config/claude/CLAUDE.md"
+            to: "${HOME}/.claude/CLAUDE.md"
+
+      - name: "Opencode"
+        description: "OpenCode AI coding agent"
+        checked: true
+        steps:
+          - type: brew
+            package: opencode
+          - type: template-symlink
+            from: "config/opencode/opencode.json"
+            to: "${HOME}/.config/opencode/opencode.json"
+            vars: ["GitHubPAT"]
+          - type: symlink
+            from: "config/opencode/AGENTS.md"
+            to: "${HOME}/.config/opencode/AGENTS.md"
+          - type: symlink
+            from: "config/opencode/plugins/"
+            to: "${HOME}/.config/opencode/plugins/"
+          - type: symlink
+            from: "config/opencode/skills/"
+            to: "${HOME}/.config/opencode/skills/"
+          - type: symlink
+            from: "config/opencode/themes/"
+            to: "${HOME}/.config/opencode/themes/"
+          - type: symlink
+            from: "config/opencode/agents/"
+            to: "${HOME}/.config/opencode/agents/"
+          - type: symlink
+            from: "config/opencode/commands/"
+            to: "${HOME}/.config/opencode/commands/"
+
+  # ── Muxy ─────────────────────────────────────────────
+  - name: "Muxy"
+    tools:
+      - name: "Muxy"
+        description: "Terminal multiplexer"
+        checked: true
+        steps:
+          - type: tap
+            repo: "muxy-app/tap"
+          - type: cask
+            package: "muxy-app/tap/muxy"
+            skip: "/Applications/Muxy.app"
+          - type: symlink
+            from: "config/muxy/conf.hjson"
+            to: "${HOME}/.config/muxy/conf.hjson"
+          - type: symlink
+            from: "config/muxy/verbs.hjson"
+            to: "${HOME}/.config/muxy/verbs.hjson"
+
+      - name: "Finetune"
+        description: "Per-app volume mixer"
+        checked: true
+        steps:
+          - type: cask
+            package: finetune
+            skip: "/Applications/Finetune.app"
+
+  # ── Backup & Sync ────────────────────────────────────
+  - name: "Backup & Sync"
+    tools:
+      - name: "mackup"
+        description: "Backup app configs"
+        checked: true
+        steps:
+          - type: brew
+            package: mackup

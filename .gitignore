@@ -1,0 +1,10 @@
+# Sensitive rendered configs (never commit these)
+config/opencode/opencode.rendered.json
+config/git/.gitconfig.rendered
+*.rendered.*
+
+# Build artifact
+dotfiles
+
+# OS
+.DS_Store

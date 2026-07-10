@@ -1,0 +1,21 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
+    "shadcn-ui": {
+      "type": "local",
+      "command": ["npx", "@jpisnice/shadcn-ui-mcp-server", "--github-api-key", "{{ .GitHubPAT }}"]
+    },
+    "chrome-devtools": {
+      "type": "local",
+      "command": ["npx", "chrome-devtools-mcp@latest"]
+    }
+  },
+  "small_model": "opencode/deepseek-v4-flash-free",
+  "agent": {
+    "explore": { "model": "opencode/deepseek-v4-flash-free" }
+  },
+  "plugin": [
+    "superpowers@git+https://github.com/obra/superpowers.git",
+    "./plugins/caveman/plugin.js"
+  ]
+}
