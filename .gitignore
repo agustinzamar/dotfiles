@@ -8,3 +8,10 @@ dotfiles
 
 # OS
 .DS_Store
+
+# Logs and temp files
+.log
+*.log
+
+# Plan docs (not configs)
+docs/superpowers/
