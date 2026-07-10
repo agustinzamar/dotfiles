@@ -15,4 +15,5 @@ var (
 	ErrorStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("#ed8796"))
 	SkipStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("#6e738d"))
 	SpinnerStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#7dc4e4"))
+	PromptLabelStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("#f5a97f"))
 )

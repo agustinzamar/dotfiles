@@ -9,6 +9,7 @@ import (
 	"github.com/agustinzamar/dotfiles/internal/logger"
 	"github.com/agustinzamar/dotfiles/internal/manifest"
 	"github.com/charmbracelet/bubbles/spinner"
+	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -17,6 +18,7 @@ type state int
 
 const (
 	stateSelecting state = iota
+	statePrompting
 	stateInstalling
 	stateDone
 )
@@ -43,6 +45,9 @@ type model struct {
 	currentTool    string
 	installing     int
 	totalToInstall int
+	textInput      textinput.Model
+	promptKeys     []string
+	promptIndex    int
 }
 
 func NewModel(m *manifest.Manifest) tea.Model {
@@ -56,12 +61,16 @@ func NewModel(m *manifest.Manifest) tea.Model {
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = SpinnerStyle
+	ti := textinput.New()
+	ti.Placeholder = ""
+	ti.CharLimit = 256
 	return &model{
 		categories: m.Categories,
 		toolsByTab: toolsByTab,
 		state:      stateSelecting,
 		vars:       vars,
 		spinner:    s,
+		textInput:  ti,
 	}
 }
 
@@ -102,9 +111,35 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.toolsByTab[m.tabIndex][m.cursor].checked = !m.toolsByTab[m.tabIndex][m.cursor].checked
 				}
 			case "enter":
-				m.collectVars()
-				m.state = stateInstalling
-				return m, installNextFlatCmd(0, m)
+				m.startPrompting()
+				if m.state == stateInstalling {
+					return m, installNextFlatCmd(0, m)
+				}
+				m.textInput.Focus()
+				return m, textinput.Blink
+			}
+		}
+
+		if m.state == statePrompting {
+			switch msg.String() {
+			case "enter":
+				val := m.textInput.Value()
+				m.vars[m.promptKeys[m.promptIndex]] = val
+				config.SaveVars(m.vars)
+				m.promptIndex++
+				if m.promptIndex >= len(m.promptKeys) {
+					m.state = stateInstalling
+					return m, installNextFlatCmd(0, m)
+				}
+				m.textInput.SetValue("")
+				m.textInput.Focus()
+				return m, textinput.Blink
+			case "ctrl+c":
+				return m, tea.Quit
+			default:
+				var cmd tea.Cmd
+				m.textInput, cmd = m.textInput.Update(msg)
+				return m, cmd
 			}
 		}
 
@@ -145,6 +180,8 @@ func (m *model) View() string {
 	switch m.state {
 	case stateSelecting:
 		return m.selectionView()
+	case statePrompting:
+		return m.promptingView()
 	case stateInstalling, stateDone:
 		return m.installingView()
 	}
@@ -242,8 +279,9 @@ func (m *model) installingView() string {
 	return b.String()
 }
 
-func (m *model) collectVars() {
-	m.totalToInstall = 0
+func (m *model) startPrompting() {
+	seen := map[string]bool{}
+	var keys []string
 	flat := m.flatItems()
 	for _, item := range flat {
 		if !item.checked {
@@ -251,12 +289,37 @@ func (m *model) collectVars() {
 		}
 		m.totalToInstall++
 		for _, step := range item.tool.Steps {
-			if step.Type == "template-symlink" {
-				config.PromptMissing(step.Vars)
+			if step.Type != "template-symlink" {
+				continue
+			}
+			for _, k := range step.Vars {
+				if !seen[k] && m.vars[k] == "" {
+					keys = append(keys, k)
+				}
+				seen[k] = true
 			}
 		}
 	}
-	m.vars = config.GetVars()
+	if len(keys) == 0 {
+		m.vars = config.GetVars()
+		m.state = stateInstalling
+		return
+	}
+	m.promptKeys = keys
+	m.promptIndex = 0
+	m.textInput.SetValue("")
+	m.state = statePrompting
+}
+
+func (m *model) promptingView() string {
+	var b strings.Builder
+	b.WriteString(TitleStyle.Render("Setup"))
+	b.WriteString("\n\n")
+	b.WriteString(fmt.Sprintf("Enter value for %s:\n\n", PromptLabelStyle.Render(m.promptKeys[m.promptIndex])))
+	b.WriteString(m.textInput.View())
+	b.WriteString("\n\n")
+	b.WriteString(HelpStyle.Render(fmt.Sprintf("%d/%d values needed. Enter to confirm, Ctrl+C to quit.", m.promptIndex+1, len(m.promptKeys))))
+	return b.String()
 }
 
 func installNextFlatCmd(idx int, m *model) tea.Cmd {
