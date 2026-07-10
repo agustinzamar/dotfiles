@@ -46,6 +46,7 @@ dotfiles update
 
 ### Shell & Terminal
 - **Oh My Zsh** — Zsh framework with custom `.zshrc`
+- **SSH Keychain** — Auto-loads SSH keys into Apple Keychain so you never type your passphrase
 - **Powerlevel10k** — Prompt theme (robbyrussell style)
 - **zsh-autosuggestions** — Fish-like autosuggestions
 - **fzf-tab** — Fuzzy tab completion

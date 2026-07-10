@@ -23,6 +23,14 @@ categories:
               KEEP_ZSHRC: "yes"
             skip: "test -d ${HOME}/.oh-my-zsh"
 
+      - name: "SSH Keychain"
+        description: "Add SSH keys to Apple Keychain"
+        checked: true
+        steps:
+          - type: run
+            command: 'for key in ${HOME}/.ssh/id_*; do case "$key" in *.pub|*.revoked) continue ;; esac; ssh-add --apple-use-keychain "$key" 2>/dev/null; done'
+            skip: "ssh-add -l | grep -q ."
+
   # ── Shell & Terminal ─────────────────────────────────
   - name: "Shell & Terminal"
     tools:
@@ -188,16 +196,9 @@ categories:
           - type: brew
             package: yazi
 
-      - name: "spotify_player"
-        description: "Terminal Spotify client"
-        checked: false
-        steps:
-          - type: brew
-            package: spotify_player
-
       - name: "sshpass"
         description: "Non-interactive SSH auth"
-        checked: false
+        checked: true
         steps:
           - type: brew
             package: sshpass
