@@ -244,6 +244,13 @@ categories:
             from: "config/herd/herd.json"
             to: "${HOME}/Library/Application Support/Herd/config/herd.json"
 
+      - name: "nvm"
+        description: "Node version manager (used by Herd)"
+        checked: true
+        steps:
+          - type: brew
+            package: nvm
+
       - name: "DBngin"
         description: "Database manager"
         checked: true
@@ -291,7 +298,7 @@ categories:
           - type: brew
             package: pipx
 
-      - name: ".npmrc"
+      - name: "Global .npmrc"
         description: "npm configuration"
         checked: true
         steps:
@@ -522,6 +529,13 @@ categories:
   # ── Utilities ────────────────────────────────────────
   - name: "Utilities"
     tools:
+      - name: "mackup"
+        description: "Backup app configs to cloud storage"
+        checked: true
+        steps:
+          - type: brew
+            package: mackup
+
       - name: "Finetune"
         description: "Per-app volume mixer"
         checked: true
