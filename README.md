@@ -48,17 +48,24 @@ dotfiles update
 
 ## What's Included
 
-### Shell & Terminal
-- **Oh My Zsh** — Zsh framework with custom `.zshrc`
+### Core
+- **Xcode CLT** — Command Line Tools (git, compilers, etc.)
+- **Homebrew** — Package manager
 - **SSH Keychain** — Auto-loads SSH keys into Apple Keychain so you never type your passphrase
+
+### Shell
+- **Oh My Zsh** — Zsh framework with custom `.zshrc`
 - **Powerlevel10k** — Prompt theme (robbyrussell style)
 - **zsh-autosuggestions** — Fish-like autosuggestions
 - **fzf-tab** — Fuzzy tab completion
 - **fast-syntax-highlighting** — Syntax highlighting in shell
+- **Shell Aliases & Functions** — Custom aliases and shell functions
+
+### Terminal
 - **Ghostty** — Terminal emulator with Catppuccin theme
 - **Muxy** — Terminal multiplexer
 
-### Modern CLI Tools
+### CLI Tools
 - **bat** — Cat with syntax highlighting
 - **eza** — Modern ls with icons
 - **fzf** — Fuzzy finder
@@ -72,26 +79,29 @@ dotfiles update
 - **direnv** — Per-directory env vars
 - **unar** — Multi-format unarchiver
 - **yazi** — Terminal file manager
+- **sshpass** — Non-interactive SSH auth
 
 ### Development
 - **Herd** — Laravel dev environment
 - **DBngin** — Database manager
 - **OrbStack** — Docker & Linux VMs
 - **Composer** — PHP package manager
+- **mysql-to-sqlite3** — MySQL to SQLite converter
+- **sqlite3** — SQLite CLI
 - **pipx** — Python package runner
+- **.npmrc** — npm configuration
+
+### Git & GitHub
+- **gh** — GitHub CLI
+- **Git Config** — `.gitconfig` with delta diff viewer + gh auth (Go template)
+
+### Editors
 - **VS Code** — Settings + keybindings + extensions
 - **PhpStorm** — JetBrains PHP IDE
 
 ### AI Tools
 - **Claude Code** — Claude AI coding agent (config + skills + agents synced)
 - **Opencode** — OpenCode AI coding agent (config + plugins/skills/themes/agents/commands synced)
-
-### Git & GitHub
-- **gh** — GitHub CLI
-- **Git Config** — `.gitconfig` with delta diff viewer + gh auth (Go template)
-
-### Backup & Sync
-- **mackup** — Backup app configs
 
 ### macOS Defaults
 - **Finder** — Show all extensions, pathbar, full path in title
@@ -100,8 +110,11 @@ dotfiles update
 - **Text & Input** — Fast key repeat, always show scrollbars
 - **Misc** — No .DS_Store on network stores, disable Handoff
 
-### Other
+### Utilities
 - **Finetune** — Per-app volume mixer
+
+### Backup & Sync
+- **mackup** — Backup app configs
 
 ## How It Works
 

@@ -19,6 +19,17 @@ categories:
             command: '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
             skip: "which brew"
 
+      - name: "SSH Keychain"
+        description: "Add SSH keys to Apple Keychain"
+        checked: true
+        steps:
+          - type: run
+            command: 'for key in ${HOME}/.ssh/id_*; do case "$key" in *.pub|*.revoked) continue ;; esac; ssh-add --apple-use-keychain "$key" 2>/dev/null; done'
+            skip: "ssh-add -l | grep -q ."
+
+  # ── Shell ─────────────────────────────────────────────
+  - name: "Shell"
+    tools:
       - name: "Oh My Zsh"
         description: "Zsh framework"
         checked: true
@@ -31,17 +42,6 @@ categories:
               KEEP_ZSHRC: "yes"
             skip: "test -d ${HOME}/.oh-my-zsh"
 
-      - name: "SSH Keychain"
-        description: "Add SSH keys to Apple Keychain"
-        checked: true
-        steps:
-          - type: run
-            command: 'for key in ${HOME}/.ssh/id_*; do case "$key" in *.pub|*.revoked) continue ;; esac; ssh-add --apple-use-keychain "$key" 2>/dev/null; done'
-            skip: "ssh-add -l | grep -q ."
-
-  # ── Shell & Terminal ─────────────────────────────────
-  - name: "Shell & Terminal"
-    tools:
       - name: "Shell Config (.zshrc)"
         description: "Zsh config with OMZ plugins and custom loader"
         checked: true
@@ -83,16 +83,6 @@ categories:
           - type: omz-plugin
             repo: "https://github.com/zdharma-continuum/fast-syntax-highlighting"
 
-      - name: "Ghostty"
-        description: "Terminal emulator"
-        checked: true
-        steps:
-          - type: cask
-            package: ghostty
-          - type: symlink
-            from: "config/ghostty/config"
-            to: "${HOME}/.config/ghostty/config"
-
       - name: "Shell Aliases & Functions"
         description: "Custom aliases and shell functions"
         checked: true
@@ -106,6 +96,19 @@ categories:
           - type: symlink
             from: "home/.exports"
             to: "${HOME}/.dotfiles-home/.exports"
+
+  # ── Terminal ──────────────────────────────────────────
+  - name: "Terminal"
+    tools:
+      - name: "Ghostty"
+        description: "Terminal emulator"
+        checked: true
+        steps:
+          - type: cask
+            package: ghostty
+          - type: symlink
+            from: "config/ghostty/config"
+            to: "${HOME}/.config/ghostty/config"
 
       - name: "Muxy"
         description: "Terminal multiplexer"
@@ -288,6 +291,14 @@ categories:
           - type: brew
             package: pipx
 
+      - name: ".npmrc"
+        description: "npm configuration"
+        checked: true
+        steps:
+          - type: symlink
+            from: "config/npm/.npmrc"
+            to: "${HOME}/.npmrc"
+
   # ── Git & GitHub ─────────────────────────────────────
   - name: "Git & GitHub"
     tools:
@@ -306,14 +317,6 @@ categories:
             from: "config/git/.gitconfig"
             to: "${HOME}/.gitconfig"
             vars: ["GitName", "GitEmail"]
-
-      - name: ".npmrc"
-        description: "npm configuration"
-        checked: true
-        steps:
-          - type: symlink
-            from: "config/npm/.npmrc"
-            to: "${HOME}/.npmrc"
 
   # ── Editors ──────────────────────────────────────────
   - name: "Editors"
@@ -423,17 +426,6 @@ categories:
             from: "config/opencode/commands/"
             to: "${HOME}/.config/opencode/commands/"
 
-  # ── Other ────────────────────────────────────────────
-  - name: "Other"
-    tools:
-      - name: "Finetune"
-        description: "Per-app volume mixer"
-        checked: true
-        steps:
-          - type: cask
-            package: finetune
-            skip: "/Applications/Finetune.app"
-
   # ── macOS Defaults ───────────────────────────────────
   - name: "macOS Defaults"
     tools:
@@ -526,6 +518,17 @@ categories:
             key: ActivityCacheAllowed
             value: "false"
             valueType: bool
+
+  # ── Utilities ────────────────────────────────────────
+  - name: "Utilities"
+    tools:
+      - name: "Finetune"
+        description: "Per-app volume mixer"
+        checked: true
+        steps:
+          - type: cask
+            package: finetune
+            skip: "/Applications/Finetune.app"
 
   # ── Backup & Sync ────────────────────────────────────
   - name: "Backup & Sync"
