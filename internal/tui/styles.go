@@ -14,4 +14,5 @@ var (
 	SuccessStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#a6da95"))
 	ErrorStyle      = lipgloss.NewStyle().Foreground(lipgloss.Color("#ed8796"))
 	SkipStyle       = lipgloss.NewStyle().Foreground(lipgloss.Color("#6e738d"))
+	SpinnerStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("#7dc4e4"))
 )

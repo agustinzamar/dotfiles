@@ -8,6 +8,7 @@ import (
 	"github.com/agustinzamar/dotfiles/internal/executor"
 	"github.com/agustinzamar/dotfiles/internal/logger"
 	"github.com/agustinzamar/dotfiles/internal/manifest"
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
@@ -31,13 +32,17 @@ type installMsg struct {
 }
 
 type model struct {
-	categories  []manifest.Category
-	toolsByTab  [][]toolItem
-	tabIndex    int
-	cursor      int
-	state       state
-	messages    []string
-	vars        map[string]string
+	categories     []manifest.Category
+	toolsByTab     [][]toolItem
+	tabIndex       int
+	cursor         int
+	state          state
+	messages       []string
+	vars           map[string]string
+	spinner        spinner.Model
+	currentTool    string
+	installing     int
+	totalToInstall int
 }
 
 func NewModel(m *manifest.Manifest) tea.Model {
@@ -48,18 +53,27 @@ func NewModel(m *manifest.Manifest) tea.Model {
 			toolsByTab[i] = append(toolsByTab[i], toolItem{tool: t, checked: t.Checked})
 		}
 	}
+	s := spinner.New()
+	s.Spinner = spinner.Dot
+	s.Style = SpinnerStyle
 	return &model{
 		categories: m.Categories,
 		toolsByTab: toolsByTab,
 		state:      stateSelecting,
 		vars:       vars,
+		spinner:    s,
 	}
 }
 
-func (m *model) Init() tea.Cmd { return nil }
+func (m *model) Init() tea.Cmd { return m.spinner.Tick }
 
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case spinner.TickMsg:
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
+
 	case tea.KeyMsg:
 		if m.state == stateSelecting {
 			switch msg.String() {
@@ -109,12 +123,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		flat := m.flatItems()
 		for i := range flat {
 			if flat[i].tool.Name == msg.toolName {
-				for j := i + 1; j < len(flat); j++ {
-					if flat[j].checked {
-						return m, installNextFlatCmd(j, m)
-					}
-				}
-				break
+				return m, installNextFlatCmd(i+1, m)
 			}
 		}
 		m.state = stateDone
@@ -217,6 +226,12 @@ func (m *model) installingView() string {
 	var b strings.Builder
 	b.WriteString(TitleStyle.Render("Installing..."))
 	b.WriteString("\n")
+
+	if m.state == stateInstalling {
+		b.WriteString(fmt.Sprintf("%s Installing %d/%d: %s\n",
+			m.spinner.View(), m.installing, m.totalToInstall, m.currentTool))
+	}
+
 	for _, msg := range m.messages {
 		b.WriteString(msg)
 		b.WriteString("\n")
@@ -228,11 +243,13 @@ func (m *model) installingView() string {
 }
 
 func (m *model) collectVars() {
+	m.totalToInstall = 0
 	flat := m.flatItems()
 	for _, item := range flat {
 		if !item.checked {
 			continue
 		}
+		m.totalToInstall++
 		for _, step := range item.tool.Steps {
 			if step.Type == "template-symlink" {
 				config.PromptMissing(step.Vars)
@@ -251,6 +268,8 @@ func installNextFlatCmd(idx int, m *model) tea.Cmd {
 	if !item.checked {
 		return nil
 	}
+	m.currentTool = item.tool.Name
+	m.installing++
 	return func() tea.Msg {
 		var results []executor.Result
 		dotfilesDir := manifest.DotfilesDir()
