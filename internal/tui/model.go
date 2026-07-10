@@ -173,7 +173,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			icon = "\u2717"
 		}
 		m.stepsDone++
-		m.messages = append(m.messages, fmt.Sprintf("  %s %s [%s]: %s", icon, msg.toolName, msg.stepType, msg.result.Msg))
+		m.messages = append(m.messages, fmt.Sprintf("  %s %s: %s", icon, msg.toolName, msg.result.Msg))
 		logger.Log(msg.result.Status, msg.toolName, msg.result.Msg)
 
 		if len(m.stepQueue) == 0 {

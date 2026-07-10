@@ -24,10 +24,14 @@ func execBrew(step manifest.Step, expand func(string) string) Result {
 		return Result{Status: "skipped", Msg: step.Package + " already installed"}
 	}
 	cmd := exec.Command("brew", "install", step.Package)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return Result{Status: "error", Msg: fmt.Sprintf("brew install %s: %v", step.Package, err)}
+		msg := fmt.Sprintf("brew install %s: %v", step.Package, err)
+		if s := stderr.String(); s != "" {
+			msg = s
+		}
+		return Result{Status: "error", Msg: msg}
 	}
 	return Result{Status: "installed", Msg: step.Package}
 }
@@ -37,10 +41,14 @@ func execCask(step manifest.Step, expand func(string) string) Result {
 		return Result{Status: "skipped", Msg: step.Package + " already installed"}
 	}
 	cmd := exec.Command("brew", "install", "--cask", step.Package)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return Result{Status: "error", Msg: fmt.Sprintf("brew cask install %s: %v", step.Package, err)}
+		msg := fmt.Sprintf("brew cask install %s: %v", step.Package, err)
+		if s := stderr.String(); s != "" {
+			msg = s
+		}
+		return Result{Status: "error", Msg: msg}
 	}
 	return Result{Status: "installed", Msg: step.Package}
 }
@@ -51,10 +59,14 @@ func execTap(step manifest.Step, expand func(string) string) Result {
 		return Result{Status: "skipped", Msg: "tap " + step.Repo + " already exists"}
 	}
 	cmd := exec.Command("brew", "tap", step.Repo)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return Result{Status: "error", Msg: fmt.Sprintf("tap %s: %v", step.Repo, err)}
+		msg := fmt.Sprintf("tap %s: %v", step.Repo, err)
+		if s := stderr.String(); s != "" {
+			msg = s
+		}
+		return Result{Status: "error", Msg: msg}
 	}
 	return Result{Status: "installed", Msg: "tapped " + step.Repo}
 }
@@ -65,10 +77,14 @@ func execVSCode(step manifest.Step, expand func(string) string) Result {
 		return Result{Status: "skipped", Msg: step.Extension + " already installed"}
 	}
 	cmd := exec.Command("code", "--install-extension", step.Extension)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return Result{Status: "error", Msg: fmt.Sprintf("vscode %s: %v", step.Extension, err)}
+		msg := fmt.Sprintf("vscode %s: %v", step.Extension, err)
+		if s := stderr.String(); s != "" {
+			msg = s
+		}
+		return Result{Status: "error", Msg: msg}
 	}
 	return Result{Status: "installed", Msg: step.Extension}
 }
@@ -84,10 +100,14 @@ func execOMZPlugin(step manifest.Step, expand func(string) string) Result {
 		return Result{Status: "skipped", Msg: name + " plugin already installed"}
 	}
 	cmd := exec.Command("git", "clone", "--depth=1", step.Repo, dest)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return Result{Status: "error", Msg: fmt.Sprintf("clone %s: %v", step.Repo, err)}
+		msg := fmt.Sprintf("clone %s: %v", step.Repo, err)
+		if s := stderr.String(); s != "" {
+			msg = s
+		}
+		return Result{Status: "error", Msg: msg}
 	}
 	return Result{Status: "installed", Msg: name}
 }
@@ -137,10 +157,14 @@ func execGitClone(step manifest.Step, expand func(string) string) Result {
 	}
 	args = append(args, step.Repo, dest)
 	cmd := exec.Command("git", args...)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return Result{Status: "error", Msg: fmt.Sprintf("git clone %s: %v", step.Repo, err)}
+		msg := fmt.Sprintf("git clone %s: %v", step.Repo, err)
+		if s := stderr.String(); s != "" {
+			msg = s
+		}
+		return Result{Status: "error", Msg: msg}
 	}
 	return Result{Status: "installed", Msg: dest}
 }
@@ -150,8 +174,8 @@ func execRun(step manifest.Step, expand func(string) string) Result {
 		return Result{Status: "skipped", Msg: "already done"}
 	}
 	cmd := exec.Command("sh", "-c", expand(step.Command))
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
 	if step.Env != nil {
 		cmd.Env = os.Environ()
 		for k, v := range step.Env {
@@ -159,7 +183,11 @@ func execRun(step manifest.Step, expand func(string) string) Result {
 		}
 	}
 	if err := cmd.Run(); err != nil {
-		return Result{Status: "error", Msg: fmt.Sprintf("run: %v", err)}
+		msg := fmt.Sprintf("run: %v", err)
+		if s := stderr.String(); s != "" {
+			msg = s
+		}
+		return Result{Status: "error", Msg: msg}
 	}
 	return Result{Status: "installed", Msg: "ok"}
 }
@@ -188,10 +216,14 @@ func execDefaults(step manifest.Step, expand func(string) string) Result {
 	}
 
 	cmd := exec.Command("defaults", "write", domain, key, flag, value)
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return Result{Status: "error", Msg: fmt.Sprintf("defaults write %s %s: %v", domain, key, err)}
+		msg := fmt.Sprintf("defaults write %s %s: %v", domain, key, err)
+		if s := stderr.String(); s != "" {
+			msg = s
+		}
+		return Result{Status: "error", Msg: msg}
 	}
 	return Result{Status: "installed", Msg: domain + " " + key}
 }
