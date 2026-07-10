@@ -59,19 +59,50 @@ func Load(path string) (*Manifest, error) {
 func (t Tool) CategoryName() string { return t.Category }
 
 func DotfilesDir() string {
-	if cwd, err := os.Getwd(); err == nil {
-		dir := cwd
-		for range 6 {
-			if _, err := os.Stat(filepath.Join(dir, "config", "tools.yaml")); err == nil {
-				return dir
-			}
-			parent := filepath.Dir(dir)
-			if parent == dir {
-				break
-			}
-			dir = parent
+	// Check env var override
+	if dir := os.Getenv("DOTFILES_HOME"); dir != "" {
+		return dir
+	}
+
+	// Check next to the binary
+	if exe, err := os.Executable(); err == nil {
+		if dir := resolveDotfilesDir(filepath.Dir(exe)); dir != "" {
+			return dir
 		}
 	}
+
+	// Check from cwd
+	if cwd, err := os.Getwd(); err == nil {
+		if dir := resolveDotfilesDir(cwd); dir != "" {
+			return dir
+		}
+	}
+
+	// Known locations
 	home, _ := os.UserHomeDir()
+	for _, d := range []string{
+		home + "/.dotfiles",
+		home + "/Documents/repos/dotfiles",
+	} {
+		if _, err := os.Stat(filepath.Join(d, "config", "tools.yaml")); err == nil {
+			return d
+		}
+	}
+
 	return home + "/.dotfiles"
+}
+
+func resolveDotfilesDir(start string) string {
+	dir := start
+	for range 6 {
+		if _, err := os.Stat(filepath.Join(dir, "config", "tools.yaml")); err == nil {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			break
+		}
+		dir = parent
+	}
+	return ""
 }

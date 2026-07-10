@@ -16,21 +16,23 @@ Personal dotfiles managed by a Go CLI. Interactive TUI installer with checkboxes
 
 ```bash
 # Clone
-git clone git@github.com:agustinzamar/dotfiles.git ~/.dotfiles
-cd ~/.dotfiles
+git clone git@github.com:agustinzamar/dotfiles.git ~/Documents/repos/dotfiles
+cd ~/Documents/repos/dotfiles
 
-# Build
-go build -o dotfiles .
+# Build and install to PATH
+make install
 
 # Interactive install
-./dotfiles install
+dotfiles install
 
 # Or non-interactive: install everything
-./dotfiles install --all
+dotfiles install --all
 
 # Update everything later
-./dotfiles update
+dotfiles update
 ```
+
+`dotfiles` runs from anywhere — no need to be inside the repo.
 
 ## Commands
 
