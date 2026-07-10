@@ -3,6 +3,14 @@ categories:
   # ── Core ──────────────────────────────────────────────
   - name: "Core"
     tools:
+      - name: "Xcode CLT"
+        description: "Command Line Tools (git, compilers, etc.)"
+        checked: true
+        steps:
+          - type: run
+            command: "xcode-select --install 2>/dev/null; true"
+            skip: "xcode-select -p &>/dev/null"
+
       - name: "Homebrew"
         description: "Package manager"
         checked: true
