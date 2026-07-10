@@ -6,6 +6,7 @@ import (
 
 	"github.com/agustinzamar/dotfiles/internal/config"
 	"github.com/agustinzamar/dotfiles/internal/executor"
+	"github.com/agustinzamar/dotfiles/internal/logger"
 	"github.com/agustinzamar/dotfiles/internal/manifest"
 	"github.com/agustinzamar/dotfiles/internal/tui"
 	tea "github.com/charmbracelet/bubbletea"
@@ -70,6 +71,7 @@ func installAll(m *manifest.Manifest) error {
 					fmt.Fprintf(os.Stderr, " \u2717(%s)", r.Msg)
 					allSkipped = false
 				}
+				logger.Log(r.Status, t.Name, r.Msg)
 			}
 			if allSkipped {
 				fmt.Print(" (already done)")

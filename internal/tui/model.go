@@ -6,6 +6,7 @@ import (
 
 	"github.com/agustinzamar/dotfiles/internal/config"
 	"github.com/agustinzamar/dotfiles/internal/executor"
+	"github.com/agustinzamar/dotfiles/internal/logger"
 	"github.com/agustinzamar/dotfiles/internal/manifest"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -103,6 +104,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				icon = "\u2717"
 			}
 			m.messages = append(m.messages, fmt.Sprintf("  %s %s: %s", icon, msg.toolName, r.Msg))
+			logger.Log(r.Status, msg.toolName, r.Msg)
 		}
 		flat := m.flatItems()
 		for i := range flat {
