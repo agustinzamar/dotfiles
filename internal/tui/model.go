@@ -93,6 +93,12 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.KeyMsg:
+		if m.state == stateDone {
+			if msg.String() == "ctrl+c" || msg.String() == "q" {
+				return m, tea.Quit
+			}
+		}
+
 		if m.state == stateSelecting {
 			switch msg.String() {
 			case "ctrl+c", "q":
@@ -166,7 +172,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		if len(m.stepQueue) == 0 {
 			m.state = stateDone
-			return m, tea.Quit
+			return m, nil
 		}
 		return m, installNextStep(m)
 	}
