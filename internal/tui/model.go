@@ -8,6 +8,7 @@ import (
 	"github.com/agustinzamar/dotfiles/internal/executor"
 	"github.com/agustinzamar/dotfiles/internal/manifest"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 type state int
@@ -29,25 +30,26 @@ type installMsg struct {
 }
 
 type model struct {
-	categories []manifest.Category
-	items      []toolItem
-	cursor     int
-	state      state
-	messages   []string
-	vars       map[string]string
+	categories  []manifest.Category
+	toolsByTab  [][]toolItem
+	tabIndex    int
+	cursor      int
+	state       state
+	messages    []string
+	vars        map[string]string
 }
 
 func NewModel(m *manifest.Manifest) tea.Model {
 	vars := config.GetVars()
-	var items []toolItem
-	for _, cat := range m.Categories {
+	toolsByTab := make([][]toolItem, len(m.Categories))
+	for i, cat := range m.Categories {
 		for _, t := range cat.Tools {
-			items = append(items, toolItem{tool: t, checked: t.Checked})
+			toolsByTab[i] = append(toolsByTab[i], toolItem{tool: t, checked: t.Checked})
 		}
 	}
 	return &model{
 		categories: m.Categories,
-		items:      items,
+		toolsByTab: toolsByTab,
 		state:      stateSelecting,
 		vars:       vars,
 	}
@@ -62,20 +64,32 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "ctrl+c", "q":
 				return m, tea.Quit
+			case "left", "shift+tab":
+				if m.tabIndex > 0 {
+					m.tabIndex--
+					m.cursor = 0
+				}
+			case "right", "tab":
+				if m.tabIndex < len(m.toolsByTab)-1 {
+					m.tabIndex++
+					m.cursor = 0
+				}
 			case "up", "k":
 				if m.cursor > 0 {
 					m.cursor--
 				}
 			case "down", "j":
-				if m.cursor < len(m.items)-1 {
+				if m.cursor < len(m.toolsByTab[m.tabIndex])-1 {
 					m.cursor++
 				}
 			case " ":
-				m.items[m.cursor].checked = !m.items[m.cursor].checked
+				if len(m.toolsByTab[m.tabIndex]) > 0 {
+					m.toolsByTab[m.tabIndex][m.cursor].checked = !m.toolsByTab[m.tabIndex][m.cursor].checked
+				}
 			case "enter":
 				m.collectVars()
 				m.state = stateInstalling
-				return m, installNextCmd(0, m)
+				return m, installNextFlatCmd(0, m)
 			}
 		}
 
@@ -90,11 +104,12 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			m.messages = append(m.messages, fmt.Sprintf("  %s %s: %s", icon, msg.toolName, r.Msg))
 		}
-		for i := range m.items {
-			if m.items[i].tool.Name == msg.toolName {
-				for j := i + 1; j < len(m.items); j++ {
-					if m.items[j].checked {
-						return m, installNextCmd(j, m)
+		flat := m.flatItems()
+		for i := range flat {
+			if flat[i].tool.Name == msg.toolName {
+				for j := i + 1; j < len(flat); j++ {
+					if flat[j].checked {
+						return m, installNextFlatCmd(j, m)
 					}
 				}
 				break
@@ -105,6 +120,14 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+func (m *model) flatItems() []toolItem {
+	var items []toolItem
+	for _, tab := range m.toolsByTab {
+		items = append(items, tab...)
+	}
+	return items
 }
 
 func (m *model) View() string {
@@ -119,18 +142,37 @@ func (m *model) View() string {
 
 func (m *model) selectionView() string {
 	var b strings.Builder
+
 	b.WriteString(TitleStyle.Render("Dotfiles Installer"))
-	b.WriteString("\n")
-	b.WriteString(HelpStyle.Render("j/k or \u2191/\u2193 navigate  Space toggle  Enter install  q quit"))
 	b.WriteString("\n\n")
 
-	currentCat := ""
-	for i, item := range m.items {
-		if item.tool.Category != currentCat {
-			currentCat = item.tool.Category
-			b.WriteString(CategoryStyle.Render(currentCat))
-			b.WriteString("\n")
+	// Tabs bar
+	var tabNames []string
+	var tabStyles []string
+	for i, cat := range m.categories {
+		if i == m.tabIndex {
+			tabStyles = append(tabStyles, CategoryActiveStyle.Render(cat.Name))
+		} else {
+			tabStyles = append(tabStyles, CategoryStyle.Render(cat.Name))
 		}
+		_ = tabNames
+	}
+	b.WriteString(strings.Join(tabStyles, "  "))
+	b.WriteString("\n")
+	b.WriteString(strings.Repeat("\u2500", 60))
+	b.WriteString("\n\n")
+
+	// Help text
+	b.WriteString(HelpStyle.Render("\u2190/\u2192 switch tab  j/k navigate  Space toggle  Enter install  q quit"))
+	b.WriteString("\n\n")
+
+	// Current tab's tools
+	items := m.toolsByTab[m.tabIndex]
+	if len(items) == 0 {
+		b.WriteString(HelpStyle.Render("  No tools in this category"))
+		b.WriteString("\n")
+	}
+	for i, item := range items {
 		cursor := " "
 		if m.cursor == i {
 			cursor = CursorStyle.Render(">")
@@ -149,7 +191,26 @@ func (m *model) selectionView() string {
 		b.WriteString(CheckboxStyle.Render(fmt.Sprintf("%s %s %s", cursor, checkbox, name)))
 		b.WriteString("\n")
 	}
+
+	// Checked tool summary
+	_, total := m.checkedCount()
+	b.WriteString(fmt.Sprintf("\n%s", HelpStyle.Render(fmt.Sprintf("%d checked across all categories. Press Enter to install.", total))))
+
 	return b.String()
+}
+
+func (m *model) checkedCount() (int, int) {
+	checked := 0
+	total := 0
+	for _, tab := range m.toolsByTab {
+		for _, item := range tab {
+			total++
+			if item.checked {
+				checked++
+			}
+		}
+	}
+	return checked, total
 }
 
 func (m *model) installingView() string {
@@ -167,7 +228,8 @@ func (m *model) installingView() string {
 }
 
 func (m *model) collectVars() {
-	for _, item := range m.items {
+	flat := m.flatItems()
+	for _, item := range flat {
 		if !item.checked {
 			continue
 		}
@@ -180,8 +242,12 @@ func (m *model) collectVars() {
 	m.vars = config.GetVars()
 }
 
-func installNextCmd(idx int, m *model) tea.Cmd {
-	item := m.items[idx]
+func installNextFlatCmd(idx int, m *model) tea.Cmd {
+	flat := m.flatItems()
+	if idx >= len(flat) {
+		return nil
+	}
+	item := flat[idx]
 	if !item.checked {
 		return nil
 	}
@@ -195,3 +261,9 @@ func installNextCmd(idx int, m *model) tea.Cmd {
 		return installMsg{toolName: item.tool.Name, results: results}
 	}
 }
+
+var CategoryActiveStyle = lipgloss.NewStyle().
+	Bold(true).
+	Foreground(lipgloss.Color("#1e1e2e")).
+	Background(lipgloss.Color("#c6a0f6")).
+	Padding(0, 1)

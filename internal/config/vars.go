@@ -45,7 +45,10 @@ func PromptMissing(needed []string) error {
 func SaveVars(vars map[string]string) error {
 	os.MkdirAll(filepath.Dir(varsCachePath), 0755)
 	data, _ := json.MarshalIndent(vars, "", "  ")
-	return os.WriteFile(varsCachePath, data, 0644)
+	if err := os.WriteFile(varsCachePath, data, 0600); err != nil {
+		return err
+	}
+	return os.Chmod(varsCachePath, 0600)
 }
 
 func Render(tmplStr string, vars map[string]string) (string, error) {
