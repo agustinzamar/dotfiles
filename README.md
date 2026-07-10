@@ -48,7 +48,6 @@ go build -o dotfiles .
 - **zsh-autosuggestions** — Fish-like autosuggestions
 - **fzf-tab** — Fuzzy tab completion
 - **fast-syntax-highlighting** — Syntax highlighting in shell
-- **Starship** — Cross-shell prompt (optional, p10k is default)
 - **Ghostty** — Terminal emulator with Catppuccin theme
 
 ### Modern CLI Tools
@@ -63,7 +62,6 @@ go build -o dotfiles .
 - **yq** — YAML processor
 - **bottom** — System monitor
 - **direnv** — Per-directory env vars
-- **tree** — Directory tree view
 - **unar** — Multi-format unarchiver
 - **yazi** — Terminal file manager
 
@@ -72,7 +70,6 @@ go build -o dotfiles .
 - **DBngin** — Database manager
 - **OrbStack** — Docker & Linux VMs
 - **Composer** — PHP package manager
-- **mysql-client** — MySQL CLI tools
 - **pipx** — Python package runner
 - **VS Code** — Settings + keybindings + extensions
 - **PhpStorm** — JetBrains PHP IDE

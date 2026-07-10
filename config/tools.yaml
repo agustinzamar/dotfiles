@@ -67,16 +67,6 @@ categories:
           - type: omz-plugin
             repo: "https://github.com/zdharma-continuum/fast-syntax-highlighting"
 
-      - name: "Starship"
-        description: "Cross-shell prompt (optional, p10k is default)"
-        checked: false
-        steps:
-          - type: brew
-            package: starship
-          - type: symlink
-            from: "config/starship/starship.toml"
-            to: "${HOME}/.config/starship.toml"
-
       - name: "Ghostty"
         description: "Terminal emulator"
         checked: true
@@ -184,13 +174,6 @@ categories:
           - type: brew
             package: direnv
 
-      - name: "tree"
-        description: "Directory tree view"
-        checked: true
-        steps:
-          - type: brew
-            package: tree
-
       - name: "unar"
         description: "Multi-format unarchiver"
         checked: true
@@ -258,13 +241,6 @@ categories:
         steps:
           - type: brew
             package: composer
-
-      - name: "mysql-client"
-        description: "MySQL CLI tools"
-        checked: true
-        steps:
-          - type: brew
-            package: mysql-client
 
       - name: "mysql-to-sqlite3"
         description: "MySQL to SQLite converter"
