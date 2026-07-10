@@ -147,7 +147,6 @@ func (m *model) selectionView() string {
 	b.WriteString("\n\n")
 
 	// Tabs bar
-	var tabNames []string
 	var tabStyles []string
 	for i, cat := range m.categories {
 		if i == m.tabIndex {
@@ -155,9 +154,8 @@ func (m *model) selectionView() string {
 		} else {
 			tabStyles = append(tabStyles, CategoryStyle.Render(cat.Name))
 		}
-		_ = tabNames
 	}
-	b.WriteString(strings.Join(tabStyles, "  "))
+	b.WriteString(lipgloss.JoinHorizontal(lipgloss.Top, tabStyles...))
 	b.WriteString("\n")
 	b.WriteString(strings.Repeat("\u2500", 60))
 	b.WriteString("\n\n")

@@ -261,10 +261,17 @@ categories:
 
       - name: "mysql-to-sqlite3"
         description: "MySQL to SQLite converter"
-        checked: false
+        checked: true
         steps:
           - type: brew
             package: mysql-to-sqlite3
+
+      - name: "sqlite3"
+        description: "SQLite CLI"
+        checked: true
+        steps:
+          - type: brew
+            package: sqlite
 
       - name: "pipx"
         description: "Python package runner"
