@@ -385,10 +385,10 @@ categories:
             from: "config/claude/settings.json"
             to: "${HOME}/.claude/settings.json"
           - type: symlink
-            from: "config/claude/skills/"
+            from: "config/opencode/skills/"
             to: "${HOME}/.claude/skills/"
           - type: symlink
-            from: "config/claude/agents/"
+            from: "config/opencode/agents/"
             to: "${HOME}/.claude/agents/"
           - type: symlink
             from: "config/claude/CLAUDE.md"
