@@ -67,3 +67,37 @@ func TestLink_WrongSymlinkError(t *testing.T) {
 		t.Fatal("expected error for wrong symlink target")
 	}
 }
+
+func TestLinkResult_BackupCreated(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "src")
+	dst := filepath.Join(dir, "dst")
+	os.WriteFile(src, []byte("new"), 0644)
+	os.WriteFile(dst, []byte("old"), 0644)
+
+	result, err := LinkWithResult(src, dst)
+	if err != nil {
+		t.Fatalf("LinkWithResult failed: %v", err)
+	}
+	if !result.BackupCreated {
+		t.Fatal("expected BackupCreated=true")
+	}
+	if result.BackupPath != dst+".backup" {
+		t.Fatalf("expected backup path %s, got %s", dst+".backup", result.BackupPath)
+	}
+}
+
+func TestLinkResult_NoBackup(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "src")
+	dst := filepath.Join(dir, "dst")
+	os.WriteFile(src, []byte("content"), 0644)
+
+	result, err := LinkWithResult(src, dst)
+	if err != nil {
+		t.Fatalf("LinkWithResult failed: %v", err)
+	}
+	if result.BackupCreated {
+		t.Fatal("expected BackupCreated=false for fresh symlink")
+	}
+}
