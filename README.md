@@ -52,6 +52,7 @@ dotfiles update
 - **fzf-tab** — Fuzzy tab completion
 - **fast-syntax-highlighting** — Syntax highlighting in shell
 - **Ghostty** — Terminal emulator with Catppuccin theme
+- **Muxy** — Terminal multiplexer
 
 ### Modern CLI Tools
 - **bat** — Cat with syntax highlighting
@@ -85,12 +86,11 @@ dotfiles update
 - **gh** — GitHub CLI
 - **Git Config** — `.gitconfig` with delta diff viewer + gh auth (Go template)
 
-### Muxy
-- **Muxy** — Terminal multiplexer
-- **Finetune** — Per-app volume mixer
-
 ### Backup & Sync
 - **mackup** — Backup app configs
+
+### Other
+- **Finetune** — Per-app volume mixer
 
 ## How It Works
 

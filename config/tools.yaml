@@ -99,6 +99,22 @@ categories:
             from: "home/.exports"
             to: "${HOME}/.dotfiles-home/.exports"
 
+      - name: "Muxy"
+        description: "Terminal multiplexer"
+        checked: true
+        steps:
+          - type: tap
+            repo: "muxy-app/tap"
+          - type: cask
+            package: "muxy-app/tap/muxy"
+            skip: "/Applications/Muxy.app"
+          - type: symlink
+            from: "config/muxy/conf.hjson"
+            to: "${HOME}/.config/muxy/conf.hjson"
+          - type: symlink
+            from: "config/muxy/verbs.hjson"
+            to: "${HOME}/.config/muxy/verbs.hjson"
+
   # ── CLI Tools ────────────────────────────────────────
   - name: "CLI Tools"
     tools:
@@ -392,25 +408,9 @@ categories:
             from: "config/opencode/commands/"
             to: "${HOME}/.config/opencode/commands/"
 
-  # ── Muxy ─────────────────────────────────────────────
-  - name: "Muxy"
+  # ── Other ────────────────────────────────────────────
+  - name: "Other"
     tools:
-      - name: "Muxy"
-        description: "Terminal multiplexer"
-        checked: true
-        steps:
-          - type: tap
-            repo: "muxy-app/tap"
-          - type: cask
-            package: "muxy-app/tap/muxy"
-            skip: "/Applications/Muxy.app"
-          - type: symlink
-            from: "config/muxy/conf.hjson"
-            to: "${HOME}/.config/muxy/conf.hjson"
-          - type: symlink
-            from: "config/muxy/verbs.hjson"
-            to: "${HOME}/.config/muxy/verbs.hjson"
-
       - name: "Finetune"
         description: "Per-app volume mixer"
         checked: true
