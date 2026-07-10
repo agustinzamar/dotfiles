@@ -93,8 +93,14 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 	case tea.KeyMsg:
+		if m.state == stateDone || m.state == stateInstalling {
+			if msg.String() == "ctrl+c" {
+				return m, tea.Quit
+			}
+		}
+
 		if m.state == stateDone {
-			if msg.String() == "ctrl+c" || msg.String() == "q" {
+			if msg.String() == "q" {
 				return m, tea.Quit
 			}
 		}
