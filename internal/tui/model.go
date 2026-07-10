@@ -28,9 +28,10 @@ type toolItem struct {
 	checked bool
 }
 
-type installMsg struct {
+type stepResultMsg struct {
 	toolName string
-	results  []executor.Result
+	stepType string
+	result   executor.Result
 }
 
 type model struct {
@@ -42,12 +43,19 @@ type model struct {
 	messages       []string
 	vars           map[string]string
 	spinner        spinner.Model
-	currentTool    string
-	installing     int
-	totalToInstall int
 	textInput      textinput.Model
 	promptKeys     []string
 	promptIndex    int
+	stepQueue      []stepQueueItem
+	currentTool    string
+	currentStep    string
+	stepsDone      int
+	totalSteps     int
+}
+
+type stepQueueItem struct {
+	toolName string
+	step     manifest.Step
 }
 
 func NewModel(m *manifest.Manifest) tea.Model {
@@ -62,7 +70,6 @@ func NewModel(m *manifest.Manifest) tea.Model {
 	s.Spinner = spinner.Dot
 	s.Style = SpinnerStyle
 	ti := textinput.New()
-	ti.Placeholder = ""
 	ti.CharLimit = 256
 	return &model{
 		categories: m.Categories,
@@ -79,9 +86,11 @@ func (m *model) Init() tea.Cmd { return m.spinner.Tick }
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case spinner.TickMsg:
-		var cmd tea.Cmd
-		m.spinner, cmd = m.spinner.Update(msg)
-		return m, cmd
+		if m.state == stateInstalling || m.state == stateDone {
+			var cmd tea.Cmd
+			m.spinner, cmd = m.spinner.Update(msg)
+			return m, cmd
+		}
 
 	case tea.KeyMsg:
 		if m.state == stateSelecting {
@@ -113,7 +122,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "enter":
 				m.startPrompting()
 				if m.state == stateInstalling {
-					return m, installNextFlatCmd(0, m)
+					return m, tea.Batch(m.spinner.Tick, installNextStep(m))
 				}
 				m.textInput.Focus()
 				return m, textinput.Blink
@@ -129,7 +138,7 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.promptIndex++
 				if m.promptIndex >= len(m.promptKeys) {
 					m.state = stateInstalling
-					return m, installNextFlatCmd(0, m)
+					return m, tea.Batch(m.spinner.Tick, installNextStep(m))
 				}
 				m.textInput.SetValue("")
 				m.textInput.Focus()
@@ -143,26 +152,23 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-	case installMsg:
-		for _, r := range msg.results {
-			icon := "\u2713"
-			switch r.Status {
-			case "skipped":
-				icon = "\u2022"
-			case "error":
-				icon = "\u2717"
-			}
-			m.messages = append(m.messages, fmt.Sprintf("  %s %s: %s", icon, msg.toolName, r.Msg))
-			logger.Log(r.Status, msg.toolName, r.Msg)
+	case stepResultMsg:
+		icon := "\u2713"
+		switch msg.result.Status {
+		case "skipped":
+			icon = "\u2022"
+		case "error":
+			icon = "\u2717"
 		}
-		flat := m.flatItems()
-		for i := range flat {
-			if flat[i].tool.Name == msg.toolName {
-				return m, installNextFlatCmd(i+1, m)
-			}
+		m.stepsDone++
+		m.messages = append(m.messages, fmt.Sprintf("  %s %s [%s]: %s", icon, msg.toolName, msg.stepType, msg.result.Msg))
+		logger.Log(msg.result.Status, msg.toolName, msg.result.Msg)
+
+		if len(m.stepQueue) == 0 {
+			m.state = stateDone
+			return m, tea.Quit
 		}
-		m.state = stateDone
-		return m, tea.Quit
+		return m, installNextStep(m)
 	}
 
 	return m, nil
@@ -194,7 +200,6 @@ func (m *model) selectionView() string {
 	b.WriteString(TitleStyle.Render("Dotfiles Installer"))
 	b.WriteString("\n\n")
 
-	// Tabs bar
 	var tabStyles []string
 	for i, cat := range m.categories {
 		if i == m.tabIndex {
@@ -208,11 +213,9 @@ func (m *model) selectionView() string {
 	b.WriteString(strings.Repeat("\u2500", 60))
 	b.WriteString("\n\n")
 
-	// Help text
 	b.WriteString(HelpStyle.Render("\u2190/\u2192 switch tab  j/k navigate  Space toggle  Enter install  q quit"))
 	b.WriteString("\n\n")
 
-	// Current tab's tools
 	items := m.toolsByTab[m.tabIndex]
 	if len(items) == 0 {
 		b.WriteString(HelpStyle.Render("  No tools in this category"))
@@ -238,7 +241,6 @@ func (m *model) selectionView() string {
 		b.WriteString("\n")
 	}
 
-	// Checked tool summary
 	_, total := m.checkedCount()
 	b.WriteString(fmt.Sprintf("\n%s", HelpStyle.Render(fmt.Sprintf("%d checked across all categories. Press Enter to install.", total))))
 
@@ -262,17 +264,25 @@ func (m *model) checkedCount() (int, int) {
 func (m *model) installingView() string {
 	var b strings.Builder
 	b.WriteString(TitleStyle.Render("Installing..."))
-	b.WriteString("\n")
+	b.WriteString("\n\n")
 
-	if m.state == stateInstalling {
-		b.WriteString(fmt.Sprintf("%s Installing %d/%d: %s\n",
-			m.spinner.View(), m.installing, m.totalToInstall, m.currentTool))
+	if m.state == stateInstalling && len(m.stepQueue) > 0 {
+		b.WriteString(fmt.Sprintf("%s %s Installing step %d/%d: %s (%s)\n",
+			m.spinner.View(), m.currentTool, m.stepsDone+1, m.totalSteps, m.currentTool, m.currentStep))
+		b.WriteString("\n")
 	}
 
-	for _, msg := range m.messages {
+	maxMsgs := 30
+	start := 0
+	if len(m.messages) > maxMsgs {
+		start = len(m.messages) - maxMsgs
+		b.WriteString(HelpStyle.Render(fmt.Sprintf("  ... %d earlier messages\n", start)))
+	}
+	for _, msg := range m.messages[start:] {
 		b.WriteString(msg)
 		b.WriteString("\n")
 	}
+
 	if m.state == stateDone {
 		b.WriteString("\n" + SuccessStyle.Render("Done. Restart your terminal."))
 	}
@@ -283,12 +293,13 @@ func (m *model) startPrompting() {
 	seen := map[string]bool{}
 	var keys []string
 	flat := m.flatItems()
+	var queue []stepQueueItem
 	for _, item := range flat {
 		if !item.checked {
 			continue
 		}
-		m.totalToInstall++
 		for _, step := range item.tool.Steps {
+			queue = append(queue, stepQueueItem{toolName: item.tool.Name, step: step})
 			if step.Type != "template-symlink" {
 				continue
 			}
@@ -300,6 +311,8 @@ func (m *model) startPrompting() {
 			}
 		}
 	}
+	m.stepQueue = queue
+	m.totalSteps = len(queue)
 	if len(keys) == 0 {
 		m.vars = config.GetVars()
 		m.state = stateInstalling
@@ -322,25 +335,18 @@ func (m *model) promptingView() string {
 	return b.String()
 }
 
-func installNextFlatCmd(idx int, m *model) tea.Cmd {
-	flat := m.flatItems()
-	if idx >= len(flat) {
+func installNextStep(m *model) tea.Cmd {
+	if len(m.stepQueue) == 0 {
 		return nil
 	}
-	item := flat[idx]
-	if !item.checked {
-		return nil
-	}
-	m.currentTool = item.tool.Name
-	m.installing++
+	item := m.stepQueue[0]
+	m.stepQueue = m.stepQueue[1:]
+	m.currentTool = item.toolName
+	m.currentStep = item.step.Type
 	return func() tea.Msg {
-		var results []executor.Result
 		dotfilesDir := manifest.DotfilesDir()
-		for _, step := range item.tool.Steps {
-			r := executor.Run(step, dotfilesDir, m.vars, false)
-			results = append(results, r)
-		}
-		return installMsg{toolName: item.tool.Name, results: results}
+		r := executor.Run(item.step, dotfilesDir, m.vars, false)
+		return stepResultMsg{toolName: item.toolName, stepType: item.step.Type, result: r}
 	}
 }
 
