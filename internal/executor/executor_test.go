@@ -187,15 +187,39 @@ func TestRunDispatcher(t *testing.T) {
 		Command: "echo ok",
 		Skip:    "true",
 	}
-	result := Run(step, "", nil)
+	result := Run(step, "", nil, false)
 	if result.Status != "skipped" {
 		t.Fatalf("expected skipped, got %s", result.Status)
 	}
 }
 
 func TestUnknownStep(t *testing.T) {
-	result := Run(manifest.Step{Type: "nonexistent"}, "", nil)
+	result := Run(manifest.Step{Type: "nonexistent"}, "", nil, false)
 	if result.Status != "error" {
 		t.Fatalf("expected error, got %s", result.Status)
+	}
+}
+
+func TestDryRunBrewWouldInstall(t *testing.T) {
+	step := manifest.Step{
+		Type:    "brew",
+		Package: "nonexistent-package-xyz",
+		Skip:    "which nonexistent-package-xyz",
+	}
+	result := Run(step, "", nil, true)
+	if result.Status != "would-install" {
+		t.Fatalf("expected would-install, got %s: %s", result.Status, result.Msg)
+	}
+}
+
+func TestDryRunBrewWouldSkip(t *testing.T) {
+	step := manifest.Step{
+		Type:    "brew",
+		Package: "go",
+		Skip:    "which go",
+	}
+	result := Run(step, "", nil, true)
+	if result.Status != "would-skip" {
+		t.Fatalf("expected would-skip, got %s: %s", result.Status, result.Msg)
 	}
 }

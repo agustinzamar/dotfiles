@@ -36,7 +36,7 @@ var updateCmd = &cobra.Command{
 		for _, cat := range m.Categories {
 			for _, t := range cat.Tools {
 				for _, step := range t.Steps {
-					executor.Run(step, dotfilesDir, vars)
+					executor.Run(step, dotfilesDir, vars, false)
 				}
 			}
 		}

@@ -12,13 +12,17 @@ type Result struct {
 	Msg    string
 }
 
-func Run(step manifest.Step, dotfilesDir string, vars map[string]string) Result {
+func Run(step manifest.Step, dotfilesDir string, vars map[string]string, dryRun bool) Result {
 	expand := func(s string) string {
 		s = os.ExpandEnv(s)
 		for k, v := range vars {
 			s = strings.ReplaceAll(s, "${"+k+"}", v)
 		}
 		return s
+	}
+
+	if dryRun {
+		return dryRunStep(step, dotfilesDir, expand)
 	}
 
 	switch step.Type {
@@ -42,5 +46,17 @@ func Run(step manifest.Step, dotfilesDir string, vars map[string]string) Result 
 		return execRun(step, expand)
 	default:
 		return Result{Status: "error", Msg: "unknown step type: " + step.Type}
+	}
+}
+
+func dryRunStep(step manifest.Step, dotfilesDir string, expand func(string) string) Result {
+	if checkSkip(step.Skip, expand) {
+		return Result{Status: "would-skip", Msg: step.Package + " already installed"}
+	}
+	switch step.Type {
+	case "symlink", "template-symlink":
+		return Result{Status: "would-install", Msg: expand(step.To)}
+	default:
+		return Result{Status: "would-install", Msg: step.Package + step.Repo + step.Extension + step.Command}
 	}
 }

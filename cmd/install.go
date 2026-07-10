@@ -13,6 +13,7 @@ import (
 )
 
 var allFlag bool
+var allDryRun bool
 
 var installCmd = &cobra.Command{
 	Use:   "install",
@@ -34,6 +35,7 @@ var installCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(installCmd)
 	installCmd.Flags().BoolVar(&allFlag, "all", false, "Install all tools without TUI prompt")
+	installCmd.Flags().BoolVar(&allDryRun, "dry-run", false, "Preview what would be installed without making changes")
 }
 
 func installAll(m *manifest.Manifest) error {
@@ -52,12 +54,17 @@ func installAll(m *manifest.Manifest) error {
 			fmt.Fprintf(os.Stderr, "  %s...", t.Name)
 			allSkipped := true
 			for _, step := range t.Steps {
-				r := executor.Run(step, dotfilesDir, vars)
+				r := executor.Run(step, dotfilesDir, vars, allDryRun)
 				switch r.Status {
 				case "installed":
 					fmt.Print(" \u2713")
 					allSkipped = false
 				case "skipped":
+					fmt.Print(" \u2022")
+				case "would-install":
+					fmt.Print(" +")
+					allSkipped = false
+				case "would-skip":
 					fmt.Print(" \u2022")
 				case "error":
 					fmt.Fprintf(os.Stderr, " \u2717(%s)", r.Msg)

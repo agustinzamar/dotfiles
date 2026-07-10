@@ -255,7 +255,7 @@ func installNextFlatCmd(idx int, m *model) tea.Cmd {
 		var results []executor.Result
 		dotfilesDir := manifest.DotfilesDir()
 		for _, step := range item.tool.Steps {
-			r := executor.Run(step, dotfilesDir, m.vars)
+			r := executor.Run(step, dotfilesDir, m.vars, false)
 			results = append(results, r)
 		}
 		return installMsg{toolName: item.tool.Name, results: results}
