@@ -319,6 +319,13 @@ categories:
           - type: brew
             package: pipx
 
+      - name: "rembg"
+        description: "Background removal"
+        checked: true
+        steps:
+          - type: run
+            command: "pipx install rembg"
+
       - name: "Global .npmrc"
         description: "npm configuration"
         checked: true
