@@ -324,7 +324,7 @@ categories:
         checked: true
         steps:
           - type: run
-            command: "pipx install rembg"
+            command: 'pipx install "rembg[cpu,cli]"'
 
       - name: "Global .npmrc"
         description: "npm configuration"
