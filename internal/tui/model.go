@@ -92,7 +92,7 @@ func (m *model) Init() tea.Cmd { return m.spinner.Tick }
 func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case spinner.TickMsg:
-		if m.state == stateInstalling || m.state == stateDone {
+		if m.state == stateInstalling {
 			var cmd tea.Cmd
 			m.spinner, cmd = m.spinner.Update(msg)
 			return m, cmd
@@ -100,7 +100,11 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case tea.KeyMsg:
 		if m.state == stateDone {
-			return m, tea.Quit
+			switch msg.String() {
+			case "q", "enter", "ctrl+c", "esc", " ":
+				return m, tea.Quit
+			}
+			return m, nil
 		}
 
 		if m.state == stateInstalling {
@@ -189,6 +193,11 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		return m, installNextStep(m)
+
+	case tea.MouseMsg:
+		if m.state == stateDone {
+			return m, nil
+		}
 	}
 
 	return m, nil
@@ -317,7 +326,7 @@ func (m *model) installingView() string {
 			b.WriteString(fmt.Sprintf("  %s 0 errors", SuccessStyle.Render("\u2713")))
 		}
 		b.WriteString("\n\n")
-		b.WriteString(HelpStyle.Render("Press any key to exit."))
+		b.WriteString(HelpStyle.Render("Press q or Enter to exit."))
 	}
 	return b.String()
 }
