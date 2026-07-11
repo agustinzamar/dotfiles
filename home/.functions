@@ -30,6 +30,19 @@ function git-prune-local() {
   git fetch -p && git branch -vv | grep ': gone]' | awk '{print $1}' | xargs git branch -D
 }
 
+function removebg() {
+  local input="$1"
+  local dir="$(dirname "$input")"
+  local base="$(basename "$input")"
+  local name="${base%.*}"
+  local ext="${base##*.}"
+  if [ "$name" = "$ext" ]; then
+    rembg i "$input" "$dir/${name}_no_bg"
+  else
+    rembg i "$input" "$dir/${name}_no_bg.${ext}"
+  fi
+}
+
 function clone() {
   if [ $# -eq 0 ]; then
     local repo=$(gh api "user/repos?per_page=200&type=all" --jq '.[].full_name' 2>/dev/null | fzf --prompt="Clone repo: ")
