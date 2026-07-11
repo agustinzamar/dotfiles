@@ -14,6 +14,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+var manifestRef *manifest.Manifest
+
 type state int
 
 const (
@@ -44,7 +46,7 @@ type model struct {
 	vars           map[string]string
 	spinner        spinner.Model
 	textInput      textinput.Model
-	promptKeys     []string
+	promptVars    []manifest.VarDef
 	promptIndex    int
 	stepQueue      []stepQueueItem
 	currentTool    string
@@ -62,6 +64,7 @@ type stepQueueItem struct {
 }
 
 func NewModel(m *manifest.Manifest) tea.Model {
+	manifestRef = m
 	vars := config.GetVars()
 	toolsByTab := make([][]toolItem, len(m.Categories))
 	for i, cat := range m.Categories {
@@ -146,10 +149,10 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "enter":
 				val := m.textInput.Value()
-				m.vars[m.promptKeys[m.promptIndex]] = val
+				m.vars[m.promptVars[m.promptIndex].Name] = val
 				config.SaveVars(m.vars)
 				m.promptIndex++
-				if m.promptIndex >= len(m.promptKeys) {
+				if m.promptIndex >= len(m.promptVars) {
 					m.state = stateInstalling
 					return m, tea.Batch(m.spinner.Tick, installNextStep(m))
 				}
@@ -321,7 +324,7 @@ func (m *model) installingView() string {
 
 func (m *model) startPrompting() {
 	seen := map[string]bool{}
-	var keys []string
+	var vars []manifest.VarDef
 	flat := m.flatItems()
 	var queue []stepQueueItem
 	for _, item := range flat {
@@ -335,7 +338,11 @@ func (m *model) startPrompting() {
 			}
 			for _, k := range step.Vars {
 				if !seen[k] && m.vars[k] == "" {
-					keys = append(keys, k)
+					if vd, ok := manifestRef.Vars[k]; ok {
+						vars = append(vars, manifest.VarDef{Name: k, Description: vd.Description, Why: vd.Why, Hint: vd.Hint})
+					} else {
+						vars = append(vars, manifest.VarDef{Name: k, Description: k})
+					}
 				}
 				seen[k] = true
 			}
@@ -343,12 +350,12 @@ func (m *model) startPrompting() {
 	}
 	m.stepQueue = queue
 	m.totalSteps = len(queue)
-	if len(keys) == 0 {
+	if len(vars) == 0 {
 		m.vars = config.GetVars()
 		m.state = stateInstalling
 		return
 	}
-	m.promptKeys = keys
+	m.promptVars = vars
 	m.promptIndex = 0
 	m.textInput.SetValue("")
 	m.state = statePrompting
@@ -356,12 +363,24 @@ func (m *model) startPrompting() {
 
 func (m *model) promptingView() string {
 	var b strings.Builder
+	vd := m.promptVars[m.promptIndex]
 	b.WriteString(TitleStyle.Render("Setup"))
+	b.WriteString("\n")
+	b.WriteString(strings.Repeat("\u2500", 60))
 	b.WriteString("\n\n")
-	b.WriteString(fmt.Sprintf("Enter value for %s:\n\n", PromptLabelStyle.Render(m.promptKeys[m.promptIndex])))
+	b.WriteString(fmt.Sprintf("Enter %s:\n\n", PromptLabelStyle.Render(vd.Description)))
+	if vd.Why != "" {
+		b.WriteString(HelpStyle.Render(fmt.Sprintf("  %s", vd.Why)))
+		b.WriteString("\n")
+	}
+	if vd.Hint != "" {
+		b.WriteString(HelpStyle.Render(fmt.Sprintf("  %s", vd.Hint)))
+		b.WriteString("\n")
+	}
+	b.WriteString("\n")
 	b.WriteString(m.textInput.View())
 	b.WriteString("\n\n")
-	b.WriteString(HelpStyle.Render(fmt.Sprintf("%d/%d values needed. Enter to confirm, Ctrl+C to quit.", m.promptIndex+1, len(m.promptKeys))))
+	b.WriteString(HelpStyle.Render(fmt.Sprintf("%d/%d values needed. Enter to confirm, Ctrl+C to quit.", m.promptIndex+1, len(m.promptVars))))
 	return b.String()
 }
 

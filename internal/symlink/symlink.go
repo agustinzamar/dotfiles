@@ -12,6 +12,8 @@ type LinkResult struct {
 }
 
 func LinkWithResult(src, dst string) (LinkResult, error) {
+	src = filepath.Clean(src)
+	dst = filepath.Clean(dst)
 	result := LinkResult{}
 	if existing, err := os.Readlink(dst); err == nil {
 		if existing == src {
@@ -25,6 +27,7 @@ func LinkWithResult(src, dst string) (LinkResult, error) {
 		target, _ := os.Readlink(dst)
 		return result, fmt.Errorf("%s is already symlinked to %s (not %s) — skipping", dst, target, src)
 	}
+	// Force remove if anything exists at dst (file, dir, or broken symlink)
 	if _, err := os.Lstat(dst); err == nil {
 		if err := os.RemoveAll(dst); err != nil {
 			return result, fmt.Errorf("remove %s: %w", dst, err)
@@ -35,6 +38,8 @@ func LinkWithResult(src, dst string) (LinkResult, error) {
 	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
 		return result, err
 	}
+	// Final guard: ensure dst doesn't exist before symlink call
+	os.Remove(dst)
 	return result, os.Symlink(src, dst)
 }
 

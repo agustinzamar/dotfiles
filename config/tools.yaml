@@ -1,4 +1,18 @@
 # config/tools.yaml
+vars:
+  GitHubPAT:
+    description: "GitHub Personal Access Token"
+    why: "Used by shadcn/ui MCP server to fetch component data from GitHub"
+    hint: "Create at github.com/settings/tokens → New token (classic) → scope: public_repo"
+  GitName:
+    description: "Your full name"
+    why: "Used in .gitconfig for commit authorship"
+    hint: "e.g. Agustin Zamar"
+  GitEmail:
+    description: "Your email address"
+    why: "Used in .gitconfig for commit authorship"
+    hint: "e.g. agustin@example.com"
+
 categories:
   # ── Core ──────────────────────────────────────────────
   - name: "Core"
@@ -334,7 +348,7 @@ categories:
         steps:
           - type: cask
             package: visual-studio-code
-            skip: "test -d /Applications/Visual Studio Code.app"
+            skip: "test -d '/Applications/Visual Studio Code.app'"
           - type: symlink
             from: "config/vscode/settings.json"
             to: "${HOME}/Library/Application Support/Code/User/settings.json"

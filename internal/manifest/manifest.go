@@ -8,7 +8,15 @@ import (
 )
 
 type Manifest struct {
-	Categories []Category `yaml:"categories"`
+	Vars       map[string]VarDef `yaml:"vars,omitempty"`
+	Categories []Category        `yaml:"categories"`
+}
+
+type VarDef struct {
+	Name        string `yaml:"-"`
+	Description string `yaml:"description"`
+	Why         string `yaml:"why"`
+	Hint        string `yaml:"hint"`
 }
 
 type Category struct {
