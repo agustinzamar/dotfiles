@@ -7,7 +7,7 @@ Personal dotfiles managed by a Go CLI. Interactive TUI installer with checkboxes
 - **Interactive TUI** — Bubble Tea checklist, check/uncheck tools before install
 - **Data-driven** — All tools declared in `config/tools.yaml`, no per-tool Go code
 - **Generic Step Engine** — 9 step types (brew, cask, symlink, template, git-clone, vscode, omz-plugin, tap, run)
-- **Template Rendering** — Go templates for sensitive configs (git, opencode), vars cached in `~/.dotfiles-custom/vars.json`
+- **Template Rendering** — Go templates for sensitive configs (git, opencode), rendered outputs gitignored
 - **Private Configs** — `~/.dotfiles-custom/shell/` loaded by `.zshrc`, never committed
 - **Symlink Engine** — Idempotent, backs up existing files before overwriting
 - **Single Binary** — `go build` produces one static arm64 binary
@@ -194,6 +194,13 @@ Some configs use Go templates with variables stored in `~/.dotfiles-custom/vars.
 - **GitHubPAT** — GitHub personal access token (for OpenCode MCP server)
 
 These are prompted on first install and cached. Delete `~/.dotfiles-custom/vars.json` to re-prompt.
+
+## Sensitive Data Handling
+
+- `~/.dotfiles-custom/vars.json` is created with `0600` permissions (owner read/write only) and never leaves your machine
+- Rendered config files containing sensitive values (e.g. `opencode.rendered.json`, `.gitconfig.rendered`) are gitignored via `*.rendered.*` patterns in `.gitignore`
+- The `~/.dotfiles-custom/` directory is outside the repo and never committed
+- `dotfiles backup` uses Mackup to sync `dotfiles-custom` to cloud storage for cross-machine backup
 
 ## Customization
 
