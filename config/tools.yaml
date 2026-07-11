@@ -244,6 +244,13 @@ categories:
           - type: brew
             package: sshpass
 
+      - name: "ffmpeg"
+        description: "Audio/video converter"
+        checked: true
+        steps:
+          - type: brew
+            package: ffmpeg
+
   # ── Development ──────────────────────────────────────
   - name: "Development"
     tools:
