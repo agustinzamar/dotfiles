@@ -12,6 +12,8 @@
 	helper = !/opt/homebrew/bin/gh auth git-credential
 [push]
 	autoSetupRemote = true
+[help]
+	autocorrect = immediate
 [interactive]
 	diffFilter = delta --color-only
 [delta]

@@ -38,3 +38,48 @@ function clone() {
     gh repo clone "$1" "${@:2}"
   fi
 }
+
+# ─────────────────────────────────────────────────────────
+# disablesleep helpers: prevent Mac from sleeping temporarily
+# Requires passwordless sudo for /usr/bin/pmset:
+#   sudo visudo -f /etc/sudoers.d/pmset-nopasswd
+#   <user> ALL=(root) NOPASSWD: /usr/bin/pmset
+# ─────────────────────────────────────────────────────────
+
+# Enable disablesleep for N hours (default 2), auto-reverts.
+disablesleep-timed() {
+  local hours=${1:-2}
+  local secs=$((hours * 3600))
+
+  sudo pmset -a disablesleep 1
+  echo "🔒 disablesleep ON for ${hours}h (until $(date -v +${hours}H '+%H:%M'))"
+
+  ( sleep $secs; sudo pmset -a disablesleep 0 ) >/tmp/.disablesleep_revert.log 2>&1 &
+  disown
+  echo $! > /tmp/.disablesleep_pid
+  echo "Run 'disablesleep-off' to cancel/revert early."
+}
+
+# Revert disablesleep manually and cancel the pending timer
+disablesleep-off() {
+  sudo pmset -a disablesleep 0
+  if [[ -f /tmp/.disablesleep_pid ]]; then
+    kill "$(cat /tmp/.disablesleep_pid)" 2>/dev/null
+    rm /tmp/.disablesleep_pid
+  fi
+  echo "🔓 disablesleep OFF."
+}
+
+# Check current disablesleep state + whether a timer is pending
+disablesleep-status() {
+  local state
+  state=$(pmset -g | grep disablesleep | awk '{print $2}')
+  if [[ "$state" == "1" ]]; then
+    echo "🔒 disablesleep is ON"
+  else
+    echo "🔓 disablesleep is OFF"
+  fi
+  if [[ -f /tmp/.disablesleep_pid ]] && kill -0 "$(cat /tmp/.disablesleep_pid)" 2>/dev/null; then
+    echo "⏱  Auto-revert timer active (PID $(cat /tmp/.disablesleep_pid))"
+  fi
+}
