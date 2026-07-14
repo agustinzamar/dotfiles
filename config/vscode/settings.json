@@ -155,5 +155,7 @@
   "window.confirmSaveUntitledWorkspace": false,
   "window.nativeTabs": true,
   "workbench.editor.enablePreview": false,
-  "editor.suggest.preview": true
+  "editor.suggest.preview": true,
+  "chat.titleBar.openInAgentsWindow.enabled": false,
+  "workbench.browser.showInTitleBar": false
 }

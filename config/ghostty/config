@@ -1,9 +1,40 @@
-font-family = "JetBrains Mono"
-font-size = 13
-theme = "catppuccin-macchiato"
-background-opacity = 0.95
-macos-titlebar-style = tabs
-window-padding-x = 4
-window-padding-y = 4
-confirm-close-surface = false
+# Aesthetics
+window-theme = system
+theme = dark:"Catppuccin Frappe",light:"Catppuccin Frappe"
+window-colorspace = display-p3
+
+# Font
+font-family = "JetBrainsMono Nerd Font"
+font-size = 18
+font-thicken = true
+font-thicken-strength = 100
+adjust-cell-height = 3
+bold-is-bright = true
+
+# Use a TERM value widely supported on remote hosts
+term = xterm-256color
+
+# Tabs & Panes
+unfocused-split-opacity = 0.5
+macos-titlebar-style = native
+window-save-state = always
+fullscreen = true
+
+# Cursor
+copy-on-select = clipboard
 cursor-style = bar
+cursor-click-to-move = true
+
+# Clipboard
+clipboard-read = allow
+clipboard-write = allow
+clipboard-trim-trailing-spaces = true
+
+# Working directory
+working-directory = /Users/agustin/Documents/repos
+window-inherit-working-directory = true
+tab-inherit-working-directory = true
+
+# Updates
+auto-update = download
+auto-update-channel = stable

@@ -139,6 +139,9 @@ categories:
           - type: symlink
             from: "config/muxy/verbs.hjson"
             to: "${HOME}/.config/muxy/verbs.hjson"
+          - type: symlink
+            from: "config/ghostty/config"
+            to: "${HOME}/Library/Application Support/Muxy/ghostty.conf"
 
   # ── CLI Tools ────────────────────────────────────────
   - name: "CLI Tools"
