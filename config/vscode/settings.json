@@ -157,5 +157,8 @@
   "workbench.editor.enablePreview": false,
   "editor.suggest.preview": true,
   "chat.titleBar.openInAgentsWindow.enabled": false,
-  "workbench.browser.showInTitleBar": false
+  "workbench.browser.showInTitleBar": false,
+  "window.restoreFullscreen": true,
+  "window.customTitleBarVisibility": "windowed",
+  "window.menuStyle": "custom"
 }
