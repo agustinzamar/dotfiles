@@ -30,6 +30,33 @@ function git-prune-local() {
   git fetch -p && git branch -vv | grep ': gone]' | awk '{print $1}' | xargs git branch -D
 }
 
+function pr() {
+  if git branch --show-current >/dev/null 2>&1; then
+    gh pr view --web 2>/dev/null || gh pr create --web
+  else
+    echo "Not in a git repository or no current branch."
+    return 1
+  fi
+}
+
+function killport() {
+  local port="$1"
+  if [[ -z "$port" ]]; then
+    echo "Usage: killport <port>"
+    return 1
+  fi
+
+  local pids
+  pids=$(lsof -ti tcp:"$port" 2>/dev/null)
+  if [[ -z "$pids" ]]; then
+    echo "No process found on port $port."
+    return 1
+  fi
+
+  echo "$pids" | xargs kill -9
+  echo "Killed process(es) on port $port."
+}
+
 function clone() {
   if [ $# -eq 0 ]; then
     local repo=$(gh api "user/repos?per_page=200&type=all" --jq '.[].full_name' 2>/dev/null | fzf --prompt="Clone repo: ")
