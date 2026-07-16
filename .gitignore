@@ -15,3 +15,6 @@ dotfiles
 
 # Plan docs (not configs)
 docs/superpowers/
+
+# Laravel Herd runtime state (contains local paths like lastSite)
+config/herd/herd.json
