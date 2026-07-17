@@ -192,6 +192,7 @@ Add config files to `config/newtool/`. That's it — no Go code changes needed.
 Some configs use Go templates with variables stored in `~/.dotfiles-custom/vars.json`:
 
 - **GitName**, **GitEmail** — Git user identity
+- **GitGPGKey** — GPG key ID for commit signing (optional; leave empty to skip)
 - **GitHubPAT** — GitHub personal access token (for OpenCode MCP server)
 
 These are prompted on first install and cached. Delete `~/.dotfiles-custom/vars.json` to re-prompt.

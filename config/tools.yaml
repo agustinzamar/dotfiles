@@ -350,7 +350,7 @@ categories:
           - type: template-symlink
             from: "config/git/.gitconfig"
             to: "${HOME}/.gitconfig"
-            vars: ["GitName", "GitEmail"]
+            vars: ["GitName", "GitEmail", "GitGPGKey"]
 
   # ── Editors ──────────────────────────────────────────
   - name: "Editors"

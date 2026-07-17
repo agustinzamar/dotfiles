@@ -1,6 +1,9 @@
 [user]
 	name = {{ .GitName }}
 	email = {{ .GitEmail }}
+{{- if .GitGPGKey }}
+	signingkey = {{ .GitGPGKey }}
+{{- end }}
 [core]
 	autocrlf = input
 	pager = delta
@@ -21,3 +24,7 @@
 	light = false
 	side-by-side = true
 	line-numbers = true
+{{- if .GitGPGKey }}
+[commit]
+	gpgsign = true
+{{- end }}
