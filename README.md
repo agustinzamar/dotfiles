@@ -131,6 +131,7 @@ The installer creates symlinks from your home directory to the dotfiles reposito
 | `~/.gitconfig` | Rendered template | Git config with delta + gh auth |
 | `~/.npmrc` | `~/.dotfiles/config/npm/.npmrc` | npm configuration |
 | `~/.config/ghostty/config` | `~/.dotfiles/config/ghostty/config` | Ghostty terminal settings |
+| `~/.config/yazi/yazi.toml` | `~/.dotfiles/config/yazi/yazi.toml` | Yazi file manager settings |
 | `~/.claude/settings.json` | `~/.dotfiles/config/claude/settings.json` | Claude Code settings |
 | `~/.claude/skills/` | `~/.dotfiles/config/claude/skills/` | Claude Code skills (version-controlled) |
 | `~/.claude/agents/` | `~/.dotfiles/config/claude/agents/` | Claude Code agents (version-controlled) |

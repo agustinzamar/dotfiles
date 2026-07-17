@@ -239,6 +239,9 @@ categories:
         steps:
           - type: brew
             package: yazi
+          - type: symlink
+            from: "config/yazi/yazi.toml"
+            to: "${HOME}/.config/yazi/yazi.toml"
 
       - name: "sshpass"
         description: "Non-interactive SSH auth"
