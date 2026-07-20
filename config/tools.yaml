@@ -257,6 +257,22 @@ categories:
           - type: brew
             package: ffmpeg
 
+      - name: "Castor"
+        description: "Stream web video to your TV via DLNA/Chromecast"
+        checked: true
+        steps:
+          - type: run
+            command: "brew install --cask stupside/tap/castor"
+            skip: "test -f /Applications/Castor.app || which castor"
+
+      - name: "Yoinks"
+        description: "Download video from 1800+ sites (yt-dlp wrapper)"
+        checked: true
+        steps:
+          - type: run
+            command: "npm install -g yoinks"
+            skip: "which yoinks"
+
   # ── Development ──────────────────────────────────────
   - name: "Development"
     tools:
