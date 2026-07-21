@@ -78,7 +78,7 @@ func TestLinkResult_BackupCreated(t *testing.T) {
 	os.WriteFile(src, []byte("new"), 0644)
 	os.WriteFile(dst, []byte("old"), 0644)
 
-	result, err := LinkWithResult(src, dst)
+	result, err := LinkWithResult(src, dst, "")
 	if err != nil {
 		t.Fatalf("LinkWithResult failed: %v", err)
 	}
@@ -93,11 +93,38 @@ func TestLinkResult_NoBackup(t *testing.T) {
 	dst := filepath.Join(dir, "dst")
 	os.WriteFile(src, []byte("content"), 0644)
 
-	result, err := LinkWithResult(src, dst)
+	result, err := LinkWithResult(src, dst, "")
 	if err != nil {
 		t.Fatalf("LinkWithResult failed: %v", err)
 	}
 	if result.BackupCreated {
 		t.Fatal("expected BackupCreated=false for fresh symlink")
+	}
+}
+
+func TestLinkWithSnapshot(t *testing.T) {
+	dotDir := t.TempDir()
+	srcDir := t.TempDir()
+	src := filepath.Join(srcDir, "source")
+	dst := filepath.Join(t.TempDir(), "target")
+	os.WriteFile(src, []byte("content"), 0644)
+	os.WriteFile(dst, []byte("existing content"), 0644)
+
+	result, err := LinkWithResult(src, dst, dotDir)
+	if err != nil {
+		t.Fatalf("LinkWithResult() error = %v", err)
+	}
+	if result.SnapshotEntry == nil {
+		t.Fatalf("expected SnapshotEntry, got nil")
+	}
+	if result.SnapshotEntry.Action != "symlinked" {
+		t.Fatalf("Action = %q, want %q", result.SnapshotEntry.Action, "symlinked")
+	}
+	if _, err := os.Stat(result.SnapshotEntry.SnapshotPath); os.IsNotExist(err) {
+		t.Fatalf("snapshot file %s does not exist", result.SnapshotEntry.SnapshotPath)
+	}
+	target, _ := os.Readlink(dst)
+	if target != src {
+		t.Fatalf("symlink target = %q, want %q", target, src)
 	}
 }
