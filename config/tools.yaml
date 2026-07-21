@@ -625,6 +625,14 @@ categories:
             from: "config/opencode/commands/"
             to: "${HOME}/.config/opencode/commands/"
 
+      - name: "OpenUsage"
+        description: "AI usage tracker for Cursor, Claude Code, Codex, Copilot and more"
+        checked: true
+        steps:
+          - type: cask
+            package: openusage
+            skip: "test -d /Applications/OpenUsage.app"
+
   # ── macOS Defaults ───────────────────────────────────
   - name: "macOS Defaults"
     tools:
