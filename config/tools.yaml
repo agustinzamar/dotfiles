@@ -279,6 +279,15 @@ categories:
             command: "npm install -g yoinks"
             skip: "which yoinks"
 
+      - name: "pay-respects"
+        description: "Command suggestions and typo fixer (thefuck replacement)"
+        checked: true
+        steps:
+          - type: tap
+            repo: "timescam/homebrew-tap"
+          - type: brew
+            package: "pay-respects"
+
   # ── Development ──────────────────────────────────────
   - name: "Development"
     tools:

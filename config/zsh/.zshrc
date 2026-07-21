@@ -180,3 +180,8 @@ export PATH="/Users/agustin/.local/bin:$PATH"
 # >>> grok installer >>>
 export PATH="$HOME/.grok/bin:$PATH"
 # <<< grok installer <<<
+
+# pay-respects (Press F to Pay Respects)
+if command -v pay-respects &> /dev/null; then
+    eval "$(pay-respects zsh --alias)"
+fi
