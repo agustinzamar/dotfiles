@@ -9,6 +9,7 @@ import (
 
 	"github.com/agustinzamar/dotfiles/internal/config"
 	"github.com/agustinzamar/dotfiles/internal/manifest"
+	"github.com/agustinzamar/dotfiles/internal/snapshot"
 	"github.com/agustinzamar/dotfiles/internal/symlink"
 )
 
@@ -115,8 +116,12 @@ func execOMZPlugin(step manifest.Step, expand func(string) string) Result {
 func execSymlink(step manifest.Step, dotfilesDir string, expand func(string) string) Result {
 	src := filepath.Join(dotfilesDir, step.From)
 	dst := expand(step.To)
-	if err := symlink.Link(src, dst); err != nil {
+	result, err := symlink.LinkWithResult(src, dst, dotfilesDir)
+	if err != nil {
 		return Result{Status: "error", Msg: fmt.Sprintf("symlink %s: %v", step.To, err)}
+	}
+	if result.SnapshotEntry != nil {
+		snapshotEntries = append(snapshotEntries, *result.SnapshotEntry)
 	}
 	return Result{Status: "installed", Msg: dst}
 }
@@ -140,8 +145,15 @@ func execTemplateSymlink(step manifest.Step, dotfilesDir string, vars map[string
 		return Result{Status: "error", Msg: fmt.Sprintf("write rendered %s: %v", renderedPath, err)}
 	}
 
-	if err := symlink.Link(renderedPath, dst); err != nil {
+	if _, err := snapshot.Take(renderedPath, dotfilesDir); err != nil {
+	}
+
+	result, err := symlink.LinkWithResult(renderedPath, dst, dotfilesDir)
+	if err != nil {
 		return Result{Status: "error", Msg: fmt.Sprintf("symlink %s: %v", dst, err)}
+	}
+	if result.SnapshotEntry != nil {
+		snapshotEntries = append(snapshotEntries, *result.SnapshotEntry)
 	}
 	return Result{Status: "installed", Msg: dst}
 }

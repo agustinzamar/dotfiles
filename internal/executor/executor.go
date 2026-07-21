@@ -5,7 +5,18 @@ import (
 	"strings"
 
 	"github.com/agustinzamar/dotfiles/internal/manifest"
+	"github.com/agustinzamar/dotfiles/internal/snapshot"
 )
+
+var snapshotEntries []snapshot.Entry
+
+func ResetSnapshots() {
+	snapshotEntries = nil
+}
+
+func SnapshotEntries() []snapshot.Entry {
+	return snapshotEntries
+}
 
 type Result struct {
 	Status string
