@@ -33,8 +33,15 @@ func LinkWithResult(src, dst string, dotfilesDir string) (LinkResult, error) {
 		return LinkResult{}, fmt.Errorf("source %s does not exist", absSrc)
 	}
 
+	evalDst, errDst := filepath.EvalSymlinks(absDst)
+	evalSrc, errSrc := filepath.EvalSymlinks(absSrc)
+	if errDst == nil && errSrc == nil && evalDst == evalSrc {
+		return LinkResult{SnapshotEntry: &snapshot.Entry{OriginalPath: absDst, Action: "skipped"}}, nil
+	}
+
 	var snapEntry *snapshot.Entry
 	backupCreated := false
+	var backupPath string
 
 	currentTarget, err := os.Readlink(absDst)
 	if err == nil {
@@ -51,6 +58,11 @@ func LinkWithResult(src, dst string, dotfilesDir string) (LinkResult, error) {
 				return LinkResult{}, fmt.Errorf("snapshot before symlink: %w", snapErr)
 			}
 			snapEntry = entry
+		} else {
+			backupPath = absDst + ".backup"
+			if err := os.Rename(absDst, backupPath); err != nil {
+				return LinkResult{}, fmt.Errorf("backup rename: %w", err)
+			}
 		}
 		backupCreated = true
 	}
@@ -74,6 +86,7 @@ func LinkWithResult(src, dst string, dotfilesDir string) (LinkResult, error) {
 
 	return LinkResult{
 		BackupCreated: backupCreated,
+		BackupPath:    backupPath,
 		SnapshotEntry: snapEntry,
 	}, nil
 }
