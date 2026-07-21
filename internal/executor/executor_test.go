@@ -4,10 +4,131 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/agustinzamar/dotfiles/internal/manifest"
 )
+
+func TestSymlinkSnapshot(t *testing.T) {
+	dir := t.TempDir()
+	srcDir := filepath.Join(dir, "dotfiles")
+	dstDir := filepath.Join(dir, "home")
+	os.MkdirAll(srcDir, 0755)
+	os.MkdirAll(dstDir, 0755)
+	srcFile := filepath.Join(srcDir, "testfile")
+	dstFile := filepath.Join(dstDir, ".testfile")
+	os.WriteFile(srcFile, []byte("content"), 0644)
+
+	ResetSnapshots()
+	step := manifest.Step{
+		Type: "symlink",
+		From: "testfile",
+		To:   dstFile,
+	}
+	result := Run(step, srcDir, nil, false)
+	if result.Status != "installed" {
+		t.Fatalf("expected installed, got %s: %s", result.Status, result.Msg)
+	}
+
+	entries := SnapshotEntries()
+	if len(entries) != 1 {
+		t.Fatalf("expected 1 snapshot entry, got %d", len(entries))
+	}
+	if entries[0].OriginalPath != dstFile {
+		t.Fatalf("expected original path %s, got %s", dstFile, entries[0].OriginalPath)
+	}
+	if entries[0].Action != "symlinked" {
+		t.Fatalf("expected action symlinked, got %s", entries[0].Action)
+	}
+}
+
+func TestTemplateSymlinkSnapshot(t *testing.T) {
+	dir := t.TempDir()
+	srcDir := filepath.Join(dir, "dotfiles")
+	dstDir := filepath.Join(dir, "home")
+	os.MkdirAll(srcDir, 0755)
+	os.MkdirAll(dstDir, 0755)
+	srcFile := filepath.Join(srcDir, "testfile.tmpl")
+	dstFile := filepath.Join(dstDir, ".testfile")
+	os.WriteFile(srcFile, []byte("hello {{.Name}}"), 0644)
+
+	ResetSnapshots()
+	step := manifest.Step{
+		Type: "template-symlink",
+		From: "testfile.tmpl",
+		To:   dstFile,
+	}
+	vars := map[string]string{"Name": "world"}
+	result := Run(step, srcDir, vars, false)
+	if result.Status != "installed" {
+		t.Fatalf("expected installed, got %s: %s", result.Status, result.Msg)
+	}
+
+	renderedPath := strings.Replace(srcFile, filepath.Ext(srcFile), ".rendered"+filepath.Ext(srcFile), 1)
+	entries := SnapshotEntries()
+	if len(entries) != 2 {
+		t.Fatalf("expected 2 snapshot entries, got %d", len(entries))
+	}
+
+	var renderedFound, symlinkFound bool
+	for _, e := range entries {
+		if e.OriginalPath == renderedPath {
+			renderedFound = true
+		}
+		if e.OriginalPath == dstFile {
+			symlinkFound = true
+		}
+	}
+	if !renderedFound {
+		t.Fatalf("missing rendered file snapshot entry for %s", renderedPath)
+	}
+	if !symlinkFound {
+		t.Fatalf("missing symlink destination snapshot entry for %s", dstFile)
+	}
+}
+
+func TestDryRunNoSnapshots(t *testing.T) {
+	ResetSnapshots()
+	step := manifest.Step{
+		Type: "symlink",
+		From: "testfile",
+		To:   filepath.Join(t.TempDir(), ".testfile"),
+	}
+	result := Run(step, t.TempDir(), nil, true)
+	if result.Status != "would-install" {
+		t.Fatalf("expected would-install, got %s: %s", result.Status, result.Msg)
+	}
+	if len(SnapshotEntries()) != 0 {
+		t.Fatalf("expected no snapshots in dry-run, got %d", len(SnapshotEntries()))
+	}
+}
+
+func TestResetSnapshots(t *testing.T) {
+	dir := t.TempDir()
+	srcDir := filepath.Join(dir, "dotfiles")
+	dstDir := filepath.Join(dir, "home")
+	os.MkdirAll(srcDir, 0755)
+	os.MkdirAll(dstDir, 0755)
+	srcFile := filepath.Join(srcDir, "testfile")
+	dstFile := filepath.Join(dstDir, ".testfile")
+	os.WriteFile(srcFile, []byte("content"), 0644)
+
+	ResetSnapshots()
+	step := manifest.Step{
+		Type: "symlink",
+		From: "testfile",
+		To:   dstFile,
+	}
+	Run(step, srcDir, nil, false)
+	if len(SnapshotEntries()) == 0 {
+		t.Fatal("expected snapshots to be populated")
+	}
+	ResetSnapshots()
+	if len(SnapshotEntries()) != 0 {
+		t.Fatalf("expected snapshots to be cleared, got %d", len(SnapshotEntries()))
+	}
+}
 
 func TestBrewSkip(t *testing.T) {
 	// brew step with skip that checks for "go" binary (should be installed)

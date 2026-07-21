@@ -145,7 +145,9 @@ func execTemplateSymlink(step manifest.Step, dotfilesDir string, vars map[string
 		return Result{Status: "error", Msg: fmt.Sprintf("write rendered %s: %v", renderedPath, err)}
 	}
 
-	if _, err := snapshot.Take(renderedPath, dotfilesDir); err != nil {
+	// generated-file snapshot is non-fatal
+	if entry, _ := snapshot.Take(renderedPath, dotfilesDir); entry != nil {
+		snapshotEntries = append(snapshotEntries, *entry)
 	}
 
 	result, err := symlink.LinkWithResult(renderedPath, dst, dotfilesDir)
