@@ -452,9 +452,6 @@ categories:
           - type: cask
             package: orbstack
             skip: "test -d /Applications/OrbStack.app"
-          - type: symlink
-            from: "config/orbstack/config.json"
-            to: "${HOME}/.orbstack/config"
 
       - name: "Composer"
         description: "PHP package manager"

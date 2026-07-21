@@ -15,11 +15,15 @@ func LinkWithResult(src, dst string) (LinkResult, error) {
 	src = filepath.Clean(src)
 	dst = filepath.Clean(dst)
 	result := LinkResult{}
+
+	if _, err := os.Stat(src); err != nil {
+		return result, fmt.Errorf("source %s does not exist — skipping symlink to %s", src, dst)
+	}
+
 	if existing, err := os.Readlink(dst); err == nil {
 		if existing == src {
 			return result, nil
 		}
-		// Resolve through intermediate symlinks (e.g., ~/.dotfiles -> ~/Documents/repos/dotfiles)
 		resolved, err := filepath.EvalSymlinks(dst)
 		if err == nil && resolved == src {
 			return result, nil
@@ -27,18 +31,17 @@ func LinkWithResult(src, dst string) (LinkResult, error) {
 		target, _ := os.Readlink(dst)
 		return result, fmt.Errorf("%s is already symlinked to %s (not %s) — skipping", dst, target, src)
 	}
-	// Force remove if anything exists at dst (file, dir, or broken symlink)
 	if _, err := os.Lstat(dst); err == nil {
-		if err := os.RemoveAll(dst); err != nil {
-			return result, fmt.Errorf("remove %s: %w", dst, err)
+		backup := dst + ".backup"
+		if err := os.Rename(dst, backup); err != nil {
+			return result, fmt.Errorf("backup %s: %w", dst, err)
 		}
 		result.BackupCreated = true
-		result.BackupPath = dst + ".removed"
+		result.BackupPath = backup
 	}
 	if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
 		return result, err
 	}
-	// Final guard: ensure dst doesn't exist before symlink call
 	os.Remove(dst)
 	return result, os.Symlink(src, dst)
 }
