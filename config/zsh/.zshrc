@@ -166,9 +166,12 @@ for file in ${HOME}/.dotfiles-custom/shell/.{exports,aliases,functions,zshrc}; d
     [ -r "$file" ] && [ -f "$file" ] && source "$file"
 done
 
-# Enable direnv if installed
+# Hook inits
 if command -v direnv &> /dev/null; then
     eval "$(direnv hook zsh)"
+fi
+if command -v pay-respects &> /dev/null; then
+    eval "$(pay-respects zsh --alias)"
 fi
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
@@ -181,7 +184,3 @@ export PATH="/Users/agustin/.local/bin:$PATH"
 export PATH="$HOME/.grok/bin:$PATH"
 # <<< grok installer <<<
 
-# pay-respects (Press F to Pay Respects)
-if command -v pay-respects &> /dev/null; then
-    eval "$(pay-respects zsh --alias)"
-fi

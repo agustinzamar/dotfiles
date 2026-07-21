@@ -288,6 +288,34 @@ categories:
           - type: brew
             package: "pay-respects"
 
+      - name: "tldr"
+        description: "Practical command examples instead of man pages"
+        checked: true
+        steps:
+          - type: brew
+            package: tlrc
+
+      - name: "dust"
+        description: "Visual disk usage tree (du replacement)"
+        checked: true
+        steps:
+          - type: brew
+            package: dust
+
+      - name: "procs"
+        description: "Colorized ps replacement with tree view"
+        checked: true
+        steps:
+          - type: brew
+            package: procs
+
+      - name: "hyperfine"
+        description: "Command benchmarking tool"
+        checked: true
+        steps:
+          - type: brew
+            package: hyperfine
+
   # ── Development ──────────────────────────────────────
   - name: "Development"
     tools:
@@ -439,6 +467,13 @@ categories:
           - type: cask
             package: phpstorm
             skip: "test -d /Applications/PhpStorm.app"
+
+      - name: "Neovim"
+        description: "Modern Vim-based editor"
+        checked: true
+        steps:
+          - type: brew
+            package: neovim
 
   # ── AI Tools ─────────────────────────────────────────
   - name: "AI Tools"
