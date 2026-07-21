@@ -242,6 +242,12 @@ categories:
           - type: symlink
             from: "config/yazi/yazi.toml"
             to: "${HOME}/.config/yazi/yazi.toml"
+          - type: symlink
+            from: "config/yazi/keymap.toml"
+            to: "${HOME}/.config/yazi/keymap.toml"
+          - type: symlink
+            from: "config/yazi/theme.toml"
+            to: "${HOME}/.config/yazi/theme.toml"
 
       - name: "sshpass"
         description: "Non-interactive SSH auth"
@@ -480,12 +486,17 @@ categories:
   - name: "macOS Defaults"
     tools:
       - name: "Finder"
-        description: "Show all extensions, pathbar, full path in title"
+        description: "Show all extensions, pathbar, full path in title, hidden files"
         checked: true
         steps:
           - type: defaults
             domain: com.apple.finder
             key: AppleShowAllExtensions
+            value: "true"
+            valueType: bool
+          - type: defaults
+            domain: com.apple.finder
+            key: AppleShowAllFiles
             value: "true"
             valueType: bool
           - type: defaults
@@ -498,6 +509,9 @@ categories:
             key: _FXShowPosixPathInTitle
             value: "true"
             valueType: bool
+          - type: run
+            command: "killall Finder 2>/dev/null; true"
+            skip: "killall -0 Finder 2>/dev/null || true"
 
       - name: "Dock"
         description: "Autohide, no recents, left position"
@@ -589,3 +603,11 @@ categories:
           - type: cask
             package: finetune
             skip: "test -d /Applications/Finetune.app"
+
+      - name: "Linear Mouse"
+        description: "Customize mouse buttons, speed, and gestures"
+        checked: true
+        steps:
+          - type: cask
+            package: linearmouse
+            skip: "test -d /Applications/LinearMouse.app"

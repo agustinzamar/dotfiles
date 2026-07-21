@@ -11,7 +11,9 @@ alias phpstorm='open -a "PhpStorm.app" "\`pwd\`"'
 # Essentials
 alias cd='z'
 alias cat='bat --paging=never'
-alias catcopy='bat -p --paging=never | pbcopy'
+catcopy() {
+  bat -p --paging=never "$1" | pbcopy
+}
 alias ls='eza -la --icons --group-directories-first'
 alias ll='eza -la --icons --git'
 alias lt='eza --tree --icons'
@@ -41,3 +43,4 @@ alias cda="composer dump-autoload -o"
 alias zshconfig="code ~/.zshrc"
 alias ohmyzsh="code ~/.oh-my-zsh"
 alias opencodeconfig="code ~/.config/opencode/opencode.json"
+alias claudeconfig="code ~/.claude/CLAUDE.md"

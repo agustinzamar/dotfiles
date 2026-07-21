@@ -12,6 +12,11 @@ dotfiles
 # Logs and temp files
 .log
 *.log
+status-cache.json
+
+# Backup files
+*.bak
+*.bak.*
 
 # Plan docs (not configs)
 docs/superpowers/

@@ -1,0 +1,45 @@
+[manager]
+prepend_keymap = [
+  { on = "h", run = "leave", desc = "Go back" },
+  { on = "j", run = "arrow -1", desc = "Move down" },
+  { on = "k", run = "arrow 1", desc = "Move up" },
+  { on = "l", run = "enter", desc = "Enter directory" },
+  { on = "J", run = "arrow -5", desc = "Move down 5" },
+  { on = "K", run = "arrow 5", desc = "Move up 5" },
+  { on = "H", run = "back", desc = "Go to parent" },
+  { on = "L", run = "forward", desc = "Go forward" },
+  { on = "s", run = "search", desc = "Search" },
+  { on = "f", run = "search_fd", desc = "Fd search" },
+  { on = "o", run = "sort", desc = "Toggle sort" },
+  { on = "r", run = "rename", desc = "Rename" },
+  { on = "d", run = "delete", desc = "Delete" },
+  { on = "y", run = "yank", desc = "Yank" },
+  { on = "p", run = "paste", desc = "Paste" },
+  { on = "c", run = "create", desc = "Create" },
+  { on = "~", run = "toggle_hidden", desc = "Toggle hidden" },
+  { on = "z", run = "toggle_zoom", desc = "Zoom" },
+  { on = "q", run = "quit", desc = "Quit" },
+]
+
+[tasks]
+prepend_keymap = [
+  { on = "q", run = "close", desc = "Close tasks" },
+]
+
+[select]
+prepend_keymap = [
+  { on = "v", run = "toggle", desc = "Toggle selection" },
+  { on = "V", run = "toggle_all", desc = "Toggle all" },
+]
+
+[input]
+prepend_keymap = [
+  { on = "esc", run = "close", desc = "Cancel" },
+  { on = "enter", run = "close", desc = "Confirm" },
+]
+
+[help]
+prepend_keymap = [
+  { on = "q", run = "close", desc = "Close help" },
+  { on = "esc", run = "close", desc = "Close help" },
+]

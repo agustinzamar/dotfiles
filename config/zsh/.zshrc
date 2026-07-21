@@ -99,79 +99,24 @@ plugins=(
   fast-syntax-highlighting
 )
 
+# Grok completions (before OMZ compinit)
+fpath=(~/.grok/completions/zsh $fpath)
+
+# Source exports early so OMZ plugins find brewed binaries
+source "${HOME}/.dotfiles-home/.exports"
+
 source $ZSH/oh-my-zsh.sh
 
-# User configuration
+typeset -U path PATH
 
-# export MANPATH="/usr/local/man:$MANPATH"
-
-# You may need to manually set your language environment
-export LANG=en_US.UTF-8
-
-# Preferred editor for local and remote sessions
-if [[ -n $SSH_CONNECTION ]]; then
-  export EDITOR='vim'
-else
-  export EDITOR='nvim'
-fi  
-
-# Compilation flags
-# export ARCHFLAGS="-arch $(uname -m)"
-
-# Set personal aliases, overriding those provided by Oh My Zsh libs,
-# plugins, and themes. Aliases can be placed here, though Oh My Zsh
-# users are encouraged to define aliases within a top-level file in
-# the $ZSH_CUSTOM folder, with .zsh extension. Examples:
-# - $ZSH_CUSTOM/aliases.zsh
-# - $ZSH_CUSTOM/macos.zsh
-# For a full list of active aliases, run `alias`.
-#
-# Example aliases
-alias zshconfig="code ~/.zshrc"
-alias ohmyzsh="code ~/.oh-my-zsh"
-alias opencodeconfig="code ~/.config/opencode/opencode.json"
-
-# Essentials
-alias cd='z'
-alias cat='bat --paging=never'
-alias catcopy='bat -p --paging=never | pbcopy'
-alias ls='eza -la --icons --group-directories-first'
-alias ll='eza -la --icons --git'
-alias lt='eza --tree --icons'
-alias grep='rg'
-alias find='fd'
-alias diff='delta'
-alias top='btm'
-
-# Local Development aliases
-alias ar="php artisan"
-alias pest='./vendor/bin/pest'
-alias pint='./vendor/bin/pint'
-
-# Private SSH aliases in ~/.dotfiles-custom/shell/.aliases
-
-# DBngin MySQL
-export PATH="/usr/local/mysql/bin:$PATH"
-
-# Homebrew
-export PATH="/opt/homebrew/bin:$PATH"
-
-# Created by `pipx` on 2025-12-23 16:11:53
-export PATH="$PATH:$HOME/.local/bin"
-
-# pnpm
-export PNPM_HOME="$HOME/Library/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME:"*) ;;
-  *) export PATH="$PNPM_HOME:$PATH" ;;
-esac
-# pnpm end
+# Tool-specific PATH and environment
 
 export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"
 
 # Herd injected NVM configuration
 export NVM_DIR="$HOME/Library/Application Support/Herd/config/nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
 
 [[ -f "/Applications/Herd.app/Contents/Resources/config/shell/zshrc.zsh" ]] && builtin source "/Applications/Herd.app/Contents/Resources/config/shell/zshrc.zsh"
 
@@ -213,10 +158,8 @@ fi
 
 # === Added by dotfiles ===
 
-# Load custom shell files from dotfiles
-for file in ${HOME}/.dotfiles-home/.{exports,aliases,functions}; do
-    [ -r "$file" ] && [ -f "$file" ] && source "$file"
-done
+source "${HOME}/.dotfiles-home/.aliases"
+source "${HOME}/.dotfiles-home/.functions"
 
 # Load private custom configs (not committed)
 for file in ${HOME}/.dotfiles-custom/shell/.{exports,aliases,functions,zshrc}; do
@@ -230,3 +173,10 @@ fi
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+# Added by Antigravity CLI installer
+export PATH="/Users/agustin/.local/bin:$PATH"
+
+# >>> grok installer >>>
+export PATH="$HOME/.grok/bin:$PATH"
+# <<< grok installer <<<
