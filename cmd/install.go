@@ -15,6 +15,7 @@ import (
 
 var allFlag bool
 var allDryRun bool
+var profileFlag string
 
 var installCmd = &cobra.Command{
 	Use:   "install",
@@ -27,7 +28,7 @@ var installCmd = &cobra.Command{
 		if allFlag || allDryRun {
 			return installAll(m)
 		}
-		p := tea.NewProgram(tui.NewModel(m), tea.WithAltScreen())
+		p := tea.NewProgram(tui.NewModel(m, profileFlag), tea.WithAltScreen())
 		_, err = p.Run()
 		return err
 	},
@@ -37,6 +38,7 @@ func init() {
 	rootCmd.AddCommand(installCmd)
 	installCmd.Flags().BoolVar(&allFlag, "all", false, "Install all tools without TUI prompt")
 	installCmd.Flags().BoolVar(&allDryRun, "dry-run", false, "Preview what would be installed without making changes")
+	installCmd.Flags().StringVar(&profileFlag, "profile", "", "Profile to filter tools (e.g. personal, work)")
 }
 
 func installAll(m *manifest.Manifest) error {
@@ -45,6 +47,9 @@ func installAll(m *manifest.Manifest) error {
 	for _, cat := range m.Categories {
 		fmt.Fprintf(os.Stderr, "\n%s\n", cat.Name)
 		for _, t := range cat.Tools {
+			if profileFlag != "" && !t.MatchesProfile(profileFlag) {
+				continue
+			}
 			for _, step := range t.Steps {
 				if step.Type == "template-symlink" {
 					config.PromptMissing(step.Vars)

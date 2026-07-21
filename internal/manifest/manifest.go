@@ -25,11 +25,24 @@ type Category struct {
 }
 
 type Tool struct {
-	Category    string `yaml:"-"`
-	Name        string `yaml:"name"`
-	Description string `yaml:"description"`
-	Checked     bool   `yaml:"checked"`
-	Steps       []Step `yaml:"steps"`
+	Category    string   `yaml:"-"`
+	Name        string   `yaml:"name"`
+	Description string   `yaml:"description"`
+	Checked     bool     `yaml:"checked"`
+	Profiles    []string `yaml:"profiles,omitempty"`
+	Steps       []Step   `yaml:"steps"`
+}
+
+func (t Tool) MatchesProfile(profile string) bool {
+	if len(t.Profiles) == 0 {
+		return true
+	}
+	for _, p := range t.Profiles {
+		if p == profile {
+			return true
+		}
+	}
+	return false
 }
 
 type Step struct {

@@ -97,19 +97,117 @@ categories:
           - type: omz-plugin
             repo: "https://github.com/zdharma-continuum/fast-syntax-highlighting"
 
-      - name: "Shell Aliases & Functions"
-        description: "Custom aliases and shell functions"
+      - name: "Exports"
+        description: "PATH, editor, and environment variables"
         checked: true
         steps:
           - type: symlink
-            from: "home/.aliases"
-            to: "${HOME}/.dotfiles-home/.aliases"
-          - type: symlink
-            from: "home/.functions"
-            to: "${HOME}/.dotfiles-home/.functions"
-          - type: symlink
             from: "home/.exports"
             to: "${HOME}/.dotfiles-home/.exports"
+
+  # ── Aliases & Functions ───────────────────────────────
+  - name: "Aliases & Functions"
+    tools:
+      - name: "Aliases: System"
+        description: "sudo, flushdns, showfiles, ports, mysqlroot"
+        checked: true
+        steps:
+          - type: symlink
+            from: "home/aliases/system.zsh"
+            to: "${HOME}/.dotfiles-home/aliases/system.zsh"
+
+      - name: "Aliases: Essentials"
+        description: "cd, cat/bat, ls/eza aliases, catcopy"
+        checked: true
+        steps:
+          - type: symlink
+            from: "home/aliases/essentials.zsh"
+            to: "${HOME}/.dotfiles-home/aliases/essentials.zsh"
+
+      - name: "Aliases: Git"
+        description: "nah, push, pull, uncommit, branches, gecor"
+        checked: true
+        steps:
+          - type: symlink
+            from: "home/aliases/git.zsh"
+            to: "${HOME}/.dotfiles-home/aliases/git.zsh"
+
+      - name: "Aliases: Laravel"
+        description: "artisan, migrate:fresh --seed, pest, pint"
+        checked: true
+        profiles: ["personal"]
+        steps:
+          - type: symlink
+            from: "home/aliases/laravel.zsh"
+            to: "${HOME}/.dotfiles-home/aliases/laravel.zsh"
+
+      - name: "Aliases: Composer"
+        description: "composer update, require, install, dump-autoload"
+        checked: true
+        profiles: ["personal"]
+        steps:
+          - type: symlink
+            from: "home/aliases/composer.zsh"
+            to: "${HOME}/.dotfiles-home/aliases/composer.zsh"
+
+      - name: "Aliases: Editors"
+        description: "PhpStorm launcher"
+        checked: true
+        steps:
+          - type: symlink
+            from: "home/aliases/editors.zsh"
+            to: "${HOME}/.dotfiles-home/aliases/editors.zsh"
+
+      - name: "Aliases: Config"
+        description: "zshconfig, ohmyzsh, opencodeconfig, claudeconfig"
+        checked: true
+        steps:
+          - type: symlink
+            from: "home/aliases/config.zsh"
+            to: "${HOME}/.dotfiles-home/aliases/config.zsh"
+
+      - name: "Functions: Git"
+        description: "ghopen, clone, pr, git-prune-local"
+        checked: true
+        steps:
+          - type: symlink
+            from: "home/functions/git.zsh"
+            to: "${HOME}/.dotfiles-home/functions/git.zsh"
+
+      - name: "Functions: Util"
+        description: "mkd, digga, killport, disablesleep-*"
+        checked: true
+        steps:
+          - type: symlink
+            from: "home/functions/util.zsh"
+            to: "${HOME}/.dotfiles-home/functions/util.zsh"
+
+      - name: "Functions: Laravel"
+        description: "p, pestf, pestp"
+        checked: true
+        profiles: ["personal"]
+        steps:
+          - type: symlink
+            from: "home/functions/laravel.zsh"
+            to: "${HOME}/.dotfiles-home/functions/laravel.zsh"
+
+      - name: "Functions: Docker"
+        description: "dsh (docker exec into fzf-selected container)"
+        checked: true
+        profiles: ["personal"]
+        steps:
+          - type: symlink
+            from: "home/functions/docker.zsh"
+            to: "${HOME}/.dotfiles-home/functions/docker.zsh"
+
+      - name: "Functions: MySQL"
+        description: "dbdump, laradump"
+        checked: true
+        profiles: ["personal"]
+        steps:
+          - type: symlink
+            from: "home/functions/mysql.zsh"
+            to: "${HOME}/.dotfiles-home/functions/mysql.zsh"
 
   # ── Terminal ──────────────────────────────────────────
   - name: "Terminal"
@@ -322,6 +420,7 @@ categories:
       - name: "Herd"
         description: "Laravel dev environment"
         checked: true
+        profiles: ["personal"]
         steps:
           - type: cask
             package: herd
@@ -340,6 +439,7 @@ categories:
       - name: "DBngin"
         description: "Database manager"
         checked: true
+        profiles: ["personal"]
         steps:
           - type: cask
             package: dbngin
@@ -359,6 +459,7 @@ categories:
       - name: "Composer"
         description: "PHP package manager"
         checked: true
+        profiles: ["personal"]
         steps:
           - type: brew
             package: composer
@@ -366,6 +467,7 @@ categories:
       - name: "mysql-to-sqlite3"
         description: "MySQL to SQLite converter"
         checked: true
+        profiles: ["personal"]
         steps:
           - type: brew
             package: mysql-to-sqlite3

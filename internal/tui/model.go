@@ -63,13 +63,17 @@ type stepQueueItem struct {
 	step     manifest.Step
 }
 
-func NewModel(m *manifest.Manifest) tea.Model {
+func NewModel(m *manifest.Manifest, profile string) tea.Model {
 	manifestRef = m
 	vars := config.GetVars()
 	toolsByTab := make([][]toolItem, len(m.Categories))
 	for i, cat := range m.Categories {
 		for _, t := range cat.Tools {
-			toolsByTab[i] = append(toolsByTab[i], toolItem{tool: t, checked: t.Checked})
+			checked := t.Checked
+			if profile != "" && !t.MatchesProfile(profile) {
+				checked = false
+			}
+			toolsByTab[i] = append(toolsByTab[i], toolItem{tool: t, checked: checked})
 		}
 	}
 	s := spinner.New()
