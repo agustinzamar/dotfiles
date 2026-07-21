@@ -382,9 +382,9 @@ categories:
         checked: true
         steps:
           - type: tap
-            repo: "timescam/homebrew-tap"
+            repo: "timescam/tap"
           - type: brew
-            package: "pay-respects"
+            package: "timescam/tap/pay-respects"
 
       - name: "tldr"
         description: "Practical command examples instead of man pages"

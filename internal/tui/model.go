@@ -21,6 +21,7 @@ type state int
 const (
 	stateSelecting state = iota
 	statePrompting
+	stateConfirm
 	stateInstalling
 	stateDone
 )
@@ -145,6 +146,9 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			case "enter":
 				m.startPrompting()
+				if m.state == stateConfirm {
+					return m, nil
+				}
 				if m.state == stateInstalling {
 					return m, tea.Batch(m.spinner.Tick, installNextStep(m))
 				}
@@ -161,8 +165,8 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				config.SaveVars(m.vars)
 				m.promptIndex++
 				if m.promptIndex >= len(m.promptVars) {
-					m.state = stateInstalling
-					return m, tea.Batch(m.spinner.Tick, installNextStep(m))
+					m.state = stateConfirm
+					return m, nil
 				}
 				m.textInput.SetValue("")
 				m.textInput.Focus()
@@ -173,6 +177,19 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				var cmd tea.Cmd
 				m.textInput, cmd = m.textInput.Update(msg)
 				return m, cmd
+			}
+		}
+
+		if m.state == stateConfirm {
+			switch msg.String() {
+			case "enter":
+				m.state = stateInstalling
+				return m, tea.Batch(m.spinner.Tick, installNextStep(m))
+			case "esc":
+				m.state = stateSelecting
+				return m, nil
+			case "ctrl+c":
+				return m, tea.Quit
 			}
 		}
 
@@ -207,6 +224,11 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, nil
 }
 
+func (m *model) Messages() []string { return m.messages }
+func (m *model) Installed() int     { return m.installed }
+func (m *model) Skipped() int       { return m.skipped }
+func (m *model) Errors() int        { return m.errors }
+
 func (m *model) flatItems() []toolItem {
 	var items []toolItem
 	for _, tab := range m.toolsByTab {
@@ -221,10 +243,37 @@ func (m *model) View() string {
 		return m.selectionView()
 	case statePrompting:
 		return m.promptingView()
+	case stateConfirm:
+		return m.confirmView()
 	case stateInstalling, stateDone:
 		return m.installingView()
 	}
 	return ""
+}
+
+func (m *model) confirmView() string {
+	var b strings.Builder
+	b.WriteString(TitleStyle.Render("Confirm Installation"))
+	b.WriteString("\n\n")
+
+	checked, total := m.checkedCount()
+	b.WriteString(fmt.Sprintf("  %d of %d tools checked\n\n", checked, total))
+
+	for i, cat := range m.categories {
+		catChecked := 0
+		for _, item := range m.toolsByTab[i] {
+			if item.checked {
+				catChecked++
+			}
+		}
+		if catChecked > 0 {
+			b.WriteString(fmt.Sprintf("  %s (%d tools)\n", cat.Name, catChecked))
+		}
+	}
+
+	b.WriteString("\n")
+	b.WriteString(HelpStyle.Render("Enter  install  |  Esc  go back  |  Ctrl+C  quit"))
+	return b.String()
 }
 
 func (m *model) selectionView() string {
@@ -277,6 +326,7 @@ func (m *model) selectionView() string {
 
 	_, total := m.checkedCount()
 	b.WriteString(fmt.Sprintf("\n%s", HelpStyle.Render(fmt.Sprintf("%d checked across all categories. Press Enter to install.", total))))
+	b.WriteString(fmt.Sprintf("\n%s", HelpStyle.Render("Hint: use --profile work to auto-uncheck personal tools")))
 
 	return b.String()
 }
@@ -326,9 +376,11 @@ func (m *model) installingView() string {
 		b.WriteString("\n")
 		if m.errors > 0 {
 			b.WriteString(fmt.Sprintf("  %s %d errors", ErrorStyle.Render("\u2717"), m.errors))
+			b.WriteString(fmt.Sprintf("\n  %s", HelpStyle.Render("see errors: head -20 ~/.dotfiles/.log | grep \\[error\\]")))
 		} else {
 			b.WriteString(fmt.Sprintf("  %s 0 errors", SuccessStyle.Render("\u2713")))
 		}
+		b.WriteString(fmt.Sprintf("\n  %s", HelpStyle.Render("full log: ~/.dotfiles/.log")))
 		b.WriteString("\n\n")
 		b.WriteString(HelpStyle.Render("Press q or Enter to exit."))
 	}
@@ -365,7 +417,7 @@ func (m *model) startPrompting() {
 	m.totalSteps = len(queue)
 	if len(vars) == 0 {
 		m.vars = config.GetVars()
-		m.state = stateInstalling
+		m.state = stateConfirm
 		return
 	}
 	m.promptVars = vars

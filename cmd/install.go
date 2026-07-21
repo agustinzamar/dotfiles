@@ -28,7 +28,7 @@ var installCmd = &cobra.Command{
 		if allFlag || allDryRun {
 			return installAll(m)
 		}
-		p := tea.NewProgram(tui.NewModel(m, profileFlag), tea.WithAltScreen())
+		p := tea.NewProgram(tui.NewModel(m, profileFlag))
 		_, err = p.Run()
 		return err
 	},
