@@ -5,10 +5,12 @@ import (
 	"os"
 
 	"github.com/agustinzamar/dotfiles/internal/manifest"
+	"github.com/agustinzamar/dotfiles/internal/snapshot"
 	"github.com/spf13/cobra"
 )
 
 var cleanupDryRun bool
+var cleanupSnapshots bool
 
 var cleanupCmd = &cobra.Command{
 	Use:   "cleanup",
@@ -44,6 +46,24 @@ var cleanupCmd = &cobra.Command{
 			}
 		}
 
+		if cleanupSnapshots {
+			dotfilesDir := manifest.DotfilesDir()
+			if cleanupDryRun {
+				list, _ := snapshot.ListSnapshots(dotfilesDir)
+				if len(list) > 5 {
+					fmt.Printf("Would prune %d old snapshots\n", len(list)-5)
+					for _, ts := range list[5:] {
+						fmt.Printf("  would remove snapshot %s\n", ts)
+					}
+				}
+			} else {
+				if err := snapshot.PruneSnapshots(dotfilesDir, 5); err != nil {
+					fmt.Fprintf(os.Stderr, "Error pruning snapshots: %v\n", err)
+				}
+				fmt.Println("Snapshots pruned (keeping last 5)")
+			}
+		}
+
 		if removed == 0 {
 			fmt.Println("No backup files found.")
 		} else {
@@ -60,4 +80,5 @@ var cleanupCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(cleanupCmd)
 	cleanupCmd.Flags().BoolVar(&cleanupDryRun, "dry-run", false, "Preview without removing")
+	cleanupCmd.Flags().BoolVar(&cleanupSnapshots, "snapshots", false, "Prune old snapshots (keep last 5)")
 }
