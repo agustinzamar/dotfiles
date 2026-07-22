@@ -1,0 +1,7 @@
+categories:
+  - name: "Test"
+    tools:
+      - name: "Valid Tool"
+        steps:
+          - type: brew
+            package: go

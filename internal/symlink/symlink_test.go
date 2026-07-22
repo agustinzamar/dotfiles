@@ -57,7 +57,7 @@ func TestLink_BackupExistingFile(t *testing.T) {
 	}
 }
 
-func TestLink_WrongSymlinkError(t *testing.T) {
+func TestLink_WrongSymlinkRepaired(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "src")
 	dst := filepath.Join(dir, "dst")
@@ -66,8 +66,46 @@ func TestLink_WrongSymlinkError(t *testing.T) {
 	os.WriteFile(other, []byte("other"), 0644)
 	os.Symlink(other, dst)
 
-	if err := Link(src, dst); err == nil {
-		t.Fatal("expected error for wrong symlink target")
+	if err := Link(src, dst); err != nil {
+		t.Fatalf("expected Link to repair wrong symlink, got error: %v", err)
+	}
+
+	linkTarget, err := os.Readlink(dst)
+	if err != nil {
+		t.Fatalf("Readlink failed: %v", err)
+	}
+	if linkTarget != src {
+		t.Fatalf("expected %q, got %q", src, linkTarget)
+	}
+}
+
+func TestLinkWithResult_WrongSymlinkWithDotfilesDir(t *testing.T) {
+	dotDir := t.TempDir()
+	homeDir := t.TempDir()
+	src := filepath.Join(dotDir, "src")
+	dst := filepath.Join(homeDir, "dst")
+	other := filepath.Join(homeDir, "other")
+	os.WriteFile(src, []byte("content"), 0644)
+	os.WriteFile(other, []byte("other"), 0644)
+	os.Symlink(other, dst)
+
+	result, err := LinkWithResult(src, dst, dotDir)
+	if err != nil {
+		t.Fatalf("expected repair to succeed, got error: %v", err)
+	}
+	if result.BackupCreated {
+		t.Fatal("expected no backup for symlink repair")
+	}
+	if result.SnapshotEntry != nil {
+		t.Fatalf("expected no snapshot entry for wrong-target symlink repair, got %v", result.SnapshotEntry)
+	}
+
+	linkTarget, err := os.Readlink(dst)
+	if err != nil {
+		t.Fatalf("Readlink failed: %v", err)
+	}
+	if linkTarget != src {
+		t.Fatalf("symlink was not repaired: got %q, want %q", linkTarget, src)
 	}
 }
 

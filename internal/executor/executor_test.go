@@ -358,3 +358,17 @@ func TestDefaultsSkip(t *testing.T) {
 		t.Fatalf("expected skipped or installed, got %s: %s", result.Status, result.Msg)
 	}
 }
+
+func TestDefaultsExecuteBool(t *testing.T) {
+	step := manifest.Step{
+		Type:      "defaults",
+		Domain:    "com.apple.dock",
+		Key:       "autohide",
+		Value:     "true",
+		ValueType: "bool",
+	}
+	result := execDefaults(step, func(s string) string { return s })
+	if result.Status != "skipped" && result.Status != "installed" {
+		t.Fatalf("expected skipped or installed, got %s: %s", result.Status, result.Msg)
+	}
+}

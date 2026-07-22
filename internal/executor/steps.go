@@ -214,6 +214,14 @@ func execDefaults(step manifest.Step, expand func(string) string) Result {
 	out, err := exec.Command("defaults", "read", domain, key).Output()
 	if err == nil {
 		current := strings.TrimSpace(string(out))
+		if step.ValueType == "bool" {
+			switch current {
+			case "1":
+				current = "true"
+			case "0":
+				current = "false"
+			}
+		}
 		if current == value {
 			return Result{Status: "skipped", Msg: domain + " " + key + " already set"}
 		}

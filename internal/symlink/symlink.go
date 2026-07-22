@@ -42,16 +42,18 @@ func LinkWithResult(src, dst string, dotfilesDir string) (LinkResult, error) {
 	var snapEntry *snapshot.Entry
 	backupCreated := false
 	var backupPath string
+	repaired := false
 
 	currentTarget, err := os.Readlink(absDst)
 	if err == nil {
 		if currentTarget == absSrc {
 			return LinkResult{SnapshotEntry: &snapshot.Entry{OriginalPath: absDst, Action: "skipped"}}, nil
 		}
-		return LinkResult{}, fmt.Errorf("symlink %s already points to %s, not %s", absDst, currentTarget, absSrc)
-	}
-
-	if _, statErr := os.Stat(absDst); statErr == nil {
+		if rerr := os.Remove(absDst); rerr != nil && !os.IsNotExist(rerr) {
+			return LinkResult{}, fmt.Errorf("remove old symlink: %w", rerr)
+		}
+		repaired = true
+	} else if _, statErr := os.Stat(absDst); statErr == nil {
 		if dotfilesDir != "" {
 			entry, snapErr := snapshot.Take(absDst, dotfilesDir)
 			if snapErr != nil {
@@ -79,10 +81,12 @@ func LinkWithResult(src, dst string, dotfilesDir string) (LinkResult, error) {
 		return LinkResult{}, fmt.Errorf("symlink: %w", err)
 	}
 
-	if snapEntry == nil {
+	if snapEntry == nil && !repaired {
 		snapEntry = &snapshot.Entry{OriginalPath: absDst, Action: "created"}
 	}
-	snapEntry.Action = "symlinked"
+	if snapEntry != nil {
+		snapEntry.Action = "symlinked"
+	}
 
 	return LinkResult{
 		BackupCreated: backupCreated,

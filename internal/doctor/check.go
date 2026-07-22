@@ -128,6 +128,14 @@ func checkDefaults(step manifest.Step, expand func(string) string) Result {
 		return Result{Status: "missing", Msg: step.Domain + " " + step.Key + " not set"}
 	}
 	current := strings.TrimSpace(string(out))
+	if step.ValueType == "bool" {
+		switch current {
+		case "1":
+			current = "true"
+		case "0":
+			current = "false"
+		}
+	}
 	expected := expand(step.Value)
 	if current == expected {
 		return Result{Status: "ok", Msg: step.Domain + " " + step.Key}
