@@ -41,8 +41,8 @@ categories:
             command: 'for key in ${HOME}/.ssh/id_*; do case "$key" in *.pub|*.revoked) continue ;; esac; ssh-add --apple-use-keychain "$key" 2>/dev/null; done'
             skip: "ssh-add -l | grep -q ."
 
-  # ── Shell ─────────────────────────────────────────────
-  - name: "Shell"
+  # ── Shell Framework ───────────────────────────────────
+  - name: "Shell Framework"
     tools:
       - name: "Oh My Zsh"
         description: "Zsh framework"
@@ -76,6 +76,24 @@ categories:
             from: "config/p10k/.p10k.zsh"
             to: "${HOME}/.p10k.zsh"
 
+      - name: "Exports"
+        description: "PATH, editor, and environment variables"
+        checked: true
+        steps:
+          - type: symlink
+            from: "home/.exports"
+            to: "${HOME}/.dotfiles-home/.exports"
+
+      - name: "bash"
+        description: "Modern Bourne-Again Shell"
+        checked: true
+        steps:
+          - type: brew
+            package: bash
+
+  # ── Zsh Plugins ───────────────────────────────────────
+  - name: "Zsh Plugins"
+    tools:
       - name: "zsh-autosuggestions"
         description: "Fish-like autosuggestions"
         checked: true
@@ -97,23 +115,50 @@ categories:
           - type: omz-plugin
             repo: "https://github.com/zdharma-continuum/fast-syntax-highlighting"
 
-      - name: "bash"
-        description: "Modern Bourne-Again Shell"
+  # ── Terminal ──────────────────────────────────────────
+  - name: "Terminal"
+    tools:
+      - name: "Ghostty"
+        description: "Terminal emulator"
+        checked: true
+        steps:
+          - type: cask
+            package: ghostty
+          - type: symlink
+            from: "config/ghostty/config"
+            to: "${HOME}/.config/ghostty/config"
+
+      - name: "Muxy"
+        description: "Terminal multiplexer"
+        checked: true
+        steps:
+          - type: tap
+            repo: "muxy-app/tap"
+          - type: cask
+            package: "muxy-app/tap/muxy"
+            skip: "test -d /Applications/Muxy.app"
+          - type: symlink
+            from: "config/muxy/conf.hjson"
+            to: "${HOME}/.config/muxy/conf.hjson"
+          - type: symlink
+            from: "config/muxy/verbs.hjson"
+            to: "${HOME}/.config/muxy/verbs.hjson"
+          - type: symlink
+            from: "config/ghostty/config"
+            to: "${HOME}/Library/Application Support/Muxy/ghostty.conf"
+
+      - name: "tmux"
+        description: "Terminal multiplexer"
         checked: true
         steps:
           - type: brew
-            package: bash
-
-      - name: "Exports"
-        description: "PATH, editor, and environment variables"
-        checked: true
-        steps:
+            package: tmux
           - type: symlink
-            from: "home/.exports"
-            to: "${HOME}/.dotfiles-home/.exports"
+            from: "config/tmux/tmux.conf"
+            to: "${HOME}/.config/tmux/tmux.conf"
 
-  # ── Aliases & Functions ───────────────────────────────
-  - name: "Aliases & Functions"
+  # ── Aliases ──────────────────────────────────────────
+  - name: "Aliases"
     tools:
       - name: "Aliases: System"
         description: "sudo, flushdns, showfiles, ports, mysqlroot"
@@ -173,6 +218,9 @@ categories:
             from: "home/aliases/config.zsh"
             to: "${HOME}/.dotfiles-home/aliases/config.zsh"
 
+  # ── Functions ────────────────────────────────────────
+  - name: "Functions"
+    tools:
       - name: "Functions: Git"
         description: "ghopen, clone, pr, git-prune-local"
         checked: true
@@ -216,50 +264,8 @@ categories:
             from: "home/functions/mysql.zsh"
             to: "${HOME}/.dotfiles-home/functions/mysql.zsh"
 
-  # ── Terminal ──────────────────────────────────────────
-  - name: "Terminal"
-    tools:
-      - name: "Ghostty"
-        description: "Terminal emulator"
-        checked: true
-        steps:
-          - type: cask
-            package: ghostty
-          - type: symlink
-            from: "config/ghostty/config"
-            to: "${HOME}/.config/ghostty/config"
-
-      - name: "Muxy"
-        description: "Terminal multiplexer"
-        checked: true
-        steps:
-          - type: tap
-            repo: "muxy-app/tap"
-          - type: cask
-            package: "muxy-app/tap/muxy"
-            skip: "test -d /Applications/Muxy.app"
-          - type: symlink
-            from: "config/muxy/conf.hjson"
-            to: "${HOME}/.config/muxy/conf.hjson"
-          - type: symlink
-            from: "config/muxy/verbs.hjson"
-            to: "${HOME}/.config/muxy/verbs.hjson"
-          - type: symlink
-            from: "config/ghostty/config"
-            to: "${HOME}/Library/Application Support/Muxy/ghostty.conf"
-
-      - name: "tmux"
-        description: "Terminal multiplexer"
-        checked: true
-        steps:
-          - type: brew
-            package: tmux
-          - type: symlink
-            from: "config/tmux/tmux.conf"
-            to: "${HOME}/.config/tmux/tmux.conf"
-
-  # ── CLI Tools ────────────────────────────────────────
-  - name: "CLI Tools"
+  # ── File & Text Tools ────────────────────────────────
+  - name: "File & Text Tools"
     tools:
       - name: "bat"
         description: "cat with syntax highlighting"
@@ -275,23 +281,6 @@ categories:
           - type: brew
             package: eza
 
-      - name: "fzf"
-        description: "Fuzzy finder"
-        checked: true
-        steps:
-          - type: brew
-            package: fzf
-          - type: run
-            command: "$(brew --prefix)/opt/fzf/install --all --no-bash --no-fish"
-            skip: "test -f ${HOME}/.fzf.zsh"
-
-      - name: "zoxide"
-        description: "Smarter cd"
-        checked: true
-        steps:
-          - type: brew
-            package: zoxide
-
       - name: "ripgrep"
         description: "Fast grep"
         checked: true
@@ -305,6 +294,20 @@ categories:
         steps:
           - type: brew
             package: fd
+
+      - name: "dust"
+        description: "Visual disk usage tree (du replacement)"
+        checked: true
+        steps:
+          - type: brew
+            package: dust
+
+      - name: "procs"
+        description: "Colorized ps replacement with tree view"
+        checked: true
+        steps:
+          - type: brew
+            package: procs
 
       - name: "git-delta"
         description: "Better git diffs"
@@ -327,26 +330,40 @@ categories:
           - type: brew
             package: yq
 
-      - name: "bottom (btm)"
-        description: "System monitor"
+  # ── Navigation & Help ────────────────────────────────
+  - name: "Navigation & Help"
+    tools:
+      - name: "fzf"
+        description: "Fuzzy finder"
         checked: true
         steps:
           - type: brew
-            package: bottom
+            package: fzf
+          - type: run
+            command: "$(brew --prefix)/opt/fzf/install --all --no-bash --no-fish"
+            skip: "test -f ${HOME}/.fzf.zsh"
 
-      - name: "direnv"
-        description: "Per-directory env vars"
+      - name: "zoxide"
+        description: "Smarter cd"
         checked: true
         steps:
           - type: brew
-            package: direnv
+            package: zoxide
 
-      - name: "unar"
-        description: "Multi-format unarchiver"
+      - name: "tldr"
+        description: "Practical command examples instead of man pages"
         checked: true
         steps:
           - type: brew
-            package: unar
+            package: tlrc
+
+      - name: "opentmux"
+        description: "tmux session manager wrapper"
+        checked: true
+        steps:
+          - type: run
+            command: "npm install -g opentmux"
+            skip: "which opentmux"
 
       - name: "yazi"
         description: "Terminal file manager"
@@ -364,19 +381,46 @@ categories:
             from: "config/yazi/theme.toml"
             to: "${HOME}/.config/yazi/theme.toml"
 
-      - name: "sshpass"
-        description: "Non-interactive SSH auth"
+  # ── System Diagnostics ───────────────────────────────
+  - name: "System Diagnostics"
+    tools:
+      - name: "bottom (btm)"
+        description: "System monitor"
         checked: true
         steps:
           - type: brew
-            package: sshpass
+            package: bottom
 
+      - name: "hyperfine"
+        description: "Command benchmarking tool"
+        checked: true
+        steps:
+          - type: brew
+            package: hyperfine
+
+      - name: "mole"
+        description: "SSH tunneling CLI tool"
+        checked: true
+        steps:
+          - type: brew
+            package: mole
+
+  # ── Media & Downloads ────────────────────────────────
+  - name: "Media & Downloads"
+    tools:
       - name: "ffmpeg"
         description: "Audio/video converter"
         checked: true
         steps:
           - type: brew
             package: ffmpeg
+
+      - name: "unar"
+        description: "Multi-format unarchiver"
+        checked: true
+        steps:
+          - type: brew
+            package: unar
 
       - name: "Castor"
         description: "Stream web video to your TV via DLNA/Chromecast"
@@ -394,6 +438,16 @@ categories:
             command: "npm install -g yoinks"
             skip: "which yoinks"
 
+  # ── Dev CLI Utilities ───────────────────────────────
+  - name: "Dev CLI Utilities"
+    tools:
+      - name: "direnv"
+        description: "Per-directory env vars"
+        checked: true
+        steps:
+          - type: brew
+            package: direnv
+
       - name: "pay-respects"
         description: "Command suggestions and typo fixer (thefuck replacement)"
         checked: true
@@ -403,34 +457,6 @@ categories:
           - type: brew
             package: "timescam/tap/pay-respects"
 
-      - name: "tldr"
-        description: "Practical command examples instead of man pages"
-        checked: true
-        steps:
-          - type: brew
-            package: tlrc
-
-      - name: "dust"
-        description: "Visual disk usage tree (du replacement)"
-        checked: true
-        steps:
-          - type: brew
-            package: dust
-
-      - name: "procs"
-        description: "Colorized ps replacement with tree view"
-        checked: true
-        steps:
-          - type: brew
-            package: procs
-
-      - name: "hyperfine"
-        description: "Command benchmarking tool"
-        checked: true
-        steps:
-          - type: brew
-            package: hyperfine
-
       - name: "MySQL Client"
         description: "MySQL database CLI"
         checked: true
@@ -438,44 +464,16 @@ categories:
           - type: brew
             package: mysql-client
 
-      - name: "mole"
-        description: "SSH tunneling CLI tool"
+      - name: "sshpass"
+        description: "Non-interactive SSH auth"
         checked: true
         steps:
           - type: brew
-            package: mole
+            package: sshpass
 
-      - name: "opentmux"
-        description: "tmux session manager wrapper"
-        checked: true
-        steps:
-          - type: run
-            command: "npm install -g opentmux"
-            skip: "which opentmux"
-
-      - name: "rendercv"
-        description: "LaTeX-based CV/resume renderer"
-        checked: true
-        steps:
-          - type: run
-            command: "pipx install rendercv"
-            skip: "which rendercv"
-
-  # ── Development ──────────────────────────────────────
-  - name: "Development"
+  # ── Language Runtimes ────────────────────────────────
+  - name: "Language Runtimes"
     tools:
-      - name: "Herd"
-        description: "Laravel dev environment"
-        checked: true
-        profiles: ["personal"]
-        steps:
-          - type: cask
-            package: herd
-            skip: "test -d /Applications/Herd.app"
-          - type: symlink
-            from: "config/herd/herd.json"
-            to: "${HOME}/Library/Application Support/Herd/config/herd.json"
-
       - name: "nvm"
         description: "Node version manager (used by Herd)"
         checked: true
@@ -483,22 +481,12 @@ categories:
           - type: brew
             package: nvm
 
-      - name: "DBngin"
-        description: "Database manager"
-        checked: true
-        profiles: ["personal"]
-        steps:
-          - type: cask
-            package: dbngin
-            skip: "test -d /Applications/DBngin.app"
-
-      - name: "OrbStack"
-        description: "Docker & Linux VMs"
+      - name: "Go"
+        description: "Go programming language"
         checked: true
         steps:
-          - type: cask
-            package: orbstack
-            skip: "test -d /Applications/OrbStack.app"
+          - type: brew
+            package: go
 
       - name: "Composer"
         description: "PHP package manager"
@@ -507,6 +495,25 @@ categories:
         steps:
           - type: brew
             package: composer
+
+      - name: "pipx"
+        description: "Python package runner"
+        checked: true
+        steps:
+          - type: brew
+            package: pipx
+
+  # ── Databases ────────────────────────────────────────
+  - name: "Databases"
+    tools:
+      - name: "DBngin"
+        description: "Database manager"
+        checked: true
+        profiles: ["personal"]
+        steps:
+          - type: cask
+            package: dbngin
+            skip: "test -d /Applications/DBngin.app"
 
       - name: "mysql-to-sqlite3"
         description: "MySQL to SQLite converter"
@@ -523,19 +530,28 @@ categories:
           - type: brew
             package: sqlite
 
-      - name: "pipx"
-        description: "Python package runner"
+  # ── Dev Environment ──────────────────────────────────
+  - name: "Dev Environment"
+    tools:
+      - name: "Herd"
+        description: "Laravel dev environment"
         checked: true
+        profiles: ["personal"]
         steps:
-          - type: brew
-            package: pipx
+          - type: cask
+            package: herd
+            skip: "test -d /Applications/Herd.app"
+          - type: symlink
+            from: "config/herd/herd.json"
+            to: "${HOME}/Library/Application Support/Herd/config/herd.json"
 
-      - name: "Go"
-        description: "Go programming language"
+      - name: "OrbStack"
+        description: "Docker & Linux VMs"
         checked: true
         steps:
-          - type: brew
-            package: go
+          - type: cask
+            package: orbstack
+            skip: "test -d /Applications/OrbStack.app"
 
       - name: "Global .npmrc"
         description: "npm configuration"
@@ -691,6 +707,93 @@ categories:
             package: openusage
             skip: "test -d /Applications/OpenUsage.app"
 
+  # ── Productivity ────────────────────────────────────
+  - name: "Productivity"
+    tools:
+      - name: "mackup"
+        description: "Backup app configs to cloud storage"
+        checked: true
+        steps:
+          - type: brew
+            package: mackup
+          - type: symlink
+            from: "config/mackup/dotfiles-custom.cfg"
+            to: "${HOME}/.mackup/dotfiles-custom.cfg"
+
+      - name: "Raycast"
+        description: "App launcher and productivity tool"
+        checked: true
+        steps:
+          - type: cask
+            package: raycast
+            skip: "test -d '/Applications/Raycast.app'"
+
+      - name: "Boring Notch"
+        description: "Notch customization utility"
+        checked: true
+        steps:
+          - type: tap
+            repo: "TheBoredTeam/boring-notch"
+          - type: cask
+            package: "TheBoredTeam/boring-notch/boring-notch"
+            skip: "test -d '/Applications/Boring Notch.app'"
+
+      - name: "AltTab"
+        description: "Window switcher with previews"
+        checked: true
+        steps:
+          - type: cask
+            package: alt-tab
+            skip: "test -d '/Applications/AltTab.app'"
+
+      - name: "rendercv"
+        description: "LaTeX-based CV/resume renderer"
+        checked: true
+        steps:
+          - type: run
+            command: "pipx install rendercv"
+            skip: "which rendercv"
+
+  # ── Media ────────────────────────────────────────────
+  - name: "Media"
+    tools:
+      - name: "Finetune"
+        description: "Per-app volume mixer"
+        checked: true
+        steps:
+          - type: cask
+            package: finetune
+            skip: "test -d /Applications/Finetune.app"
+
+      - name: "TypeWhisper"
+        description: "Speech-to-text transcription tool"
+        checked: true
+        steps:
+          - type: tap
+            repo: "typewhisper/tap"
+          - type: cask
+            package: "typewhisper/tap/typewhisper"
+            skip: "test -d '/Applications/TypeWhisper.app'"
+
+      - name: "Spotify"
+        description: "Music streaming app"
+        checked: true
+        steps:
+          - type: cask
+            package: spotify
+            skip: "test -d '/Applications/Spotify.app'"
+
+  # ── Input ────────────────────────────────────────────
+  - name: "Input"
+    tools:
+      - name: "Linear Mouse"
+        description: "Customize mouse buttons, speed, and gestures"
+        checked: true
+        steps:
+          - type: cask
+            package: linearmouse
+            skip: "test -d /Applications/LinearMouse.app"
+
   # ── macOS Defaults ───────────────────────────────────
   - name: "macOS Defaults"
     tools:
@@ -791,76 +894,3 @@ categories:
             key: ActivityCacheAllowed
             value: "false"
             valueType: bool
-
-  # ── Utilities ────────────────────────────────────────
-  - name: "Utilities"
-    tools:
-      - name: "mackup"
-        description: "Backup app configs to cloud storage"
-        checked: true
-        steps:
-          - type: brew
-            package: mackup
-          - type: symlink
-            from: "config/mackup/dotfiles-custom.cfg"
-            to: "${HOME}/.mackup/dotfiles-custom.cfg"
-
-      - name: "Finetune"
-        description: "Per-app volume mixer"
-        checked: true
-        steps:
-          - type: cask
-            package: finetune
-            skip: "test -d /Applications/Finetune.app"
-
-      - name: "Linear Mouse"
-        description: "Customize mouse buttons, speed, and gestures"
-        checked: true
-        steps:
-          - type: cask
-            package: linearmouse
-            skip: "test -d /Applications/LinearMouse.app"
-
-      - name: "Boring Notch"
-        description: "Notch customization utility"
-        checked: true
-        steps:
-          - type: tap
-            repo: "TheBoredTeam/boring-notch"
-          - type: cask
-            package: "TheBoredTeam/boring-notch/boring-notch"
-            skip: "test -d '/Applications/Boring Notch.app'"
-
-      - name: "Raycast"
-        description: "App launcher and productivity tool"
-        checked: true
-        steps:
-          - type: cask
-            package: raycast
-            skip: "test -d '/Applications/Raycast.app'"
-
-      - name: "TypeWhisper"
-        description: "Speech-to-text transcription tool"
-        checked: true
-        steps:
-          - type: tap
-            repo: "typewhisper/tap"
-          - type: cask
-            package: "typewhisper/tap/typewhisper"
-            skip: "test -d '/Applications/TypeWhisper.app'"
-
-      - name: "AltTab"
-        description: "Window switcher with previews"
-        checked: true
-        steps:
-          - type: cask
-            package: alt-tab
-            skip: "test -d '/Applications/AltTab.app'"
-
-      - name: "Spotify"
-        description: "Music streaming app"
-        checked: true
-        steps:
-          - type: cask
-            package: spotify
-            skip: "test -d '/Applications/Spotify.app'"
