@@ -75,7 +75,7 @@ dotfiles update
 - **zoxide** — Smart directory jumping
 - **ripgrep** — Fast grep
 - **fd** — Fast find
-- **git-delta** — Better git diffs
+- **hunk** — Review-first terminal diff viewer
 - **jq** — JSON processor
 - **yq** — YAML processor
 - **bottom** — System monitor
@@ -101,7 +101,7 @@ dotfiles update
 
 ### Git & GitHub
 - **gh** — GitHub CLI
-- **Git Config** — `.gitconfig` with delta diff viewer + gh auth (Go template)
+- **Git Config** — `.gitconfig` with hunk pager + gh auth (Go template)
 
 ### Editors
 - **VS Code** — Settings + keybindings + extensions
@@ -110,6 +110,8 @@ dotfiles update
 ### AI Tools
 - **Claude Code** — Claude AI coding agent (config + skills + agents synced)
 - **Opencode** — OpenCode AI coding agent (config + plugins/skills/themes/agents/commands synced)
+- **Google Antigravity** — Agent orchestration platform
+- **Grok Build CLI** — Grok coding agent CLI
 
 ### macOS Defaults
 - **Finder** — Show all extensions, pathbar, full path in title
@@ -140,10 +142,11 @@ The installer creates symlinks from your home directory to the dotfiles reposito
 |-----------------|-----------|---------|
 | `~/.zshrc` | `~/.dotfiles/config/zsh/.zshrc` | Zsh configuration |
 | `~/.p10k.zsh` | `~/.dotfiles/config/p10k/.p10k.zsh` | Powerlevel10k theme |
-| `~/.gitconfig` | Rendered template | Git config with delta + gh auth |
+| `~/.gitconfig` | Rendered template | Git config with hunk pager + gh auth |
 | `~/.npmrc` | `~/.dotfiles/config/npm/.npmrc` | npm configuration |
 | `~/.config/ghostty/config` | `~/.dotfiles/config/ghostty/config` | Ghostty terminal settings |
 | `~/.config/tmux/tmux.conf` | `~/.dotfiles/config/tmux/tmux.conf` | tmux configuration |
+| `~/.config/hunk/config.toml` | `~/.dotfiles/config/hunk/config.toml` | Hunk diff viewer settings |
 | `~/.config/yazi/yazi.toml` | `~/.dotfiles/config/yazi/yazi.toml` | Yazi file manager settings |
 | `~/.claude/settings.json` | `~/.dotfiles/config/claude/settings.json` | Claude Code settings |
 | `~/.claude/skills/` | `~/.dotfiles/config/claude/skills/` | Claude Code skills (version-controlled) |
