@@ -37,7 +37,7 @@ var rollbackCmd = &cobra.Command{
 		} else {
 			m, err = snapshot.LatestManifest(dotfilesDir)
 			if err != nil {
-				return fmt.Errorf("no snapshots found: %w", err)
+				return err
 			}
 			fmt.Printf("Restoring from snapshot %s\n", m.Timestamp)
 		}
