@@ -108,11 +108,14 @@ func TestCheckGitClone_Missing(t *testing.T) {
 		t.Fatalf("expected missing, got %s: %s", result.Status, result.Msg)
 	}
 }
-
-func TestCheckRun_OK(t *testing.T) {
+func TestCheckDefaults_OK(t *testing.T) {
 	step := manifest.Step{
-		Type: "run",
-		Skip: "true",
+		Type:      "defaults",
+		Domain:    "com.apple.finder",
+		Key:       "AppleShowAllExtensions",
+		Value:     "true",
+		ValueType: "bool",
+		Skip:      "defaults read com.apple.finder AppleShowAllExtensions | grep -q 1",
 	}
 	result := Check(step, "", nil)
 	if result.Status != "ok" {
@@ -120,13 +123,32 @@ func TestCheckRun_OK(t *testing.T) {
 	}
 }
 
-func TestCheckRun_Missing(t *testing.T) {
+func TestCheckDefaults_BoolTrueMismatch(t *testing.T) {
 	step := manifest.Step{
-		Type: "run",
-		Skip: "false",
+		Type:      "defaults",
+		Domain:    "com.apple.finder",
+		Key:       "AppleShowAllExtensions",
+		Value:     "false",
+		ValueType: "bool",
+		Skip:      "defaults read com.apple.finder AppleShowAllExtensions | grep -q 1",
+	}
+	result := Check(step, "", nil)
+	if result.Status != "broken" {
+		t.Fatalf("expected broken, got %s: %s", result.Status, result.Msg)
+	}
+}
+
+func TestCheckDefaults_Missing(t *testing.T) {
+	step := manifest.Step{
+		Type:      "defaults",
+		Domain:    "com.some.nonexistent.domain",
+		Key:       "SomeKey",
+		Value:     "true",
+		ValueType: "bool",
 	}
 	result := Check(step, "", nil)
 	if result.Status != "missing" {
 		t.Fatalf("expected missing, got %s: %s", result.Status, result.Msg)
 	}
 }
+
