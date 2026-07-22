@@ -217,10 +217,9 @@ categories:
             from: "home/functions/mysql.zsh"
             to: "${HOME}/.dotfiles-home/functions/mysql.zsh"
 
-  # ── CLI ───────────────────────────────────────────────
-  - name: "CLI"
+  # ── Terminal ──────────────────────────────────────────
+  - name: "Terminal"
     tools:
-      # ── Terminal & Multiplexers ──
       - name: "Ghostty"
         description: "Terminal emulator"
         checked: true
@@ -260,7 +259,9 @@ categories:
             from: "config/tmux/tmux.conf"
             to: "${HOME}/.config/tmux/tmux.conf"
 
-      # ── File & Text ──
+  # ── File & Text ───────────────────────────────────────
+  - name: "File & Text"
+    tools:
       - name: "bat"
         description: "cat with syntax highlighting"
         checked: true
@@ -289,6 +290,9 @@ categories:
           - type: brew
             package: fd
 
+  # ── System Tools ─────────────────────────────────────
+  - name: "System Tools"
+    tools:
       - name: "dust"
         description: "Visual disk usage tree (du replacement)"
         checked: true
@@ -317,7 +321,9 @@ categories:
           - type: brew
             package: yq
 
-      # ── Navigation & Help ──
+  # ── Navigation & Help ────────────────────────────────
+  - name: "Navigation & Help"
+    tools:
       - name: "fzf"
         description: "Fuzzy finder"
         checked: true
@@ -366,7 +372,9 @@ categories:
             from: "config/yazi/theme.toml"
             to: "${HOME}/.config/yazi/theme.toml"
 
-      # ── System Diagnostics ──
+  # ── System Diagnostics ───────────────────────────────
+  - name: "System Diagnostics"
+    tools:
       - name: "bottom (btm)"
         description: "System monitor"
         checked: true
@@ -388,7 +396,9 @@ categories:
           - type: brew
             package: mole
 
-      # ── Media & Downloads ──
+  # ── Media CLIs ───────────────────────────────────────
+  - name: "Media CLIs"
+    tools:
       - name: "ffmpeg"
         description: "Audio/video converter"
         checked: true
@@ -403,7 +413,9 @@ categories:
           - type: brew
             package: unar
 
-      # ── Dev CLI Utilities ──
+  # ── Dev CLIs ─────────────────────────────────────────
+  - name: "Dev CLIs"
+    tools:
       - name: "direnv"
         description: "Per-directory env vars"
         checked: true
@@ -433,7 +445,9 @@ categories:
           - type: brew
             package: sshpass
 
-      # ── Language Runtimes ──
+  # ── Runtimes ─────────────────────────────────────────
+  - name: "Runtimes"
+    tools:
       - name: "nvm"
         description: "Node version manager (used by Herd)"
         checked: true
@@ -470,7 +484,9 @@ categories:
           - type: brew
             package: pipx
 
-      # ── Databases ──
+  # ── Databases ────────────────────────────────────────
+  - name: "Databases"
+    tools:
       - name: "DBngin"
         description: "Database manager"
         checked: true
@@ -495,7 +511,9 @@ categories:
           - type: brew
             package: sqlite
 
-      # ── Git & GitHub ──
+  # ── Git ──────────────────────────────────────────────
+  - name: "Git"
+    tools:
       - name: "gh (GitHub CLI)"
         description: "GitHub command-line tool"
         checked: true
@@ -513,7 +531,9 @@ categories:
             from: "config/hunk/config.toml"
             to: "${HOME}/.config/hunk/config.toml"
 
-      # ── AI CLI ──
+  # ── AI Agents ────────────────────────────────────────
+  - name: "AI Agents"
+    tools:
       - name: "Claude Code"
         description: "Claude AI coding agent"
         checked: true
