@@ -392,7 +392,7 @@ categories:
             package: hyperfine
 
       - name: "mole"
-        description: "SSH tunneling CLI tool"
+        description: "Mac cleaning app"
         checked: true
         steps:
           - type: brew
@@ -423,13 +423,13 @@ categories:
             command: "brew install --cask stupside/tap/castor"
             skip: "test -f /Applications/Castor.app || which castor"
 
-      - name: "Yoinks"
-        description: "Download video from 1800+ sites (yt-dlp wrapper)"
+      - name: "YTSage"
+        description: "Modern YouTube downloader with PySide6 GUI"
         checked: true
         steps:
           - type: run
-            command: "npm install -g yoinks"
-            skip: "which yoinks"
+            command: "pipx install ytsage"
+            skip: "which ytsage"
 
   # ── Dev CLI Utilities ───────────────────────────────
   - name: "Dev CLI Utilities"
@@ -709,12 +709,11 @@ categories:
             to: "${HOME}/.config/opencode/commands/"
 
       - name: "Google Antigravity"
-        description: "Agent orchestration platform"
+        description: "Agent CLI tool"
         checked: true
         steps:
-          - type: cask
+          - type: brew
             package: antigravity
-            skip: "test -d /Applications/Antigravity.app"
 
       - name: "Grok Build CLI"
         description: "Grok coding agent CLI"
