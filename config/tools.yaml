@@ -14,8 +14,8 @@ vars:
     hint: "e.g. agustin@example.com"
 
 categories:
-  # ── Core ──────────────────────────────────────────────
-  - name: "Core"
+  # ── Base ──────────────────────────────────────────────
+  - name: "Base"
     tools:
       - name: "Xcode CLT"
         description: "Command Line Tools (git, compilers, etc.)"
@@ -41,9 +41,10 @@ categories:
             command: 'for key in ${HOME}/.ssh/id_*; do case "$key" in *.pub|*.revoked) continue ;; esac; ssh-add --apple-use-keychain "$key" 2>/dev/null; done'
             skip: "ssh-add -l | grep -q ."
 
-  # ── Shell Framework ───────────────────────────────────
-  - name: "Shell Framework"
+  # ── Shell ─────────────────────────────────────────────
+  - name: "Shell"
     tools:
+      # ── Framework ──
       - name: "Oh My Zsh"
         description: "Zsh framework"
         checked: true
@@ -91,9 +92,7 @@ categories:
           - type: brew
             package: bash
 
-  # ── Zsh Plugins ───────────────────────────────────────
-  - name: "Zsh Plugins"
-    tools:
+      # ── Plugins ──
       - name: "zsh-autosuggestions"
         description: "Fish-like autosuggestions"
         checked: true
@@ -115,51 +114,7 @@ categories:
           - type: omz-plugin
             repo: "https://github.com/zdharma-continuum/fast-syntax-highlighting"
 
-  # ── Terminal ──────────────────────────────────────────
-  - name: "Terminal"
-    tools:
-      - name: "Ghostty"
-        description: "Terminal emulator"
-        checked: true
-        steps:
-          - type: cask
-            package: ghostty
-          - type: symlink
-            from: "config/ghostty/config"
-            to: "${HOME}/.config/ghostty/config"
-
-      - name: "Muxy"
-        description: "Terminal multiplexer"
-        checked: true
-        steps:
-          - type: tap
-            repo: "muxy-app/tap"
-          - type: cask
-            package: "muxy-app/tap/muxy"
-            skip: "test -d /Applications/Muxy.app"
-          - type: symlink
-            from: "config/muxy/conf.hjson"
-            to: "${HOME}/.config/muxy/conf.hjson"
-          - type: symlink
-            from: "config/muxy/verbs.hjson"
-            to: "${HOME}/.config/muxy/verbs.hjson"
-          - type: symlink
-            from: "config/ghostty/config"
-            to: "${HOME}/Library/Application Support/Muxy/ghostty.conf"
-
-      - name: "tmux"
-        description: "Terminal multiplexer"
-        checked: true
-        steps:
-          - type: brew
-            package: tmux
-          - type: symlink
-            from: "config/tmux/tmux.conf"
-            to: "${HOME}/.config/tmux/tmux.conf"
-
-  # ── Aliases ──────────────────────────────────────────
-  - name: "Aliases"
-    tools:
+      # ── Aliases ──
       - name: "Aliases: System"
         description: "sudo, flushdns, showfiles, ports, mysqlroot"
         checked: true
@@ -218,9 +173,7 @@ categories:
             from: "home/aliases/config.zsh"
             to: "${HOME}/.dotfiles-home/aliases/config.zsh"
 
-  # ── Functions ────────────────────────────────────────
-  - name: "Functions"
-    tools:
+      # ── Functions ──
       - name: "Functions: Git"
         description: "ghopen, clone, pr, git-prune-local"
         checked: true
@@ -264,9 +217,50 @@ categories:
             from: "home/functions/mysql.zsh"
             to: "${HOME}/.dotfiles-home/functions/mysql.zsh"
 
-  # ── File & Text Tools ────────────────────────────────
-  - name: "File & Text Tools"
+  # ── CLI ───────────────────────────────────────────────
+  - name: "CLI"
     tools:
+      # ── Terminal & Multiplexers ──
+      - name: "Ghostty"
+        description: "Terminal emulator"
+        checked: true
+        steps:
+          - type: cask
+            package: ghostty
+          - type: symlink
+            from: "config/ghostty/config"
+            to: "${HOME}/.config/ghostty/config"
+
+      - name: "Muxy"
+        description: "Terminal multiplexer"
+        checked: true
+        steps:
+          - type: tap
+            repo: "muxy-app/tap"
+          - type: cask
+            package: "muxy-app/tap/muxy"
+            skip: "test -d /Applications/Muxy.app"
+          - type: symlink
+            from: "config/muxy/conf.hjson"
+            to: "${HOME}/.config/muxy/conf.hjson"
+          - type: symlink
+            from: "config/muxy/verbs.hjson"
+            to: "${HOME}/.config/muxy/verbs.hjson"
+          - type: symlink
+            from: "config/ghostty/config"
+            to: "${HOME}/Library/Application Support/Muxy/ghostty.conf"
+
+      - name: "tmux"
+        description: "Terminal multiplexer"
+        checked: true
+        steps:
+          - type: brew
+            package: tmux
+          - type: symlink
+            from: "config/tmux/tmux.conf"
+            to: "${HOME}/.config/tmux/tmux.conf"
+
+      # ── File & Text ──
       - name: "bat"
         description: "cat with syntax highlighting"
         checked: true
@@ -323,9 +317,7 @@ categories:
           - type: brew
             package: yq
 
-  # ── Navigation & Help ────────────────────────────────
-  - name: "Navigation & Help"
-    tools:
+      # ── Navigation & Help ──
       - name: "fzf"
         description: "Fuzzy finder"
         checked: true
@@ -374,9 +366,7 @@ categories:
             from: "config/yazi/theme.toml"
             to: "${HOME}/.config/yazi/theme.toml"
 
-  # ── System Diagnostics ───────────────────────────────
-  - name: "System Diagnostics"
-    tools:
+      # ── System Diagnostics ──
       - name: "bottom (btm)"
         description: "System monitor"
         checked: true
@@ -398,9 +388,7 @@ categories:
           - type: brew
             package: mole
 
-  # ── Media & Downloads ────────────────────────────────
-  - name: "Media & Downloads"
-    tools:
+      # ── Media & Downloads ──
       - name: "ffmpeg"
         description: "Audio/video converter"
         checked: true
@@ -415,25 +403,7 @@ categories:
           - type: brew
             package: unar
 
-      - name: "Castor"
-        description: "Stream web video to your TV via DLNA/Chromecast"
-        checked: true
-        steps:
-          - type: run
-            command: "brew install --cask stupside/tap/castor"
-            skip: "test -f /Applications/Castor.app || which castor"
-
-      - name: "YTSage"
-        description: "Modern YouTube downloader with PySide6 GUI"
-        checked: true
-        steps:
-          - type: run
-            command: "pipx install ytsage"
-            skip: "which ytsage"
-
-  # ── Dev CLI Utilities ───────────────────────────────
-  - name: "Dev CLI Utilities"
-    tools:
+      # ── Dev CLI Utilities ──
       - name: "direnv"
         description: "Per-directory env vars"
         checked: true
@@ -463,9 +433,7 @@ categories:
           - type: brew
             package: sshpass
 
-  # ── Language Runtimes ────────────────────────────────
-  - name: "Language Runtimes"
-    tools:
+      # ── Language Runtimes ──
       - name: "nvm"
         description: "Node version manager (used by Herd)"
         checked: true
@@ -502,9 +470,7 @@ categories:
           - type: brew
             package: pipx
 
-  # ── Databases ────────────────────────────────────────
-  - name: "Databases"
-    tools:
+      # ── Databases ──
       - name: "DBngin"
         description: "Database manager"
         checked: true
@@ -529,55 +495,13 @@ categories:
           - type: brew
             package: sqlite
 
-  # ── Dev Environment ──────────────────────────────────
-  - name: "Dev Environment"
-    tools:
-      - name: "Herd"
-        description: "Laravel dev environment"
-        checked: true
-        profiles: ["personal"]
-        steps:
-          - type: cask
-            package: herd
-            skip: "test -d /Applications/Herd.app"
-          - type: symlink
-            from: "config/herd/herd.json"
-            to: "${HOME}/Library/Application Support/Herd/config/herd.json"
-
-      - name: "OrbStack"
-        description: "Docker & Linux VMs"
-        checked: true
-        steps:
-          - type: cask
-            package: orbstack
-            skip: "test -d /Applications/OrbStack.app"
-
-      - name: "Global .npmrc"
-        description: "npm configuration"
-        checked: true
-        steps:
-          - type: symlink
-            from: "config/npm/.npmrc"
-            to: "${HOME}/.npmrc"
-
-  # ── Git & GitHub ─────────────────────────────────────
-  - name: "Git & GitHub"
-    tools:
+      # ── Git & GitHub ──
       - name: "gh (GitHub CLI)"
         description: "GitHub command-line tool"
         checked: true
         steps:
           - type: brew
             package: gh
-
-      - name: "Git Config"
-        description: ".gitconfig with hunk pager + gh auth"
-        checked: true
-        steps:
-          - type: template-symlink
-            from: "config/git/.gitconfig"
-            to: "${HOME}/.gitconfig"
-            vars: ["GitName", "GitEmail", "GitGPGKey"]
 
       - name: "Hunk"
         description: "Review-first terminal diff viewer"
@@ -589,9 +513,74 @@ categories:
             from: "config/hunk/config.toml"
             to: "${HOME}/.config/hunk/config.toml"
 
-  # ── Editors ──────────────────────────────────────────
-  - name: "Editors"
+      # ── AI CLI ──
+      - name: "Claude Code"
+        description: "Claude AI coding agent"
+        checked: true
+        steps:
+          - type: brew
+            package: claude-code
+          - type: symlink
+            from: "config/claude/settings.json"
+            to: "${HOME}/.claude/settings.json"
+          - type: symlink
+            from: "config/opencode/skills/"
+            to: "${HOME}/.claude/skills/"
+          - type: symlink
+            from: "config/opencode/agents/"
+            to: "${HOME}/.claude/agents/"
+          - type: symlink
+            from: "config/claude/CLAUDE.md"
+            to: "${HOME}/.claude/CLAUDE.md"
+
+      - name: "Opencode"
+        description: "OpenCode AI coding agent"
+        checked: true
+        steps:
+          - type: brew
+            package: opencode
+          - type: template-symlink
+            from: "config/opencode/opencode.json"
+            to: "${HOME}/.config/opencode/opencode.json"
+            vars: ["GitHubPAT"]
+          - type: symlink
+            from: "config/opencode/AGENTS.md"
+            to: "${HOME}/.config/opencode/AGENTS.md"
+          - type: symlink
+            from: "config/opencode/plugins/"
+            to: "${HOME}/.config/opencode/plugins/"
+          - type: symlink
+            from: "config/opencode/skills/"
+            to: "${HOME}/.config/opencode/skills/"
+          - type: symlink
+            from: "config/opencode/themes/"
+            to: "${HOME}/.config/opencode/themes/"
+          - type: symlink
+            from: "config/opencode/agents/"
+            to: "${HOME}/.config/opencode/agents/"
+          - type: symlink
+            from: "config/opencode/commands/"
+            to: "${HOME}/.config/opencode/commands/"
+
+      - name: "Google Antigravity"
+        description: "Agent CLI tool"
+        checked: true
+        steps:
+          - type: brew
+            package: antigravity
+
+      - name: "Grok Build CLI"
+        description: "Grok coding agent CLI"
+        checked: true
+        steps:
+          - type: cask
+            package: grok-build
+            skip: "which grok"
+
+  # ── Dev ───────────────────────────────────────────────
+  - name: "Dev"
     tools:
+      # ── Editors ──
       - name: "VS Code"
         description: "Editor + settings + extensions"
         checked: true
@@ -657,75 +646,50 @@ categories:
           - type: brew
             package: neovim
 
-  # ── AI Tools ─────────────────────────────────────────
-  - name: "AI Tools"
-    tools:
-      - name: "Claude Code"
-        description: "Claude AI coding agent"
+      # ── Git & Version Control ──
+      - name: "Git Config"
+        description: ".gitconfig with hunk pager + gh auth"
         checked: true
         steps:
-          - type: brew
-            package: claude-code
-          - type: symlink
-            from: "config/claude/settings.json"
-            to: "${HOME}/.claude/settings.json"
-          - type: symlink
-            from: "config/opencode/skills/"
-            to: "${HOME}/.claude/skills/"
-          - type: symlink
-            from: "config/opencode/agents/"
-            to: "${HOME}/.claude/agents/"
-          - type: symlink
-            from: "config/claude/CLAUDE.md"
-            to: "${HOME}/.claude/CLAUDE.md"
-
-      - name: "Opencode"
-        description: "OpenCode AI coding agent"
-        checked: true
-        steps:
-          - type: brew
-            package: opencode
           - type: template-symlink
-            from: "config/opencode/opencode.json"
-            to: "${HOME}/.config/opencode/opencode.json"
-            vars: ["GitHubPAT"]
-          - type: symlink
-            from: "config/opencode/AGENTS.md"
-            to: "${HOME}/.config/opencode/AGENTS.md"
-          - type: symlink
-            from: "config/opencode/plugins/"
-            to: "${HOME}/.config/opencode/plugins/"
-          - type: symlink
-            from: "config/opencode/skills/"
-            to: "${HOME}/.config/opencode/skills/"
-          - type: symlink
-            from: "config/opencode/themes/"
-            to: "${HOME}/.config/opencode/themes/"
-          - type: symlink
-            from: "config/opencode/agents/"
-            to: "${HOME}/.config/opencode/agents/"
-          - type: symlink
-            from: "config/opencode/commands/"
-            to: "${HOME}/.config/opencode/commands/"
+            from: "config/git/.gitconfig"
+            to: "${HOME}/.gitconfig"
+            vars: ["GitName", "GitEmail", "GitGPGKey"]
 
-      - name: "Google Antigravity"
-        description: "Agent CLI tool"
-        checked: true
-        steps:
-          - type: brew
-            package: antigravity
-
-      - name: "Grok Build CLI"
-        description: "Grok coding agent CLI"
+      # ── Containers & VMs ──
+      - name: "OrbStack"
+        description: "Docker & Linux VMs"
         checked: true
         steps:
           - type: cask
-            package: grok-build
-            skip: "which grok"
+            package: orbstack
+            skip: "test -d /Applications/OrbStack.app"
 
-  # ── Productivity ────────────────────────────────────
-  - name: "Productivity"
+      # ── PHP / Laravel ──
+      - name: "Herd"
+        description: "Laravel dev environment"
+        checked: true
+        profiles: ["personal"]
+        steps:
+          - type: cask
+            package: herd
+            skip: "test -d /Applications/Herd.app"
+          - type: symlink
+            from: "config/herd/herd.json"
+            to: "${HOME}/Library/Application Support/Herd/config/herd.json"
+
+      - name: "Global .npmrc"
+        description: "npm configuration"
+        checked: true
+        steps:
+          - type: symlink
+            from: "config/npm/.npmrc"
+            to: "${HOME}/.npmrc"
+
+  # ── Apps ──────────────────────────────────────────────
+  - name: "Apps"
     tools:
+      # ── Productivity ──
       - name: "mackup"
         description: "Backup app configs to cloud storage"
         checked: true
@@ -770,9 +734,7 @@ categories:
             command: "pipx install rendercv"
             skip: "which rendercv"
 
-  # ── Media ────────────────────────────────────────────
-  - name: "Media"
-    tools:
+      # ── Media ──
       - name: "Finetune"
         description: "Per-app volume mixer"
         checked: true
@@ -799,9 +761,23 @@ categories:
             package: spotify
             skip: "test -d '/Applications/Spotify.app'"
 
-  # ── Input ────────────────────────────────────────────
-  - name: "Input"
-    tools:
+      - name: "YTSage"
+        description: "Modern YouTube downloader with PySide6 GUI"
+        checked: true
+        steps:
+          - type: run
+            command: "pipx install ytsage"
+            skip: "which ytsage"
+
+      - name: "Castor"
+        description: "Stream web video to your TV via DLNA/Chromecast"
+        checked: true
+        steps:
+          - type: run
+            command: "brew install --cask stupside/tap/castor"
+            skip: "test -f /Applications/Castor.app || which castor"
+
+      # ── Input ──
       - name: "Linear Mouse"
         description: "Customize mouse buttons, speed, and gestures"
         checked: true
@@ -810,8 +786,8 @@ categories:
             package: linearmouse
             skip: "test -d /Applications/LinearMouse.app"
 
-  # ── macOS Defaults ───────────────────────────────────
-  - name: "macOS Defaults"
+  # ── System ────────────────────────────────────────────
+  - name: "System"
     tools:
       - name: "Finder"
         description: "Show all extensions, pathbar, full path in title, hidden files"
