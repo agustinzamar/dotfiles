@@ -3,16 +3,26 @@
   "mcp": {
     "shadcn-ui": {
       "type": "local",
-      "command": ["npx", "@jpisnice/shadcn-ui-mcp-server", "--github-api-key", "{{ .GitHubPAT }}"]
+      "command": [
+        "npx",
+        "@jpisnice/shadcn-ui-mcp-server",
+        "--github-api-key",
+        "{{ .GitHubPAT }}"
+      ]
     },
     "chrome-devtools": {
       "type": "local",
-      "command": ["npx", "chrome-devtools-mcp@latest"]
+      "command": [
+        "npx",
+        "chrome-devtools-mcp@latest"
+      ]
     }
   },
   "small_model": "opencode/deepseek-v4-flash-free",
   "agent": {
-    "explore": { "model": "opencode/deepseek-v4-flash-free" }
+    "explore": {
+      "model": "opencode/deepseek-v4-flash-free"
+    }
   },
   "plugin": [
     "opencode-gemini-auth@latest",
@@ -24,13 +34,14 @@
     "@tarquinen/opencode-dcp@latest",
     "@nick-vi/opencode-type-inject",
     "opencode-pty",
-    "opencode-smart-voice-notify@latest",
     "opencode-update-notifier@0.3.3",
     "opentmux"
   ],
   "provider": {
     "google": {
-      "whitelist": ["gemini-3-pro"]
+      "whitelist": [
+        "gemini-3-pro"
+      ]
     }
   }
 }

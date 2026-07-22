@@ -1,0 +1,100 @@
+{
+  "enabledPlugins" : {
+    "frontend-design@claude-plugins-official" : true
+  },
+  "extraKnownMarketplaces" : {
+    "caveman" : {
+      "source" : {
+        "repo" : "JuliusBrussee\/caveman",
+        "source" : "github"
+      }
+    }
+  },
+  "hooks" : {
+    "Notification" : [
+      {
+        "hooks" : [
+          {
+            "command" : "'\/Users\/agustin\/Library\/Application Support\/Muxy\/hooks\/muxy-claude-hook.sh' notification # muxy-notification-hook",
+            "timeout" : 10,
+            "type" : "command"
+          }
+        ],
+        "matcher" : ""
+      }
+    ],
+    "PermissionRequest" : [
+      {
+        "hooks" : [
+          {
+            "command" : "'\/Users\/agustin\/Library\/Application Support\/Muxy\/hooks\/muxy-claude-hook.sh' permission-request # muxy-notification-hook",
+            "timeout" : 10,
+            "type" : "command"
+          }
+        ],
+        "matcher" : ""
+      }
+    ],
+    "PreToolUse" : [
+      {
+        "hooks" : [
+          {
+            "command" : "'\/Users\/agustin\/Library\/Application Support\/Muxy\/hooks\/muxy-claude-hook.sh' pre-tool-use # muxy-notification-hook",
+            "timeout" : 10,
+            "type" : "command"
+          }
+        ],
+        "matcher" : ""
+      }
+    ],
+    "SessionEnd" : [
+      {
+        "hooks" : [
+          {
+            "command" : "'\/Users\/agustin\/Library\/Application Support\/Muxy\/hooks\/muxy-claude-hook.sh' session-end # muxy-notification-hook",
+            "timeout" : 10,
+            "type" : "command"
+          }
+        ],
+        "matcher" : ""
+      }
+    ],
+    "Stop" : [
+      {
+        "hooks" : [
+          {
+            "command" : "'\/Users\/agustin\/Library\/Application Support\/Muxy\/hooks\/muxy-claude-hook.sh' stop # muxy-notification-hook",
+            "timeout" : 10,
+            "type" : "command"
+          }
+        ],
+        "matcher" : ""
+      }
+    ],
+    "StopFailure" : [
+      {
+        "hooks" : [
+          {
+            "command" : "'\/Users\/agustin\/Library\/Application Support\/Muxy\/hooks\/muxy-claude-hook.sh' stop-failure # muxy-notification-hook",
+            "timeout" : 10,
+            "type" : "command"
+          }
+        ],
+        "matcher" : ""
+      }
+    ],
+    "UserPromptSubmit" : [
+      {
+        "hooks" : [
+          {
+            "command" : "'\/Users\/agustin\/Library\/Application Support\/Muxy\/hooks\/muxy-claude-hook.sh' user-prompt-submit # muxy-notification-hook",
+            "timeout" : 10,
+            "type" : "command"
+          }
+        ],
+        "matcher" : ""
+      }
+    ]
+  },
+  "model" : "opusplan"
+}
