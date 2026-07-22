@@ -480,6 +480,13 @@ categories:
           - type: brew
             package: go
 
+      - name: "Bun"
+        description: "JavaScript runtime & package manager"
+        checked: true
+        steps:
+          - type: brew
+            package: bun
+
       - name: "Composer"
         description: "PHP package manager"
         checked: true
