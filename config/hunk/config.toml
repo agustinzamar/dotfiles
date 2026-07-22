@@ -1,0 +1,35 @@
+# Hunk: review-first terminal diff viewer
+# https://github.com/modem-dev/hunk
+
+# Built-in theme id, "auto", or custom
+theme = "github-dark-default"
+
+# Diff layout: auto, split, stack
+mode = "auto"
+
+# Version control backend: git, jj, sl
+vcs = "git"
+
+# Auto-reload file and Git-backed reviews
+watch = false
+
+# Exclude untracked files in Git working-tree reviews
+exclude_untracked = false
+
+# Show line numbers in the diff view
+line_numbers = true
+
+# Wrap long lines
+wrap_lines = false
+
+# Show the menu bar
+menu_bar = true
+
+# Allow inline agent/AI annotations
+agent_notes = true
+
+# Prompt to save changed view preferences on quit
+prompt_save_view_preferences = true
+
+# Use a transparent background
+transparent_background = false
