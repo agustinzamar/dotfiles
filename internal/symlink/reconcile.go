@@ -3,6 +3,7 @@ package symlink
 import (
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/agustinzamar/dotfiles/internal/manifest"
 )
@@ -20,6 +21,9 @@ func Reconcile(step manifest.Step, dotfilesDir string, vars map[string]string, e
 	}
 
 	expectedSrc := filepath.Join(dotfilesDir, step.From)
+	if step.Type == "template-symlink" {
+		expectedSrc = strings.Replace(expectedSrc, filepath.Ext(expectedSrc), ".rendered"+filepath.Ext(expectedSrc), 1)
+	}
 	dst := expand(step.To)
 
 	linkTarget, err := os.Readlink(dst)
