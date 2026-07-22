@@ -60,11 +60,13 @@ dotfiles update
 - **zsh-autosuggestions** — Fish-like autosuggestions
 - **fzf-tab** — Fuzzy tab completion
 - **fast-syntax-highlighting** — Syntax highlighting in shell
+- **bash** — Modern Bourne-Again Shell
 - **Shell Aliases & Functions** — Custom aliases and shell functions
 
 ### Terminal
 - **Ghostty** — Terminal emulator with Catppuccin theme
 - **Muxy** — Terminal multiplexer
+- **tmux** — Terminal multiplexer
 
 ### CLI Tools
 - **bat** — Cat with syntax highlighting
@@ -81,6 +83,10 @@ dotfiles update
 - **unar** — Multi-format unarchiver
 - **yazi** — Terminal file manager
 - **sshpass** — Non-interactive SSH auth
+- **MySQL Client** — MySQL database CLI
+- **mole** — SSH tunneling CLI tool
+- **opentmux** — tmux session manager wrapper
+- **rendercv** — LaTeX-based CV/resume renderer
 
 ### Development
 - **Herd** — Laravel dev environment
@@ -90,6 +96,7 @@ dotfiles update
 - **mysql-to-sqlite3** — MySQL to SQLite converter
 - **sqlite3** — SQLite CLI
 - **pipx** — Python package runner
+- **Go** — Go programming language
 - **.npmrc** — npm configuration
 
 ### Git & GitHub
@@ -114,6 +121,11 @@ dotfiles update
 ### Utilities
 - **mackup** — Backup sensitive configs (SSH, shell aliases) to cloud storage
 - **Finetune** — Per-app volume mixer
+- **Boring Notch** — Notch customization utility
+- **Raycast** — App launcher and productivity tool
+- **TypeWhisper** — Speech-to-text transcription tool
+- **AltTab** — Window switcher with previews
+- **Spotify** — Music streaming player
 
 ### Backup & Sync
 - **mackup** — Backup app configs
@@ -131,6 +143,7 @@ The installer creates symlinks from your home directory to the dotfiles reposito
 | `~/.gitconfig` | Rendered template | Git config with delta + gh auth |
 | `~/.npmrc` | `~/.dotfiles/config/npm/.npmrc` | npm configuration |
 | `~/.config/ghostty/config` | `~/.dotfiles/config/ghostty/config` | Ghostty terminal settings |
+| `~/.config/tmux/tmux.conf` | `~/.dotfiles/config/tmux/tmux.conf` | tmux configuration |
 | `~/.config/yazi/yazi.toml` | `~/.dotfiles/config/yazi/yazi.toml` | Yazi file manager settings |
 | `~/.claude/settings.json` | `~/.dotfiles/config/claude/settings.json` | Claude Code settings |
 | `~/.claude/skills/` | `~/.dotfiles/config/claude/skills/` | Claude Code skills (version-controlled) |

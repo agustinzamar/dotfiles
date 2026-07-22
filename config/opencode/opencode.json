@@ -15,7 +15,22 @@
     "explore": { "model": "opencode/deepseek-v4-flash-free" }
   },
   "plugin": [
+    "opencode-gemini-auth@latest",
+    "opencode-claude-auth@latest",
+    "opencode-kilo-auth@latest",
+    "opencode-antigravity-multi-auth@latest",
     "superpowers@git+https://github.com/obra/superpowers.git",
-    "./plugins/caveman/plugin.js"
-  ]
+    "./plugins/caveman/plugin.js",
+    "@tarquinen/opencode-dcp@latest",
+    "@nick-vi/opencode-type-inject",
+    "opencode-pty",
+    "opencode-smart-voice-notify@latest",
+    "opencode-update-notifier@0.3.3",
+    "opentmux"
+  ],
+  "provider": {
+    "google": {
+      "whitelist": ["gemini-3-pro"]
+    }
+  }
 }

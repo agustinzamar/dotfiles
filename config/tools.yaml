@@ -97,6 +97,13 @@ categories:
           - type: omz-plugin
             repo: "https://github.com/zdharma-continuum/fast-syntax-highlighting"
 
+      - name: "bash"
+        description: "Modern Bourne-Again Shell"
+        checked: true
+        steps:
+          - type: brew
+            package: bash
+
       - name: "Exports"
         description: "PATH, editor, and environment variables"
         checked: true
@@ -240,6 +247,16 @@ categories:
           - type: symlink
             from: "config/ghostty/config"
             to: "${HOME}/Library/Application Support/Muxy/ghostty.conf"
+
+      - name: "tmux"
+        description: "Terminal multiplexer"
+        checked: true
+        steps:
+          - type: brew
+            package: tmux
+          - type: symlink
+            from: "config/tmux/tmux.conf"
+            to: "${HOME}/.config/tmux/tmux.conf"
 
   # ── CLI Tools ────────────────────────────────────────
   - name: "CLI Tools"
@@ -414,6 +431,36 @@ categories:
           - type: brew
             package: hyperfine
 
+      - name: "MySQL Client"
+        description: "MySQL database CLI"
+        checked: true
+        steps:
+          - type: brew
+            package: mysql-client
+
+      - name: "mole"
+        description: "SSH tunneling CLI tool"
+        checked: true
+        steps:
+          - type: brew
+            package: mole
+
+      - name: "opentmux"
+        description: "tmux session manager wrapper"
+        checked: true
+        steps:
+          - type: run
+            command: "npm install -g opentmux"
+            skip: "which opentmux"
+
+      - name: "rendercv"
+        description: "LaTeX-based CV/resume renderer"
+        checked: true
+        steps:
+          - type: run
+            command: "pipx install rendercv"
+            skip: "which rendercv"
+
   # ── Development ──────────────────────────────────────
   - name: "Development"
     tools:
@@ -482,6 +529,13 @@ categories:
         steps:
           - type: brew
             package: pipx
+
+      - name: "Go"
+        description: "Go programming language"
+        checked: true
+        steps:
+          - type: brew
+            package: go
 
       - name: "Global .npmrc"
         description: "npm configuration"
@@ -558,6 +612,10 @@ categories:
             extension: "yoavbls.pretty-ts-errors"
           - type: vscode
             extension: "biomejs.biome"
+          - type: vscode
+            extension: "akamud.vscode-theme-onedark"
+          - type: vscode
+            extension: "anthropic.claude-code"
 
       - name: "PhpStorm"
         description: "JetBrains PHP IDE"
@@ -762,3 +820,47 @@ categories:
           - type: cask
             package: linearmouse
             skip: "test -d /Applications/LinearMouse.app"
+
+      - name: "Boring Notch"
+        description: "Notch customization utility"
+        checked: true
+        steps:
+          - type: tap
+            repo: "TheBoredTeam/boring-notch"
+          - type: cask
+            package: "TheBoredTeam/boring-notch/boring-notch"
+            skip: "test -d '/Applications/Boring Notch.app'"
+
+      - name: "Raycast"
+        description: "App launcher and productivity tool"
+        checked: true
+        steps:
+          - type: cask
+            package: raycast
+            skip: "test -d '/Applications/Raycast.app'"
+
+      - name: "TypeWhisper"
+        description: "Speech-to-text transcription tool"
+        checked: true
+        steps:
+          - type: tap
+            repo: "typewhisper/tap"
+          - type: cask
+            package: "typewhisper/tap/typewhisper"
+            skip: "test -d '/Applications/TypeWhisper.app'"
+
+      - name: "AltTab"
+        description: "Window switcher with previews"
+        checked: true
+        steps:
+          - type: cask
+            package: alt-tab
+            skip: "test -d '/Applications/AltTab.app'"
+
+      - name: "Spotify"
+        description: "Music streaming app"
+        checked: true
+        steps:
+          - type: cask
+            package: spotify
+            skip: "test -d '/Applications/Spotify.app'"
