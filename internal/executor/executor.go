@@ -3,19 +3,38 @@ package executor
 import (
 	"os"
 	"strings"
+	"sync"
 
 	"github.com/agustinzamar/dotfiles/internal/manifest"
 	"github.com/agustinzamar/dotfiles/internal/snapshot"
 )
 
-var snapshotEntries []snapshot.Entry
+var (
+	mu             sync.Mutex
+	snapshotEntries []snapshot.Entry
+)
 
 func ResetSnapshots() {
+	mu.Lock()
+	defer mu.Unlock()
 	snapshotEntries = nil
 }
 
+func appendSnapshotEntry(entry snapshot.Entry) {
+	mu.Lock()
+	defer mu.Unlock()
+	snapshotEntries = append(snapshotEntries, entry)
+}
+
 func SnapshotEntries() []snapshot.Entry {
-	return snapshotEntries
+	mu.Lock()
+	defer mu.Unlock()
+	if len(snapshotEntries) == 0 {
+		return nil
+	}
+	out := make([]snapshot.Entry, len(snapshotEntries))
+	copy(out, snapshotEntries)
+	return out
 }
 
 type Result struct {

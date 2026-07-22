@@ -121,7 +121,7 @@ func execSymlink(step manifest.Step, dotfilesDir string, expand func(string) str
 		return Result{Status: "error", Msg: fmt.Sprintf("symlink %s: %v", step.To, err)}
 	}
 	if result.SnapshotEntry != nil {
-		snapshotEntries = append(snapshotEntries, *result.SnapshotEntry)
+		appendSnapshotEntry(*result.SnapshotEntry)
 	}
 	return Result{Status: "installed", Msg: dst}
 }
@@ -147,7 +147,7 @@ func execTemplateSymlink(step manifest.Step, dotfilesDir string, vars map[string
 
 	// generated-file snapshot is non-fatal
 	if entry, _ := snapshot.Take(renderedPath, dotfilesDir); entry != nil {
-		snapshotEntries = append(snapshotEntries, *entry)
+		appendSnapshotEntry(*entry)
 	}
 
 	result, err := symlink.LinkWithResult(renderedPath, dst, dotfilesDir)
@@ -155,7 +155,7 @@ func execTemplateSymlink(step manifest.Step, dotfilesDir string, vars map[string
 		return Result{Status: "error", Msg: fmt.Sprintf("symlink %s: %v", dst, err)}
 	}
 	if result.SnapshotEntry != nil {
-		snapshotEntries = append(snapshotEntries, *result.SnapshotEntry)
+		appendSnapshotEntry(*result.SnapshotEntry)
 	}
 	return Result{Status: "installed", Msg: dst}
 }
