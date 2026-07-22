@@ -40,7 +40,7 @@ func Take(originalPath string, dotfilesDir string) (*Entry, error) {
 		return nil, fmt.Errorf("cannot snapshot directory: %s", originalPath)
 	}
 
-	hash, err := fileHash(originalPath)
+	hash, err := FileHash(originalPath)
 	if err != nil {
 		return nil, fmt.Errorf("hash %s: %w", originalPath, err)
 	}
@@ -65,7 +65,7 @@ func Take(originalPath string, dotfilesDir string) (*Entry, error) {
 	}, nil
 }
 
-func fileHash(path string) (string, error) {
+func FileHash(path string) (string, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return "", err
