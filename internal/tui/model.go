@@ -29,8 +29,12 @@ const (
 )
 
 type toolItem struct {
-	tool    manifest.Tool
-	checked bool
+	tool           manifest.Tool
+	checked        bool
+	expanded       bool
+	featureChecked map[string]bool
+	isFeature      bool
+	featureName    string
 }
 
 type stepResultMsg struct {
@@ -41,6 +45,7 @@ type stepResultMsg struct {
 
 type model struct {
 	categories     []manifest.Category
+	originalTools  [][]toolItem
 	toolsByTab     [][]toolItem
 	helperItems    []toolItem   // helpers filtered by dependency graph
 	tabIndex       int
@@ -71,39 +76,88 @@ type stepQueueItem struct {
 func NewModel(m *manifest.Manifest, profile string) tea.Model {
 	manifestRef = m
 	vars := config.GetVars()
-	var mainTools [][]toolItem
+	var origTools [][]toolItem
 	var allHelpers []toolItem
 	for _, cat := range m.Categories {
-		var main, helpers []toolItem
+		var main []toolItem
 		for _, t := range cat.Tools {
 			checked := t.Checked
 			if profile != "" && !t.MatchesProfile(profile) {
 				checked = false
 			}
-			item := toolItem{tool: t, checked: checked}
+			fc := make(map[string]bool, len(t.Features))
+			for _, f := range t.Features {
+				fc[f.Name] = f.Checked
+			}
+			item := toolItem{tool: t, checked: checked, featureChecked: fc}
 			if len(t.DependsOn) > 0 {
-				helpers = append(helpers, item)
 				allHelpers = append(allHelpers, item)
 			} else {
 				main = append(main, item)
 			}
 		}
-		mainTools = append(mainTools, main)
+		origTools = append(origTools, main)
 	}
 	s := spinner.New()
 	s.Spinner = spinner.Dot
 	s.Style = SpinnerStyle
 	ti := textinput.New()
 	ti.CharLimit = 256
-	return &model{
-		categories:  m.Categories,
-		toolsByTab:  mainTools,
-		helperItems: allHelpers,
-		state:       stateSelecting,
-		vars:        vars,
-		spinner:     s,
-		textInput:   ti,
+	var flatTools [][]toolItem
+	for i := range origTools {
+		flatTools = append(flatTools, buildTab(origTools[i]))
 	}
+	return &model{
+		categories:    m.Categories,
+		originalTools: origTools,
+		toolsByTab:    flatTools,
+		helperItems:   allHelpers,
+		state:         stateSelecting,
+		vars:          vars,
+		spinner:       s,
+		textInput:     ti,
+	}
+}
+
+func buildTab(orig []toolItem) []toolItem {
+	var items []toolItem
+	for _, o := range orig {
+		items = append(items, toolItem{
+			tool:           o.tool,
+			checked:        o.checked,
+			expanded:       o.expanded,
+			featureChecked: o.featureChecked,
+		})
+		if o.expanded {
+			for _, f := range o.tool.Features {
+				items = append(items, toolItem{
+					tool:        o.tool,
+					checked:     o.featureChecked[f.Name],
+					isFeature:   true,
+					featureName: f.Name,
+				})
+			}
+		}
+	}
+	return items
+}
+
+func (m *model) flatToOriginal(tabIdx, flatPos int) (origIdx int, isFeature bool) {
+	pos := 0
+	for i := range m.originalTools[tabIdx] {
+		if pos == flatPos {
+			return i, false
+		}
+		pos++
+		if m.originalTools[tabIdx][i].expanded {
+			featCount := len(m.originalTools[tabIdx][i].tool.Features)
+			if flatPos < pos+featCount {
+				return i, true
+			}
+			pos += featCount
+		}
+	}
+	return 0, false
 }
 
 func (m *model) Init() tea.Cmd { return m.spinner.Tick }
@@ -136,14 +190,42 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			switch msg.String() {
 			case "ctrl+c", "q":
 				return m, tea.Quit
-			case "left", "shift+tab":
+			case "tab":
+				if m.tabIndex < len(m.toolsByTab)-1 {
+					m.tabIndex++
+					m.cursor = 0
+				}
+			case "shift+tab":
 				if m.tabIndex > 0 {
 					m.tabIndex--
 					m.cursor = 0
 				}
-			case "right", "tab":
+			case "right":
+				if m.cursor < len(m.toolsByTab[m.tabIndex]) {
+					item := m.toolsByTab[m.tabIndex][m.cursor]
+					if !item.isFeature && len(item.tool.Features) > 0 && !item.expanded {
+						origIdx, _ := m.flatToOriginal(m.tabIndex, m.cursor)
+						m.originalTools[m.tabIndex][origIdx].expanded = true
+						m.toolsByTab[m.tabIndex] = buildTab(m.originalTools[m.tabIndex])
+						break
+					}
+				}
 				if m.tabIndex < len(m.toolsByTab)-1 {
 					m.tabIndex++
+					m.cursor = 0
+				}
+			case "left":
+				origIdx, isFeat := m.flatToOriginal(m.tabIndex, m.cursor)
+				if !isFeat && m.originalTools[m.tabIndex][origIdx].expanded {
+					m.originalTools[m.tabIndex][origIdx].expanded = false
+					m.toolsByTab[m.tabIndex] = buildTab(m.originalTools[m.tabIndex])
+					if m.cursor >= len(m.toolsByTab[m.tabIndex]) {
+						m.cursor = len(m.toolsByTab[m.tabIndex]) - 1
+					}
+					break
+				}
+				if m.tabIndex > 0 {
+					m.tabIndex--
 					m.cursor = 0
 				}
 			case "up", "k":
@@ -156,24 +238,40 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				}
 			case " ":
 				if len(m.toolsByTab[m.tabIndex]) > 0 {
-					m.toolsByTab[m.tabIndex][m.cursor].checked = !m.toolsByTab[m.tabIndex][m.cursor].checked
+					item := &m.toolsByTab[m.tabIndex][m.cursor]
+					origIdx, isFeat := m.flatToOriginal(m.tabIndex, m.cursor)
+					if isFeat {
+						newChecked := !item.checked
+						m.originalTools[m.tabIndex][origIdx].featureChecked[item.featureName] = newChecked
+						item.checked = newChecked
+					} else {
+						newChecked := !item.checked
+						m.originalTools[m.tabIndex][origIdx].checked = newChecked
+						for _, f := range item.tool.Features {
+							m.originalTools[m.tabIndex][origIdx].featureChecked[f.Name] = newChecked
+						}
+						m.toolsByTab[m.tabIndex] = buildTab(m.originalTools[m.tabIndex])
+						if m.cursor >= len(m.toolsByTab[m.tabIndex]) {
+							m.cursor = len(m.toolsByTab[m.tabIndex]) - 1
+						}
+					}
 				}
-		case "enter":
-			m.startHelpersSelection()
-			if m.state == stateSelectingHelpers {
-				break
-			}
-			if m.state == stateConfirm {
-				return m, nil
-			}
-			if m.state == stateInstalling {
-				return m, tea.Batch(m.spinner.Tick, installNextStep(m))
-			}
-			if m.state == stateDone {
-				return m, nil
-			}
-			m.textInput.Focus()
-			return m, textinput.Blink
+			case "enter":
+				m.startHelpersSelection()
+				if m.state == stateSelectingHelpers {
+					break
+				}
+				if m.state == stateConfirm {
+					return m, nil
+				}
+				if m.state == stateInstalling {
+					return m, tea.Batch(m.spinner.Tick, installNextStep(m))
+				}
+				if m.state == stateDone {
+					return m, nil
+				}
+				m.textInput.Focus()
+				return m, textinput.Blink
 			}
 		}
 
@@ -284,7 +382,7 @@ func (m *model) Errors() int        { return m.errors }
 
 func (m *model) flatItems() []toolItem {
 	var items []toolItem
-	for _, tab := range m.toolsByTab {
+	for _, tab := range m.originalTools {
 		items = append(items, tab...)
 	}
 	items = append(items, m.helperItems...)
@@ -426,7 +524,7 @@ func (m *model) selectionView() string {
 	b.WriteString(strings.Repeat("\u2500", 60))
 	b.WriteString("\n\n")
 
-	b.WriteString(HelpStyle.Render("\u2190/\u2192 switch tab  j/k navigate  Space toggle  Enter install  q quit"))
+	b.WriteString(HelpStyle.Render("\u2190/\u2192 switch tab  j/k navigate  Space toggle  \u2192 expand \u2190 collapse  Enter install  q quit"))
 	b.WriteString("\n\n")
 
 	items := m.toolsByTab[m.tabIndex]
@@ -439,16 +537,43 @@ func (m *model) selectionView() string {
 		if m.cursor == i {
 			cursor = CursorStyle.Render(">")
 		}
+
+		if item.isFeature {
+			checkbox := "[ ]"
+			if item.checked {
+				checkbox = CheckedStyle.Render("[\u2713]")
+			}
+			bullet := FeatureBulletStyle.Render("\u2022")
+			name := FeatureStyle.Render(item.featureName)
+			if m.cursor == i {
+				name = FeatureCursorStyle.Render(item.featureName)
+			}
+			if item.checked {
+				name = FeatureCheckedStyle.Render(item.featureName)
+			}
+			b.WriteString(CheckboxStyle.Render(fmt.Sprintf("   %s %s %s", checkbox, bullet, name)))
+			b.WriteString("\n")
+			continue
+		}
+
 		checkbox := "[ ]"
 		if item.checked {
 			checkbox = CheckedStyle.Render("[\u2713]")
 		}
-		name := UncheckedStyle.Render(item.tool.Name)
+		expand := ""
+		if len(item.tool.Features) > 0 {
+			if item.expanded {
+				expand = ExpandIndicatorStyle.Render("\u25bc ")
+			} else {
+				expand = ExpandIndicatorStyle.Render("\u25b6 ")
+			}
+		}
+		name := UncheckedStyle.Render(expand + item.tool.Name)
 		if item.checked {
-			name = CheckedStyle.Render(item.tool.Name)
+			name = CheckedStyle.Render(expand + item.tool.Name)
 		}
 		if m.cursor == i {
-			name = CursorStyle.Render(item.tool.Name)
+			name = CursorStyle.Render(expand + item.tool.Name)
 		}
 		desc := HelpStyle.Render(item.tool.Description)
 		b.WriteString(CheckboxStyle.Render(fmt.Sprintf("%s %s %s %s", cursor, checkbox, name, desc)))
@@ -465,11 +590,17 @@ func (m *model) selectionView() string {
 func (m *model) checkedCount() (int, int) {
 	checked := 0
 	total := 0
-	for _, tab := range m.toolsByTab {
+	for _, tab := range m.originalTools {
 		for _, item := range tab {
 			total++
 			if item.checked {
 				checked++
+			}
+			for _, f := range item.tool.Features {
+				total++
+				if item.featureChecked[f.Name] {
+					checked++
+				}
 			}
 		}
 	}
@@ -551,6 +682,38 @@ func (m *model) startPrompting() {
 				}
 				seen[k] = true
 			}
+		}
+		for _, f := range item.tool.Features {
+			if !item.featureChecked[f.Name] {
+				continue
+			}
+			for _, step := range f.Steps {
+				queue = append(queue, stepQueueItem{toolName: item.tool.Name + " > " + f.Name, step: step})
+				if step.Type != "template-symlink" {
+					continue
+				}
+				for _, k := range step.Vars {
+					if !seen[k] && m.vars[k] == "" {
+						if vd, ok := manifestRef.Vars[k]; ok {
+							vars = append(vars, manifest.VarDef{Name: k, Description: vd.Description, Why: vd.Why, Hint: vd.Hint})
+						} else {
+							vars = append(vars, manifest.VarDef{Name: k, Description: k})
+						}
+					}
+					seen[k] = true
+				}
+			}
+		}
+	}
+	// Prompt for any vars declared in manifest that weren't referenced by template-symlink steps
+	for k, vd := range manifestRef.Vars {
+		if !seen[k] && m.vars[k] == "" {
+			def := manifest.VarDef{Name: k, Description: vd.Description, Why: vd.Why, Hint: vd.Hint}
+			if def.Description == "" {
+				def.Description = k
+			}
+			vars = append(vars, def)
+			seen[k] = true
 		}
 	}
 	m.stepQueue = queue
