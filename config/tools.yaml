@@ -44,7 +44,6 @@ categories:
   # ── Shell ─────────────────────────────────────────────
   - name: "Shell"
     tools:
-      # ── Framework ──
       - name: "Oh My Zsh"
         description: "Zsh framework"
         checked: true
@@ -85,14 +84,13 @@ categories:
             from: "home/.exports"
             to: "${HOME}/.dotfiles-home/.exports"
 
-      - name: "bash"
+      - name: "Bash"
         description: "Modern Bourne-Again Shell"
         checked: true
         steps:
           - type: brew
             package: bash
 
-      # ── Plugins ──
       - name: "zsh-autosuggestions"
         description: "Fish-like autosuggestions"
         checked: true
@@ -114,7 +112,6 @@ categories:
           - type: omz-plugin
             repo: "https://github.com/zdharma-continuum/fast-syntax-highlighting"
 
-      # ── Aliases ──
       - name: "Aliases: System"
         description: "sudo, flushdns, showfiles, ports, mysqlroot"
         checked: true
@@ -139,24 +136,6 @@ categories:
             from: "home/aliases/git.zsh"
             to: "${HOME}/.dotfiles-home/aliases/git.zsh"
 
-      - name: "Aliases: Laravel"
-        description: "artisan, migrate:fresh --seed, pest, pint"
-        checked: true
-        profiles: ["personal"]
-        steps:
-          - type: symlink
-            from: "home/aliases/laravel.zsh"
-            to: "${HOME}/.dotfiles-home/aliases/laravel.zsh"
-
-      - name: "Aliases: Composer"
-        description: "composer update, require, install, dump-autoload"
-        checked: true
-        profiles: ["personal"]
-        steps:
-          - type: symlink
-            from: "home/aliases/composer.zsh"
-            to: "${HOME}/.dotfiles-home/aliases/composer.zsh"
-
       - name: "Aliases: Editors"
         description: "PhpStorm launcher"
         checked: true
@@ -173,7 +152,6 @@ categories:
             from: "home/aliases/config.zsh"
             to: "${HOME}/.dotfiles-home/aliases/config.zsh"
 
-      # ── Functions ──
       - name: "Functions: Git"
         description: "ghopen, clone, pr, git-prune-local"
         checked: true
@@ -189,33 +167,6 @@ categories:
           - type: symlink
             from: "home/functions/util.zsh"
             to: "${HOME}/.dotfiles-home/functions/util.zsh"
-
-      - name: "Functions: Laravel"
-        description: "p, pestf, pestp"
-        checked: true
-        profiles: ["personal"]
-        steps:
-          - type: symlink
-            from: "home/functions/laravel.zsh"
-            to: "${HOME}/.dotfiles-home/functions/laravel.zsh"
-
-      - name: "Functions: Docker"
-        description: "dsh (docker exec into fzf-selected container)"
-        checked: true
-        profiles: ["personal"]
-        steps:
-          - type: symlink
-            from: "home/functions/docker.zsh"
-            to: "${HOME}/.dotfiles-home/functions/docker.zsh"
-
-      - name: "Functions: MySQL"
-        description: "dbdump, laradump"
-        checked: true
-        profiles: ["personal"]
-        steps:
-          - type: symlink
-            from: "home/functions/mysql.zsh"
-            to: "${HOME}/.dotfiles-home/functions/mysql.zsh"
 
   # ── Terminal ──────────────────────────────────────────
   - name: "Terminal"
@@ -249,7 +200,7 @@ categories:
             from: "config/ghostty/config"
             to: "${HOME}/Library/Application Support/Muxy/ghostty.conf"
 
-      - name: "tmux"
+      - name: "Tmux"
         description: "Terminal multiplexer"
         checked: true
         steps:
@@ -259,72 +210,7 @@ categories:
             from: "config/tmux/tmux.conf"
             to: "${HOME}/.config/tmux/tmux.conf"
 
-  # ── File & Text ───────────────────────────────────────
-  - name: "File & Text"
-    tools:
-      - name: "bat"
-        description: "cat with syntax highlighting"
-        checked: true
-        steps:
-          - type: brew
-            package: bat
-
-      - name: "eza"
-        description: "Modern ls replacement"
-        checked: true
-        steps:
-          - type: brew
-            package: eza
-
-      - name: "ripgrep"
-        description: "Fast grep"
-        checked: true
-        steps:
-          - type: brew
-            package: ripgrep
-
-      - name: "fd"
-        description: "Fast find alternative"
-        checked: true
-        steps:
-          - type: brew
-            package: fd
-
-  # ── System Tools ─────────────────────────────────────
-  - name: "System Tools"
-    tools:
-      - name: "dust"
-        description: "Visual disk usage tree (du replacement)"
-        checked: true
-        steps:
-          - type: brew
-            package: dust
-
-      - name: "procs"
-        description: "Colorized ps replacement with tree view"
-        checked: true
-        steps:
-          - type: brew
-            package: procs
-
-      - name: "jq"
-        description: "JSON processor"
-        checked: true
-        steps:
-          - type: brew
-            package: jq
-
-      - name: "yq"
-        description: "YAML processor"
-        checked: true
-        steps:
-          - type: brew
-            package: yq
-
-  # ── Navigation & Help ────────────────────────────────
-  - name: "Navigation & Help"
-    tools:
-      - name: "fzf"
+      - name: "Fzf"
         description: "Fuzzy finder"
         checked: true
         steps:
@@ -334,21 +220,21 @@ categories:
             command: "$(brew --prefix)/opt/fzf/install --all --no-bash --no-fish"
             skip: "test -f ${HOME}/.fzf.zsh"
 
-      - name: "zoxide"
+      - name: "Zoxide"
         description: "Smarter cd"
         checked: true
         steps:
           - type: brew
             package: zoxide
 
-      - name: "tldr"
+      - name: "Tldr"
         description: "Practical command examples instead of man pages"
         checked: true
         steps:
           - type: brew
             package: tlrc
 
-      - name: "opentmux"
+      - name: "Opentmux"
         description: "tmux session manager wrapper"
         checked: true
         steps:
@@ -356,7 +242,7 @@ categories:
             command: "npm install -g opentmux"
             skip: "which opentmux"
 
-      - name: "yazi"
+      - name: "Yazi"
         description: "Terminal file manager"
         checked: true
         steps:
@@ -372,58 +258,111 @@ categories:
             from: "config/yazi/theme.toml"
             to: "${HOME}/.config/yazi/theme.toml"
 
-  # ── System Diagnostics ───────────────────────────────
-  - name: "System Diagnostics"
+  # ── Tools ─────────────────────────────────────────────
+  - name: "Tools"
     tools:
-      - name: "bottom (btm)"
+      - name: "Bat"
+        description: "cat with syntax highlighting"
+        checked: true
+        steps:
+          - type: brew
+            package: bat
+
+      - name: "Eza"
+        description: "Modern ls replacement"
+        checked: true
+        steps:
+          - type: brew
+            package: eza
+
+      - name: "Ripgrep"
+        description: "Fast grep"
+        checked: true
+        steps:
+          - type: brew
+            package: ripgrep
+
+      - name: "Fd"
+        description: "Fast find alternative"
+        checked: true
+        steps:
+          - type: brew
+            package: fd
+
+      - name: "Dust"
+        description: "Visual disk usage tree (du replacement)"
+        checked: true
+        steps:
+          - type: brew
+            package: dust
+
+      - name: "Procs"
+        description: "Colorized ps replacement with tree view"
+        checked: true
+        steps:
+          - type: brew
+            package: procs
+
+      - name: "Jq"
+        description: "JSON processor"
+        checked: true
+        steps:
+          - type: brew
+            package: jq
+
+      - name: "Yq"
+        description: "YAML processor"
+        checked: true
+        steps:
+          - type: brew
+            package: yq
+
+      - name: "Bottom"
         description: "System monitor"
         checked: true
         steps:
           - type: brew
             package: bottom
 
-      - name: "hyperfine"
+      - name: "Hyperfine"
         description: "Command benchmarking tool"
         checked: true
         steps:
           - type: brew
             package: hyperfine
 
-      - name: "mole"
+      - name: "Mole"
         description: "Mac cleaning app"
         checked: true
         steps:
           - type: brew
             package: mole
 
-  # ── Media CLIs ───────────────────────────────────────
-  - name: "Media CLIs"
-    tools:
-      - name: "ffmpeg"
-        description: "Audio/video converter"
-        checked: true
-        steps:
-          - type: brew
-            package: ffmpeg
-
-      - name: "unar"
-        description: "Multi-format unarchiver"
-        checked: true
-        steps:
-          - type: brew
-            package: unar
-
-  # ── Dev CLIs ─────────────────────────────────────────
-  - name: "Dev CLIs"
-    tools:
-      - name: "direnv"
+      - name: "Direnv"
         description: "Per-directory env vars"
         checked: true
         steps:
           - type: brew
             package: direnv
 
-      - name: "pay-respects"
+      - name: "Ffmpeg"
+        description: "Audio/video converter"
+        checked: true
+        steps:
+          - type: brew
+            package: ffmpeg
+
+      - name: "Unar"
+        description: "Multi-format unarchiver"
+        checked: true
+        steps:
+          - type: brew
+            package: unar
+
+  # ── Dev ───────────────────────────────────────────────
+  - name: "Dev"
+    tools:
+      - name: "Pay-respects"
         description: "Command suggestions and typo fixer (thefuck replacement)"
         checked: true
         steps:
@@ -431,24 +370,24 @@ categories:
             command: "_arch=$(uname -m); case \"$_arch\" in arm64) _arch=aarch64 ;; x86_64) _arch=x86_64 ;; esac; _url=\"https://github.com/iffse/pay-respects/releases/download/nightly/pay-respects-nightly-${_arch}-apple-darwin.tar.zst\"; _tmp=$(mktemp -d); curl -fsSL \"$_url\" -o \"$_tmp/pay-respects.tar.zst\" && mkdir -p \"${HOME}/.local/bin\" && tar -xf \"$_tmp/pay-respects.tar.zst\" -C \"$_tmp\" && cp \"$_tmp/pay-respects\" \"${HOME}/.local/bin/pay-respects\" && cp \"$_tmp/_pay-respects-module-100-runtime-rules\" \"${HOME}/.local/bin/\" && cp \"$_tmp/_pay-respects-fallback-100-request-ai\" \"${HOME}/.local/bin/\" && chmod +x \"${HOME}/.local/bin/pay-respects\" \"${HOME}/.local/bin/_pay-respects-module-100-runtime-rules\" \"${HOME}/.local/bin/_pay-respects-fallback-100-request-ai\"; rm -rf \"$_tmp\""
             skip: "which pay-respects"
 
-      - name: "MySQL Client"
+      - name: "Mysql Client"
         description: "MySQL database CLI"
         checked: true
         steps:
           - type: brew
             package: mysql-client
+          - type: symlink
+            from: "home/functions/mysql.zsh"
+            to: "${HOME}/.dotfiles-home/functions/mysql.zsh"
 
-      - name: "sshpass"
+      - name: "Sshpass"
         description: "Non-interactive SSH auth"
         checked: true
         steps:
           - type: brew
             package: sshpass
 
-  # ── Runtimes ─────────────────────────────────────────
-  - name: "Runtimes"
-    tools:
-      - name: "nvm"
+      - name: "Nvm"
         description: "Node version manager (used by Herd)"
         checked: true
         steps:
@@ -476,18 +415,18 @@ categories:
         steps:
           - type: brew
             package: composer
+          - type: symlink
+            from: "home/aliases/composer.zsh"
+            to: "${HOME}/.dotfiles-home/aliases/composer.zsh"
 
-      - name: "pipx"
+      - name: "Pipx"
         description: "Python package runner"
         checked: true
         steps:
           - type: brew
             package: pipx
 
-  # ── Databases ────────────────────────────────────────
-  - name: "Databases"
-    tools:
-      - name: "DBngin"
+      - name: "Dbngin"
         description: "Database manager"
         checked: true
         profiles: ["personal"]
@@ -496,7 +435,7 @@ categories:
             package: dbngin
             skip: "test -d /Applications/DBngin.app"
 
-      - name: "mysql-to-sqlite3"
+      - name: "Mysql-to-sqlite3"
         description: "MySQL to SQLite converter"
         checked: true
         profiles: ["personal"]
@@ -504,36 +443,129 @@ categories:
           - type: brew
             package: mysql-to-sqlite3
 
-      - name: "sqlite3"
+      - name: "Sqlite3"
         description: "SQLite CLI"
         checked: true
         steps:
           - type: brew
             package: sqlite
 
-  # ── Git ──────────────────────────────────────────────
-  - name: "Git"
-    tools:
-      - name: "gh (GitHub CLI)"
-        description: "GitHub command-line tool"
+      - name: "OrbStack"
+        description: "Docker & Linux VMs"
         checked: true
         steps:
-          - type: brew
-            package: gh
-
-      - name: "Hunk"
-        description: "Review-first terminal diff viewer"
-        checked: true
-        steps:
-          - type: brew
-            package: hunk
+          - type: cask
+            package: orbstack
+            skip: "test -d /Applications/OrbStack.app"
           - type: symlink
-            from: "config/hunk/config.toml"
-            to: "${HOME}/.config/hunk/config.toml"
+            from: "home/functions/docker.zsh"
+            to: "${HOME}/.dotfiles-home/functions/docker.zsh"
 
-  # ── AI Agents ────────────────────────────────────────
-  - name: "AI Agents"
+      - name: "Herd"
+        description: "Laravel dev environment"
+        checked: true
+        profiles: ["personal"]
+        steps:
+          - type: cask
+            package: herd
+            skip: "test -d /Applications/Herd.app"
+          - type: symlink
+            from: "config/herd/herd.json"
+            to: "${HOME}/Library/Application Support/Herd/config/herd.json"
+          - type: symlink
+            from: "home/aliases/laravel.zsh"
+            to: "${HOME}/.dotfiles-home/aliases/laravel.zsh"
+          - type: symlink
+            from: "home/functions/laravel.zsh"
+            to: "${HOME}/.dotfiles-home/functions/laravel.zsh"
+
+      - name: "Git Config"
+        description: ".gitconfig with hunk pager + gh auth"
+        checked: true
+        steps:
+          - type: template-symlink
+            from: "config/git/.gitconfig"
+            to: "${HOME}/.gitconfig"
+            vars: ["GitName", "GitEmail", "GitGPGKey"]
+            skip: "test -f ${HOME}/.gitconfig"
+
+      - name: "Global .npmrc"
+        description: "npm configuration"
+        checked: true
+        steps:
+          - type: symlink
+            from: "config/npm/.npmrc"
+            to: "${HOME}/.npmrc"
+            skip: "test -f ${HOME}/.npmrc"
+
+  # ── Editors & AI ──────────────────────────────────────
+  - name: "Editors & AI"
     tools:
+      - name: "Vs Code"
+        description: "Editor + settings + extensions"
+        checked: true
+        steps:
+          - type: cask
+            package: visual-studio-code
+            skip: "test -d '/Applications/Visual Studio Code.app'"
+          - type: symlink
+            from: "config/vscode/settings.json"
+            to: "${HOME}/Library/Application Support/Code/User/settings.json"
+          - type: symlink
+            from: "config/vscode/keybindings.json"
+            to: "${HOME}/Library/Application Support/Code/User/keybindings.json"
+          - type: vscode
+            extension: "aaron-bond.better-comments"
+          - type: vscode
+            extension: "bmewburn.vscode-intelephense-client"
+          - type: vscode
+            extension: "bradlc.vscode-tailwindcss"
+          - type: vscode
+            extension: "catppuccin.catppuccin-vsc"
+          - type: vscode
+            extension: "christian-kohler.path-intellisense"
+          - type: vscode
+            extension: "laravel.vscode-laravel"
+          - type: vscode
+            extension: "mechatroner.rainbow-csv"
+          - type: vscode
+            extension: "naumovs.color-highlight"
+          - type: vscode
+            extension: "pkief.material-icon-theme"
+          - type: vscode
+            extension: "redhat.vscode-xml"
+          - type: vscode
+            extension: "redhat.vscode-yaml"
+          - type: vscode
+            extension: "usernamehw.errorlens"
+          - type: vscode
+            extension: "waderyan.gitblame"
+          - type: vscode
+            extension: "xdebug.php-debug"
+          - type: vscode
+            extension: "yoavbls.pretty-ts-errors"
+          - type: vscode
+            extension: "biomejs.biome"
+          - type: vscode
+            extension: "akamud.vscode-theme-onedark"
+          - type: vscode
+            extension: "anthropic.claude-code"
+
+      - name: "Phpstorm"
+        description: "JetBrains PHP IDE"
+        checked: true
+        steps:
+          - type: cask
+            package: phpstorm
+            skip: "test -d /Applications/PhpStorm.app"
+
+      - name: "Neovim"
+        description: "Modern Vim-based editor"
+        checked: true
+        steps:
+          - type: brew
+            package: neovim
+
       - name: "Claude Code"
         description: "Claude AI coding agent"
         checked: true
@@ -597,120 +629,27 @@ categories:
             package: grok-build
             skip: "which grok"
 
-  # ── Dev ───────────────────────────────────────────────
-  - name: "Dev"
-    tools:
-      # ── Editors ──
-      - name: "VS Code"
-        description: "Editor + settings + extensions"
-        checked: true
-        steps:
-          - type: cask
-            package: visual-studio-code
-            skip: "test -d '/Applications/Visual Studio Code.app'"
-          - type: symlink
-            from: "config/vscode/settings.json"
-            to: "${HOME}/Library/Application Support/Code/User/settings.json"
-          - type: symlink
-            from: "config/vscode/keybindings.json"
-            to: "${HOME}/Library/Application Support/Code/User/keybindings.json"
-          - type: vscode
-            extension: "aaron-bond.better-comments"
-          - type: vscode
-            extension: "bmewburn.vscode-intelephense-client"
-          - type: vscode
-            extension: "bradlc.vscode-tailwindcss"
-          - type: vscode
-            extension: "catppuccin.catppuccin-vsc"
-          - type: vscode
-            extension: "christian-kohler.path-intellisense"
-          - type: vscode
-            extension: "laravel.vscode-laravel"
-          - type: vscode
-            extension: "mechatroner.rainbow-csv"
-          - type: vscode
-            extension: "naumovs.color-highlight"
-          - type: vscode
-            extension: "pkief.material-icon-theme"
-          - type: vscode
-            extension: "redhat.vscode-xml"
-          - type: vscode
-            extension: "redhat.vscode-yaml"
-          - type: vscode
-            extension: "usernamehw.errorlens"
-          - type: vscode
-            extension: "waderyan.gitblame"
-          - type: vscode
-            extension: "xdebug.php-debug"
-          - type: vscode
-            extension: "yoavbls.pretty-ts-errors"
-          - type: vscode
-            extension: "biomejs.biome"
-          - type: vscode
-            extension: "akamud.vscode-theme-onedark"
-          - type: vscode
-            extension: "anthropic.claude-code"
-
-      - name: "PhpStorm"
-        description: "JetBrains PHP IDE"
-        checked: true
-        steps:
-          - type: cask
-            package: phpstorm
-            skip: "test -d /Applications/PhpStorm.app"
-
-      - name: "Neovim"
-        description: "Modern Vim-based editor"
+      - name: "Gh"
+        description: "GitHub command-line tool"
         checked: true
         steps:
           - type: brew
-            package: neovim
+            package: gh
 
-      # ── Git & Version Control ──
-      - name: "Git Config"
-        description: ".gitconfig with hunk pager + gh auth"
+      - name: "Hunk"
+        description: "Review-first terminal diff viewer"
         checked: true
         steps:
-          - type: template-symlink
-            from: "config/git/.gitconfig"
-            to: "${HOME}/.gitconfig"
-            vars: ["GitName", "GitEmail", "GitGPGKey"]
-
-      # ── Containers & VMs ──
-      - name: "OrbStack"
-        description: "Docker & Linux VMs"
-        checked: true
-        steps:
-          - type: cask
-            package: orbstack
-            skip: "test -d /Applications/OrbStack.app"
-
-      # ── PHP / Laravel ──
-      - name: "Herd"
-        description: "Laravel dev environment"
-        checked: true
-        profiles: ["personal"]
-        steps:
-          - type: cask
-            package: herd
-            skip: "test -d /Applications/Herd.app"
+          - type: brew
+            package: hunk
           - type: symlink
-            from: "config/herd/herd.json"
-            to: "${HOME}/Library/Application Support/Herd/config/herd.json"
-
-      - name: "Global .npmrc"
-        description: "npm configuration"
-        checked: true
-        steps:
-          - type: symlink
-            from: "config/npm/.npmrc"
-            to: "${HOME}/.npmrc"
+            from: "config/hunk/config.toml"
+            to: "${HOME}/.config/hunk/config.toml"
 
   # ── Apps ──────────────────────────────────────────────
   - name: "Apps"
     tools:
-      # ── Productivity ──
-      - name: "mackup"
+      - name: "Mackup"
         description: "Backup app configs to cloud storage"
         checked: true
         steps:
@@ -746,7 +685,7 @@ categories:
             package: alt-tab
             skip: "test -d '/Applications/AltTab.app'"
 
-      - name: "rendercv"
+      - name: "Rendercv"
         description: "LaTeX-based CV/resume renderer"
         checked: true
         steps:
@@ -754,7 +693,6 @@ categories:
             command: "pipx install rendercv"
             skip: "which rendercv"
 
-      # ── Media ──
       - name: "Finetune"
         description: "Per-app volume mixer"
         checked: true
@@ -781,7 +719,7 @@ categories:
             package: spotify
             skip: "test -d '/Applications/Spotify.app'"
 
-      - name: "YTSage"
+      - name: "Ytsage"
         description: "Modern YouTube downloader with PySide6 GUI"
         checked: true
         steps:
@@ -797,7 +735,6 @@ categories:
             command: "brew install --cask stupside/tap/castor"
             skip: "test -f /Applications/Castor.app || which castor"
 
-      # ── Input ──
       - name: "Linear Mouse"
         description: "Customize mouse buttons, speed, and gestures"
         checked: true
