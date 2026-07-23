@@ -91,31 +91,14 @@ func installAll(m *manifest.Manifest) error {
 					continue
 				}
 				for _, step := range t.Steps {
-					switch step.Type {
-					case "symlink":
-						src := filepath.Join(dotfilesDir, step.From)
-						dst := expand(step.To)
-						currentTarget, _ := os.Readlink(dst)
-						if currentTarget != src {
-							fmt.Fprintf(os.Stderr, "  symlink %s\n", dst)
-							fmt.Fprintf(os.Stderr, "    from: %s\n", currentTarget)
-							fmt.Fprintf(os.Stderr, "    to:   %s\n", src)
-						}
-					case "template-symlink":
-						src := filepath.Join(dotfilesDir, step.From)
-						dst := expand(step.To)
-						currentTarget, _ := os.Readlink(dst)
-						if currentTarget != src {
-							fmt.Fprintf(os.Stderr, "  template %s\n", dst)
-						}
-						tmplData, _ := os.ReadFile(src)
-						rendered, _ := config.Render(string(tmplData), vars)
-						existing, _ := os.ReadFile(dst)
-						if string(existing) != rendered {
-							fmt.Fprintf(os.Stderr, "    content differs\n")
-						}
-					default:
-						fmt.Fprintf(os.Stderr, "  %s %s\n", step.Type, step.Package+step.Repo+step.Command)
+					diffStep(step, t.Name, dotfilesDir, expand, vars)
+				}
+				for _, f := range t.Features {
+					if !f.Checked {
+						continue
+					}
+					for _, step := range f.Steps {
+						diffStep(step, t.Name+" > "+f.Name, dotfilesDir, expand, vars)
 					}
 				}
 			}
@@ -133,6 +116,20 @@ func installAll(m *manifest.Manifest) error {
 				if step.Type == "template-symlink" {
 					config.PromptMissing(step.Vars)
 				}
+			}
+			for _, f := range t.Features {
+				if !f.Checked {
+					continue
+				}
+				for _, step := range f.Steps {
+					if step.Type == "template-symlink" {
+						config.PromptMissing(step.Vars)
+					}
+				}
+			}
+			// Prompt for any vars declared in manifest that weren't in template-symlink steps
+			for k := range m.Vars {
+				config.PromptMissing([]string{k})
 			}
 			vars = config.GetVars()
 
@@ -157,6 +154,32 @@ func installAll(m *manifest.Manifest) error {
 					hadError = true
 				}
 				logger.Log(r.Status, t.Name, r.Msg)
+			}
+			for _, f := range t.Features {
+				if !f.Checked {
+					continue
+				}
+				for _, step := range f.Steps {
+					r := executor.Run(step, dotfilesDir, vars, isDryRun)
+					fName := t.Name + " > " + f.Name
+					switch r.Status {
+					case "installed":
+						fmt.Fprint(os.Stderr, " \u2713")
+						allSkipped = false
+					case "skipped":
+						fmt.Fprint(os.Stderr, " \u2022")
+					case "would-install":
+						fmt.Fprint(os.Stderr, " +")
+						allSkipped = false
+					case "would-skip":
+						fmt.Fprint(os.Stderr, " \u2022")
+					case "error":
+						fmt.Fprintf(os.Stderr, " \u2717(%s)", r.Msg)
+						allSkipped = false
+						hadError = true
+					}
+					logger.Log(r.Status, fName, r.Msg)
+				}
 			}
 			if allSkipped {
 				fmt.Fprint(os.Stderr, " (already done)")
@@ -197,4 +220,33 @@ func installAll(m *manifest.Manifest) error {
 
 	fmt.Println("\nDone.")
 	return nil
+}
+
+func diffStep(step manifest.Step, label string, dotfilesDir string, expand func(string) string, vars map[string]string) {
+	switch step.Type {
+	case "symlink":
+		src := filepath.Join(dotfilesDir, step.From)
+		dst := expand(step.To)
+		currentTarget, _ := os.Readlink(dst)
+		if currentTarget != src {
+			fmt.Fprintf(os.Stderr, "  %s: symlink %s\n", label, dst)
+			fmt.Fprintf(os.Stderr, "    from: %s\n", currentTarget)
+			fmt.Fprintf(os.Stderr, "    to:   %s\n", src)
+		}
+	case "template-symlink":
+		src := filepath.Join(dotfilesDir, step.From)
+		dst := expand(step.To)
+		currentTarget, _ := os.Readlink(dst)
+		if currentTarget != src {
+			fmt.Fprintf(os.Stderr, "  %s: template %s\n", label, dst)
+		}
+		tmplData, _ := os.ReadFile(src)
+		rendered, _ := config.Render(string(tmplData), vars)
+		existing, _ := os.ReadFile(dst)
+		if string(existing) != rendered {
+			fmt.Fprintf(os.Stderr, "    content differs\n")
+		}
+	default:
+		fmt.Fprintf(os.Stderr, "  %s: %s %s\n", label, step.Type, step.Package+step.Repo+step.Command)
+	}
 }

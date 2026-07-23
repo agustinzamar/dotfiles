@@ -25,13 +25,21 @@ type Category struct {
 }
 
 type Tool struct {
-	Category    string   `yaml:"-"`
+	Category    string     `yaml:"-"`
+	Name        string     `yaml:"name"`
+	Description string     `yaml:"description"`
+	Checked     bool       `yaml:"checked"`
+	Profiles    []string   `yaml:"profiles,omitempty"`
+	DependsOn   []string   `yaml:"depends_on,omitempty"`
+	Steps       []Step     `yaml:"steps,omitempty"`
+	Features    []Feature  `yaml:"features,omitempty"`
+}
+
+type Feature struct {
 	Name        string   `yaml:"name"`
-	Description string   `yaml:"description"`
+	Description string   `yaml:"description,omitempty"`
 	Checked     bool     `yaml:"checked"`
-	Profiles    []string `yaml:"profiles,omitempty"`
-	DependsOn   []string `yaml:"depends_on,omitempty"`
-	Steps       []Step   `yaml:"steps"`
+	Steps       []Step   `yaml:"steps,omitempty"`
 }
 
 func (t Tool) MatchesProfile(profile string) bool {
