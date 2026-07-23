@@ -66,6 +66,7 @@ categories:
 
       - name: "Powerlevel10k"
         description: "Prompt theme (robbyrussell style)"
+        depends_on: ["Oh My Zsh"]
         checked: true
         steps:
           - type: git-clone
@@ -93,6 +94,7 @@ categories:
 
       - name: "zsh-autosuggestions"
         description: "Fish-like autosuggestions"
+        depends_on: ["Oh My Zsh"]
         checked: true
         steps:
           - type: omz-plugin
@@ -100,6 +102,7 @@ categories:
 
       - name: "fzf-tab"
         description: "Fuzzy tab completion"
+        depends_on: ["Oh My Zsh"]
         checked: true
         steps:
           - type: omz-plugin
@@ -107,6 +110,7 @@ categories:
 
       - name: "fast-syntax-highlighting"
         description: "Syntax highlighting in shell"
+        depends_on: ["Oh My Zsh"]
         checked: true
         steps:
           - type: omz-plugin
@@ -114,6 +118,7 @@ categories:
 
       - name: "Aliases: System"
         description: "sudo, flushdns, showfiles, ports, mysqlroot"
+        depends_on: ["Vs Code", "Mysql Client"]
         checked: true
         steps:
           - type: symlink
@@ -122,6 +127,7 @@ categories:
 
       - name: "Aliases: Essentials"
         description: "cd, cat/bat, ls/eza aliases, catcopy"
+        depends_on: ["Bat", "Eza"]
         checked: true
         steps:
           - type: symlink
@@ -130,6 +136,7 @@ categories:
 
       - name: "Aliases: Git"
         description: "nah, push, pull, uncommit, branches, gecor"
+        depends_on: ["Gh", "Fzf"]
         checked: true
         steps:
           - type: symlink
@@ -138,6 +145,7 @@ categories:
 
       - name: "Aliases: Editors"
         description: "PhpStorm launcher"
+        depends_on: ["Vs Code", "Phpstorm", "Neovim"]
         checked: true
         steps:
           - type: symlink
@@ -146,6 +154,7 @@ categories:
 
       - name: "Aliases: Config"
         description: "zshconfig, ohmyzsh, opencodeconfig, claudeconfig"
+        depends_on: ["Oh My Zsh"]
         checked: true
         steps:
           - type: symlink
@@ -154,6 +163,7 @@ categories:
 
       - name: "Functions: Git"
         description: "ghopen, clone, pr, git-prune-local"
+        depends_on: ["Gh", "Fzf"]
         checked: true
         steps:
           - type: symlink
@@ -236,6 +246,7 @@ categories:
 
       - name: "Opentmux"
         description: "tmux session manager wrapper"
+        depends_on: ["Tmux"]
         checked: true
         steps:
           - type: run
@@ -481,7 +492,7 @@ categories:
 
       - name: "Git Config"
         description: ".gitconfig with hunk pager + gh auth"
-        checked: true
+        depends_on: ["Xcode CLT"]
         steps:
           - type: template-symlink
             from: "config/git/.gitconfig"
@@ -491,7 +502,7 @@ categories:
 
       - name: "Global .npmrc"
         description: "npm configuration"
-        checked: true
+        depends_on: ["Nvm"]
         steps:
           - type: symlink
             from: "config/npm/.npmrc"
