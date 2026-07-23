@@ -160,5 +160,11 @@
   "workbench.browser.showInTitleBar": false,
   "window.restoreFullscreen": true,
   "window.customTitleBarVisibility": "windowed",
-  "window.menuStyle": "custom"
+  "window.menuStyle": "custom",
+  "github.copilot.chat.claudeAgent.allowAutoPermissions": true,
+  "github.copilot.chat.anthropic.contextEditing.mode": "clear-both",
+  "github.copilot.chat.claude48OpusPrompt.enabled": true,
+  "github.copilot.chat.gemini3GetChangedFilesTool.enabled": true,
+  "github.copilot.chat.githubMcpServer.enabled": true,
+  "claudeCode.preferredLocation": "panel"
 }

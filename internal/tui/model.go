@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/agustinzamar/dotfiles/internal/config"
@@ -19,7 +20,8 @@ var manifestRef *manifest.Manifest
 type state int
 
 const (
-	stateSelecting state = iota
+	stateSelecting        state = iota
+	stateSelectingHelpers         // second phase: alias/function helpers
 	statePrompting
 	stateConfirm
 	stateInstalling
@@ -40,8 +42,10 @@ type stepResultMsg struct {
 type model struct {
 	categories     []manifest.Category
 	toolsByTab     [][]toolItem
+	helperItems    []toolItem   // helpers filtered by dependency graph
 	tabIndex       int
 	cursor         int
+	helperCursor   int
 	state          state
 	messages       []string
 	vars           map[string]string
@@ -67,15 +71,24 @@ type stepQueueItem struct {
 func NewModel(m *manifest.Manifest, profile string) tea.Model {
 	manifestRef = m
 	vars := config.GetVars()
-	toolsByTab := make([][]toolItem, len(m.Categories))
-	for i, cat := range m.Categories {
+	var mainTools [][]toolItem
+	var allHelpers []toolItem
+	for _, cat := range m.Categories {
+		var main, helpers []toolItem
 		for _, t := range cat.Tools {
 			checked := t.Checked
 			if profile != "" && !t.MatchesProfile(profile) {
 				checked = false
 			}
-			toolsByTab[i] = append(toolsByTab[i], toolItem{tool: t, checked: checked})
+			item := toolItem{tool: t, checked: checked}
+			if len(t.DependsOn) > 0 {
+				helpers = append(helpers, item)
+				allHelpers = append(allHelpers, item)
+			} else {
+				main = append(main, item)
+			}
 		}
+		mainTools = append(mainTools, main)
 	}
 	s := spinner.New()
 	s.Spinner = spinner.Dot
@@ -83,12 +96,13 @@ func NewModel(m *manifest.Manifest, profile string) tea.Model {
 	ti := textinput.New()
 	ti.CharLimit = 256
 	return &model{
-		categories: m.Categories,
-		toolsByTab: toolsByTab,
-		state:      stateSelecting,
-		vars:       vars,
-		spinner:    s,
-		textInput:  ti,
+		categories:  m.Categories,
+		toolsByTab:  mainTools,
+		helperItems: allHelpers,
+		state:       stateSelecting,
+		vars:        vars,
+		spinner:     s,
+		textInput:   ti,
 	}
 }
 
@@ -143,6 +157,45 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case " ":
 				if len(m.toolsByTab[m.tabIndex]) > 0 {
 					m.toolsByTab[m.tabIndex][m.cursor].checked = !m.toolsByTab[m.tabIndex][m.cursor].checked
+				}
+		case "enter":
+			m.startHelpersSelection()
+			if m.state == stateSelectingHelpers {
+				break
+			}
+			if m.state == stateConfirm {
+				return m, nil
+			}
+			if m.state == stateInstalling {
+				return m, tea.Batch(m.spinner.Tick, installNextStep(m))
+			}
+			if m.state == stateDone {
+				return m, nil
+			}
+			m.textInput.Focus()
+			return m, textinput.Blink
+			}
+		}
+
+		if m.state == stateSelectingHelpers {
+			switch msg.String() {
+			case "ctrl+c", "q":
+				return m, tea.Quit
+			case "esc":
+				m.state = stateSelecting
+				m.cursor = 0
+				return m, nil
+			case "up", "k":
+				if m.cursor > 0 {
+					m.cursor--
+				}
+			case "down", "j":
+				if m.cursor < len(m.helperItems)-1 {
+					m.cursor++
+				}
+			case " ":
+				if len(m.helperItems) > 0 {
+					m.helperItems[m.cursor].checked = !m.helperItems[m.cursor].checked
 				}
 			case "enter":
 				m.startPrompting()
@@ -234,6 +287,7 @@ func (m *model) flatItems() []toolItem {
 	for _, tab := range m.toolsByTab {
 		items = append(items, tab...)
 	}
+	items = append(items, m.helperItems...)
 	return items
 }
 
@@ -241,6 +295,8 @@ func (m *model) View() string {
 	switch m.state {
 	case stateSelecting:
 		return m.selectionView()
+	case stateSelectingHelpers:
+		return m.helpersView()
 	case statePrompting:
 		return m.promptingView()
 	case stateConfirm:
@@ -259,21 +315,96 @@ func (m *model) confirmView() string {
 	checked, total := m.checkedCount()
 	b.WriteString(fmt.Sprintf("  %d of %d tools checked\n\n", checked, total))
 
-	for i, cat := range m.categories {
-		catChecked := 0
-		for _, item := range m.toolsByTab[i] {
-			if item.checked {
-				catChecked++
-			}
+	catChecked := make(map[string]int)
+	for _, item := range m.flatItems() {
+		if item.checked {
+			catChecked[item.tool.Category]++
 		}
-		if catChecked > 0 {
-			b.WriteString(fmt.Sprintf("  %s (%d tools)\n", cat.Name, catChecked))
+	}
+	for _, cat := range m.categories {
+		if count := catChecked[cat.Name]; count > 0 {
+			b.WriteString(fmt.Sprintf("  %s (%d tools)\n", cat.Name, count))
 		}
 	}
 
 	b.WriteString("\n")
 	b.WriteString(HelpStyle.Render("Enter  install  |  Esc  go back  |  Ctrl+C  quit"))
 	return b.String()
+}
+
+func (m *model) helpersView() string {
+	var b strings.Builder
+
+	b.WriteString(TitleStyle.Render("Helpers"))
+	b.WriteString("\n\n")
+
+	if len(m.helperItems) == 0 {
+		b.WriteString(HelpStyle.Render("  No helpers match your selection"))
+		b.WriteString("\n")
+	}
+
+	b.WriteString(HelpStyle.Render("j/k navigate  Space toggle  Enter continue  Esc back  q quit"))
+	b.WriteString("\n\n")
+
+	for i, item := range m.helperItems {
+		cursor := " "
+		if m.helperCursor == i {
+			cursor = CursorStyle.Render(">")
+		}
+		checkbox := "[ ]"
+		if item.checked {
+			checkbox = CheckedStyle.Render("[\u2713]")
+		}
+		name := UncheckedStyle.Render(item.tool.Name)
+		if item.checked {
+			name = CheckedStyle.Render(item.tool.Name)
+		}
+		if m.helperCursor == i {
+			name = CursorStyle.Render(item.tool.Name)
+		}
+		desc := HelpStyle.Render(item.tool.Description)
+		b.WriteString(CheckboxStyle.Render(fmt.Sprintf("%s %s %s %s", cursor, checkbox, name, desc)))
+		b.WriteString("\n")
+	}
+
+	_, total := m.checkedCount()
+	b.WriteString(fmt.Sprintf("\n%s", HelpStyle.Render(fmt.Sprintf("%d checked. Press Enter to continue.", total))))
+
+	return b.String()
+}
+
+func (m *model) startHelpersSelection() {
+	selected := make(map[string]bool)
+	for _, item := range m.toolsByTab {
+		for _, t := range item {
+			if t.checked {
+				selected[t.tool.Name] = true
+			}
+		}
+	}
+
+	var available []toolItem
+	for _, item := range m.helperItems {
+		allMet := true
+		for _, dep := range item.tool.DependsOn {
+			if !selected[dep] {
+				allMet = false
+				break
+			}
+		}
+		if allMet {
+			available = append(available, item)
+		}
+	}
+
+	if len(available) == 0 {
+		m.startPrompting()
+		return
+	}
+
+	m.helperItems = available
+	m.helperCursor = 0
+	m.state = stateSelectingHelpers
 }
 
 func (m *model) selectionView() string {
@@ -342,6 +473,12 @@ func (m *model) checkedCount() (int, int) {
 			}
 		}
 	}
+	for _, item := range m.helperItems {
+		total++
+		if item.checked {
+			checked++
+		}
+	}
 	return checked, total
 }
 
@@ -391,6 +528,9 @@ func (m *model) startPrompting() {
 	seen := map[string]bool{}
 	var vars []manifest.VarDef
 	flat := m.flatItems()
+	sort.SliceStable(flat, func(i, j int) bool {
+		return len(flat[i].tool.DependsOn) == 0 && len(flat[j].tool.DependsOn) > 0
+	})
 	var queue []stepQueueItem
 	for _, item := range flat {
 		if !item.checked {

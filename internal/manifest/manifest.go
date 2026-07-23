@@ -30,6 +30,7 @@ type Tool struct {
 	Description string   `yaml:"description"`
 	Checked     bool     `yaml:"checked"`
 	Profiles    []string `yaml:"profiles,omitempty"`
+	DependsOn   []string `yaml:"depends_on,omitempty"`
 	Steps       []Step   `yaml:"steps"`
 }
 
