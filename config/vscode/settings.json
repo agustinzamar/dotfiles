@@ -137,7 +137,7 @@
   "files.autoSave": "afterDelay",
   "git.autofetch": true,
   "git.enableCommitSigning": true,
-  "window.zoomLevel": 1.2,
+  "window.zoomLevel": 2,
   "window.zoomPerWindow": false,
   "settingsSync.ignoredSettings": [
     "-window.zoomLevel"
@@ -156,15 +156,15 @@
   "window.nativeTabs": true,
   "workbench.editor.enablePreview": false,
   "editor.suggest.preview": true,
-  "chat.titleBar.openInAgentsWindow.enabled": false,
   "workbench.browser.showInTitleBar": false,
   "window.restoreFullscreen": true,
-  "window.customTitleBarVisibility": "windowed",
   "window.menuStyle": "custom",
   "github.copilot.chat.claudeAgent.allowAutoPermissions": true,
   "github.copilot.chat.anthropic.contextEditing.mode": "clear-both",
   "github.copilot.chat.claude48OpusPrompt.enabled": true,
   "github.copilot.chat.gemini3GetChangedFilesTool.enabled": true,
   "github.copilot.chat.githubMcpServer.enabled": true,
-  "claudeCode.preferredLocation": "panel"
+  "claudeCode.preferredLocation": "panel",
+  "workbench.secondarySideBar.showLabels": false,
+  "chat.titleBar.openInAgentsWindow.enabled": false
 }
