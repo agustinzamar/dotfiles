@@ -14,7 +14,7 @@ import (
 	"github.com/agustinzamar/dotfiles/internal/manifest"
 	"github.com/agustinzamar/dotfiles/internal/snapshot"
 	"github.com/agustinzamar/dotfiles/internal/tui"
-	tea "github.com/charmbracelet/bubbletea"
+	tea "charm.land/bubbletea/v2"
 	"github.com/spf13/cobra"
 )
 
