@@ -11,7 +11,7 @@ func TestGitHubAuthSkipsLoginWhenStatusSucceeds(t *testing.T) {
 			"gh auth status": "Logged in to github.com",
 		},
 	}
-	prompt := &fakePrompt{}
+	prompt := newFakePrompt(nil, nil)
 	result, err := GitHubAuth(prompt, runner)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -27,9 +27,7 @@ func TestGitHubAuthReturnsInteractiveLoginWhenUnauthenticated(t *testing.T) {
 			"gh auth status": "You are not logged in",
 		},
 	}
-	prompt := &fakePrompt{
-		confirm: true,
-	}
+	prompt := newFakePrompt(nil, []bool{true})
 	result, err := GitHubAuth(prompt, runner)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -52,9 +50,7 @@ func TestGitHubAuthRunsSetupGitOnlyAfterVerifiedLogin(t *testing.T) {
 			"gh auth setup-git": "Git credentials configured",
 		},
 	}
-	prompt := &fakePrompt{
-		confirm: true,
-	}
+	prompt := newFakePrompt(nil, []bool{true})
 	result, err := GitHubAuth(prompt, runner)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -73,7 +69,7 @@ func TestGitHubAuthNeverIncludesCommandOutputInResult(t *testing.T) {
 			"gh auth status": "Logged in to github.com",
 		},
 	}
-	prompt := &fakePrompt{}
+	prompt := newFakePrompt(nil, nil)
 	result, err := GitHubAuth(prompt, runner)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
