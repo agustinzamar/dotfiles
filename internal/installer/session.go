@@ -2,6 +2,8 @@ package installer
 
 import (
 	"errors"
+	"sort"
+	"time"
 
 	"github.com/agustinzamar/dotfiles/internal/executor"
 	"github.com/agustinzamar/dotfiles/internal/lock"
@@ -78,6 +80,7 @@ func (s *Session) Execute(itemID string) Result {
 	}
 
 	var lastResult executor.Result
+	installed := false
 	hasFailure := false
 
 	for _, step := range item.Node.Node.Steps {
@@ -86,6 +89,9 @@ func (s *Session) Execute(itemID string) Result {
 		if r.Status == "error" {
 			hasFailure = true
 			break
+		}
+		if r.Status == "installed" || r.Status == "would-install" {
+			installed = true
 		}
 		if r.Status != "skipped" && r.Status != "would-skip" {
 			s.changed = true
@@ -97,7 +103,7 @@ func (s *Session) Execute(itemID string) Result {
 		item.Status = StatusFailed
 		status = StatusFailed
 	} else if s.dryRun {
-		if lastResult.Status == "would-install" || lastResult.Status == "would-skip" {
+		if installed || lastResult.Status == "would-skip" {
 			item.Status = StatusWouldInstall
 			status = StatusWouldInstall
 		} else {
@@ -105,7 +111,7 @@ func (s *Session) Execute(itemID string) Result {
 			status = StatusAlreadyPresent
 		}
 	} else {
-		if lastResult.Status == "installed" || lastResult.Status == "would-install" {
+		if installed {
 			item.Status = StatusInstalled
 			status = StatusInstalled
 		} else {
@@ -141,6 +147,7 @@ func (s *Session) ExecuteSteps(itemID string) Result {
 	}
 
 	var lastResult executor.Result
+	installed := false
 	hasFailure := false
 
 	// Run parent node steps AND all accepted children's steps
@@ -151,6 +158,9 @@ func (s *Session) ExecuteSteps(itemID string) Result {
 			if r.Status == "error" {
 				hasFailure = true
 				return
+			}
+			if r.Status == "installed" || r.Status == "would-install" {
+				installed = true
 			}
 			if r.Status != "skipped" && r.Status != "would-skip" {
 				s.changed = true
@@ -184,7 +194,7 @@ func (s *Session) ExecuteSteps(itemID string) Result {
 		item.Status = StatusFailed
 		status = StatusFailed
 	} else if s.dryRun {
-		if lastResult.Status == "would-install" || lastResult.Status == "would-skip" {
+		if installed || lastResult.Status == "would-skip" {
 			item.Status = StatusWouldInstall
 			status = StatusWouldInstall
 		} else {
@@ -192,7 +202,7 @@ func (s *Session) ExecuteSteps(itemID string) Result {
 			status = StatusAlreadyPresent
 		}
 	} else {
-		if lastResult.Status == "installed" || lastResult.Status == "would-install" {
+		if installed {
 			item.Status = StatusInstalled
 			status = StatusInstalled
 		} else {
@@ -211,24 +221,32 @@ func (s *Session) Results() []Result {
 	for _, r := range s.results {
 		out = append(out, r)
 	}
+	sort.Slice(out, func(i, j int) bool { return out[i].ItemID < out[j].ItemID })
 	return out
 }
 
 func (s *Session) Close() error {
-	if s.locked && s.lockPath != "" {
-		if s.changed && !s.dryRun {
-			entries := executor.SnapshotEntries()
-			if len(entries) > 0 {
-				ts := "unknown"
-				sm := &snapshot.Manifest{Timestamp: ts, Entries: entries}
-				_ = snapshot.SaveManifest(sm, s.dotfilesDir)
-				_ = snapshot.PruneSnapshots(s.dotfilesDir, 5)
+	if !s.locked || s.lockPath == "" {
+		return nil
+	}
+	var closeErr error
+	if s.changed && !s.dryRun {
+		entries := executor.SnapshotEntries()
+		if len(entries) > 0 {
+			ts := time.Now().Format("20060102T150405")
+			sm := &snapshot.Manifest{Timestamp: ts, Entries: entries}
+			if err := snapshot.SaveManifest(sm, s.dotfilesDir); err != nil {
+				closeErr = errors.Join(closeErr, err)
+			}
+			if err := snapshot.PruneSnapshots(s.dotfilesDir, 5); err != nil {
+				closeErr = errors.Join(closeErr, err)
 			}
 		}
-		lk := lock.New(s.lockPath)
-		err := lk.Release()
-		s.locked = false
-		return err
 	}
-	return nil
+	lk := lock.New(s.lockPath)
+	if err := lk.Release(); err != nil {
+		closeErr = errors.Join(closeErr, err)
+	}
+	s.locked = false
+	return closeErr
 }

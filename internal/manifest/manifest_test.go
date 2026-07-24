@@ -151,3 +151,17 @@ categories:
 		t.Fatal("expected unknown workflow error")
 	}
 }
+
+func TestLoadValidatesLegacyToolsManifest(t *testing.T) {
+	yaml := `
+categories:
+  - id: base
+    name: Base
+    tools:
+      - name: Broken
+        depends_on: [Missing]
+`
+	if _, err := Load(writeTempManifest(t, yaml)); err == nil {
+		t.Fatal("expected legacy manifest validation error")
+	}
+}

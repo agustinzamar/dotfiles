@@ -2,12 +2,14 @@ package tui
 
 import (
 	"fmt"
+	"os/exec"
 	"strings"
 
-	"github.com/agustinzamar/dotfiles/internal/installer"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/huh/v2"
-	"charm.land/lipgloss/v2"
+	"github.com/agustinzamar/dotfiles/internal/installer"
+	"github.com/agustinzamar/dotfiles/internal/manifest"
+	"github.com/agustinzamar/dotfiles/internal/workflow"
 )
 
 type guidedState int
@@ -16,6 +18,7 @@ const (
 	stateGuidePrompt guidedState = iota
 	stateGuideExecuting
 	stateGuideInteractiveCommand
+	stateGuideWorkflowPrompt
 	stateGuideFailure
 	stateGuideSummary
 )
@@ -31,7 +34,26 @@ type interactiveNeededMsg struct {
 	reason string
 }
 
-type interactiveFinishedMsg struct{}
+type interactiveFinishedMsg struct{ err error }
+
+type workflowAnswer struct {
+	value string
+	ok    bool
+}
+
+type workflowRequest struct {
+	kind    string
+	title   string
+	value   string
+	options []string
+	answer  chan workflowAnswer
+}
+
+type workflowEventMsg struct {
+	request *workflowRequest
+	result  *workflow.Result
+	err     error
+}
 
 type failActionMsg struct {
 	action string
@@ -59,6 +81,14 @@ type guidedModel struct {
 
 	// interactive state
 	interactiveItem string
+	setup           []string
+	setupIndex      int
+	interactiveCmd  *exec.Cmd
+	workflowEvents  <-chan workflowEventMsg
+	workflowRequest *workflowRequest
+	workflowValue   string
+	workflowConfirm bool
+	workflowRunner  *workflow.Runner
 
 	// sizing
 	width  int
@@ -67,9 +97,10 @@ type guidedModel struct {
 
 func NewGuidedModel(session *installer.Session, profile string) tea.Model {
 	return &guidedModel{
-		session: session,
-		profile: profile,
-		state:   stateGuidePrompt,
+		session:        session,
+		profile:        profile,
+		state:          stateGuidePrompt,
+		workflowRunner: newGuidedWorkflowRunner(),
 	}
 }
 
@@ -135,7 +166,7 @@ func (m *guidedModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	// handle forms in prompt and failure states
-	if m.form != nil && (m.state == stateGuidePrompt || m.state == stateGuideFailure) {
+	if m.form != nil && (m.state == stateGuidePrompt || m.state == stateGuideFailure || m.state == stateGuideWorkflowPrompt) {
 		fm, cmd := m.form.Update(msg)
 		m.form = fm.(*huh.Form)
 		if m.form.State == huh.StateCompleted {
@@ -152,9 +183,17 @@ func (m *guidedModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.interactiveItem = msg.itemID
 		return m, nil
 	case interactiveFinishedMsg:
-		// re-execute after interactive setup
+		if msg.err != nil {
+			return m, func() tea.Msg {
+				return stepDoneMsg{itemID: m.item.ID, result: installer.Result{ItemID: m.item.ID, Status: installer.StatusFailed, Reason: msg.err.Error()}}
+			}
+		}
 		m.state = stateGuideExecuting
-		return m, m.execCurrent()
+		m.interactiveCmd = nil
+		m.setupIndex++
+		return m, m.startWorkflow()
+	case workflowEventMsg:
+		return m.onWorkflowEvent(msg)
 	case failActionMsg:
 		return m.onFailAction(msg)
 	case tea.KeyMsg:
@@ -166,6 +205,10 @@ func (m *guidedModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case "enter":
 				return m, m.runInteractiveCmd()
 			case "esc":
+				if m.item != nil {
+					m.item.Status = installer.StatusPendingSetup
+					m.item.Reason = "interactive setup skipped"
+				}
 				m.nextItem()
 				m.state = stateGuidePrompt
 				return m, m.rebuildForm()
@@ -183,6 +226,8 @@ func (m *guidedModel) onFormDone() tea.Cmd {
 		return m.onPromptDone()
 	case stateGuideFailure:
 		return m.onFailFormDone()
+	case stateGuideWorkflowPrompt:
+		return m.onWorkflowFormDone()
 	}
 	return nil
 }
@@ -233,19 +278,15 @@ func (m *guidedModel) execCurrent() tea.Cmd {
 		return tea.Quit
 	}
 
-	// check for setup workflows that need interactive handling
-	if len(item.Node.Node.Setup) > 0 {
-		for _, wf := range item.Node.Node.Setup {
-			switch wf {
-			case "git-identity", "github-auth", "signed-commits", "hunk-git-pager":
-				return func() tea.Msg {
-					return interactiveNeededMsg{
-						itemID: item.ID,
-						reason: fmt.Sprintf("workflow %s requires interactive setup", wf),
-					}
-				}
-			}
+	m.setup = nil
+	for _, name := range item.Node.Node.Setup {
+		if manifest.KnownWorkflows[name] {
+			m.setup = append(m.setup, name)
 		}
+	}
+	m.setupIndex = 0
+	if len(m.setup) > 0 {
+		return m.startWorkflow()
 	}
 
 	// regular execution
@@ -277,7 +318,7 @@ func (m *guidedModel) onStepDone(msg stepDoneMsg) (tea.Model, tea.Cmd) {
 // --- failure handling ---
 
 func (m *guidedModel) buildFailureForm() tea.Cmd {
-	action := "retry"
+	m.sel = "retry"
 	sel := huh.NewSelect[string]().
 		Title(fmt.Sprintf("Failed: %s", m.failMsg)).
 		Options(
@@ -285,9 +326,7 @@ func (m *guidedModel) buildFailureForm() tea.Cmd {
 			huh.NewOption("Skip", "skip"),
 			huh.NewOption("Quit", "quit"),
 		).
-		Value(&action)
-
-	m.sel = action
+		Value(&m.sel)
 	m.form = huh.NewForm(huh.NewGroup(sel))
 	if m.width > 0 {
 		m.form = m.form.WithWidth(m.width)
@@ -301,6 +340,101 @@ func (m *guidedModel) onFailFormDone() tea.Cmd {
 	return func() tea.Msg {
 		return failActionMsg{action: action}
 	}
+}
+
+func (m *guidedModel) onWorkflowEvent(msg workflowEventMsg) (tea.Model, tea.Cmd) {
+	if msg.request != nil {
+		m.workflowRequest = msg.request
+		m.workflowValue = msg.request.value
+		m.workflowConfirm = msg.request.value == "true"
+		m.state = stateGuideWorkflowPrompt
+		return m, m.buildWorkflowForm(msg.request)
+	}
+	if msg.err != nil || msg.result == nil || msg.result.Outcome == workflow.OutcomeFailed {
+		reason := "workflow failed"
+		if msg.err != nil {
+			reason = msg.err.Error()
+		} else if msg.result != nil {
+			reason = msg.result.Reason
+		}
+		return m, func() tea.Msg {
+			return stepDoneMsg{itemID: m.item.ID, result: installer.Result{ItemID: m.item.ID, Status: installer.StatusFailed, Reason: reason}}
+		}
+	}
+	if msg.result.Interactive != nil {
+		m.interactiveCmd = msg.result.Interactive
+		m.interactiveItem = m.item.ID
+		m.state = stateGuideInteractiveCommand
+		return m, nil
+	}
+	if msg.result.Outcome != workflow.OutcomeComplete {
+		m.item.Status = installer.StatusPendingSetup
+		m.item.Reason = msg.result.Reason
+		return m, func() tea.Msg {
+			return stepDoneMsg{itemID: m.item.ID, result: installer.Result{ItemID: m.item.ID, Status: installer.StatusPendingSetup, Reason: msg.result.Reason}}
+		}
+	}
+	m.setupIndex++
+	return m, m.startWorkflow()
+}
+
+func (m *guidedModel) startWorkflow() tea.Cmd {
+	if m.setupIndex >= len(m.setup) {
+		return func() tea.Msg {
+			r := m.session.Execute(m.item.ID)
+			return stepDoneMsg{itemID: m.item.ID, result: r}
+		}
+	}
+	events := make(chan workflowEventMsg)
+	m.workflowEvents = events
+	name := m.setup[m.setupIndex]
+	go func() {
+		p := &guidedPrompt{requests: events}
+		result, err := m.workflowRunner.Run(name, p, guidedCommandRunner{})
+		if err != nil {
+			events <- workflowEventMsg{err: err}
+			return
+		}
+		events <- workflowEventMsg{result: &result}
+	}()
+	return m.waitWorkflowEvent()
+}
+
+func (m *guidedModel) waitWorkflowEvent() tea.Cmd {
+	return func() tea.Msg { return <-m.workflowEvents }
+}
+
+func (m *guidedModel) buildWorkflowForm(req *workflowRequest) tea.Cmd {
+	var field huh.Field
+	switch req.kind {
+	case "confirm":
+		field = huh.NewConfirm().Title(req.title).Value(&m.workflowConfirm)
+	case "input":
+		field = huh.NewInput().Title(req.title).Value(&m.workflowValue)
+	case "choose":
+		options := make([]huh.Option[string], 0, len(req.options))
+		for _, option := range req.options {
+			options = append(options, huh.NewOption(option, option))
+		}
+		field = huh.NewSelect[string]().Title(req.title).Options(options...).Value(&m.workflowValue)
+	}
+	m.form = huh.NewForm(huh.NewGroup(field))
+	if m.width > 0 {
+		m.form = m.form.WithWidth(m.width)
+	}
+	return m.form.Init()
+}
+
+func (m *guidedModel) onWorkflowFormDone() tea.Cmd {
+	answer := workflowAnswer{value: m.workflowValue, ok: m.workflowConfirm}
+	if m.workflowRequest.kind != "confirm" {
+		answer.ok = true
+	}
+	m.workflowRequest.answer <- answer
+	m.workflowRequest = nil
+	m.form = nil
+	m.state = stateGuideExecuting
+	return m.waitWorkflowEvent()
 }
 
 func (m *guidedModel) onFailAction(msg failActionMsg) (tea.Model, tea.Cmd) {
@@ -329,9 +463,47 @@ func (m *guidedModel) onFailAction(msg failActionMsg) (tea.Model, tea.Cmd) {
 // --- interactive command ---
 
 func (m *guidedModel) runInteractiveCmd() tea.Cmd {
-	return func() tea.Msg {
-		return interactiveFinishedMsg{}
+	if m.interactiveCmd == nil {
+		return func() tea.Msg { return interactiveFinishedMsg{} }
 	}
+	return tea.ExecProcess(m.interactiveCmd, func(err error) tea.Msg {
+		return interactiveFinishedMsg{err: err}
+	})
+}
+
+type guidedPrompt struct{ requests chan<- workflowEventMsg }
+
+func (p *guidedPrompt) Confirm(title string, defaultYes bool) (bool, error) {
+	answer := make(chan workflowAnswer)
+	p.requests <- workflowEventMsg{request: &workflowRequest{kind: "confirm", title: title, value: fmt.Sprint(defaultYes), answer: answer}}
+	return (<-answer).ok, nil
+}
+func (p *guidedPrompt) Input(title, value string) (string, error) {
+	answer := make(chan workflowAnswer)
+	p.requests <- workflowEventMsg{request: &workflowRequest{kind: "input", title: title, value: value, answer: answer}}
+	return (<-answer).value, nil
+}
+func (p *guidedPrompt) Choose(title string, options []string) (string, error) {
+	answer := make(chan workflowAnswer)
+	p.requests <- workflowEventMsg{request: &workflowRequest{kind: "choose", title: title, options: options, answer: answer}}
+	return (<-answer).value, nil
+}
+
+type guidedCommandRunner struct{}
+
+func (guidedCommandRunner) Run(name string, args ...string) (string, error) {
+	out, err := exec.Command(name, args...).CombinedOutput()
+	return string(out), err
+}
+func (guidedCommandRunner) LookPath(name string) (string, error) { return exec.LookPath(name) }
+
+func newGuidedWorkflowRunner() *workflow.Runner {
+	registry := workflow.NewRegistry()
+	registry.Register("git-identity", workflow.GitIdentity)
+	registry.Register("github-auth", workflow.GitHubAuth)
+	registry.Register("signed-commits", workflow.SignedCommits)
+	registry.Register("hunk-git-pager", workflow.HunkGitPager)
+	return workflow.NewRunner(registry)
 }
 
 // --- views ---
@@ -352,6 +524,11 @@ func (m *guidedModel) View() tea.View {
 			return tea.NewView(m.form.View())
 		}
 		return tea.NewView(m.failureView())
+	case stateGuideWorkflowPrompt:
+		if m.form != nil {
+			return tea.NewView(m.form.View())
+		}
+		return tea.NewView("")
 	case stateGuideSummary:
 		return m.summaryView()
 	}
@@ -472,6 +649,3 @@ func statusIcon(st installer.Status) string {
 		return "?"
 	}
 }
-
-// keep lipgloss import alive (used by styles referenced from styles.go)
-var _ = []lipgloss.Style{GuideItemInstalled, GuideItemSkipped, GuideItemDeclined, GuideItemFailed, GuideItemPending, GuideItemWould}

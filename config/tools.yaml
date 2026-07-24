@@ -12,6 +12,10 @@ vars:
     description: "Your email address"
     why: "Used in .gitconfig for commit authorship"
     hint: "e.g. agustin@example.com"
+  GitGPGKey:
+    description: "GPG signing key"
+    why: "Used to sign Git commits"
+    hint: "Enter GPG key ID, for example 0123456789ABCDEF"
 
 categories:
   # ── Base ──────────────────────────────────────────────

@@ -1,11 +1,13 @@
 package cmd
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/agustinzamar/dotfiles/internal/config"
 	"github.com/agustinzamar/dotfiles/internal/executor"
 	"github.com/agustinzamar/dotfiles/internal/installer"
@@ -13,7 +15,6 @@ import (
 	"github.com/agustinzamar/dotfiles/internal/manifest"
 	"github.com/agustinzamar/dotfiles/internal/snapshot"
 	"github.com/agustinzamar/dotfiles/internal/tui"
-	tea "charm.land/bubbletea/v2"
 	"github.com/spf13/cobra"
 )
 
@@ -58,7 +59,7 @@ var installCmd = &cobra.Command{
 		}
 
 		if selectFlag {
-			p := tea.NewProgram(tui.NewSelectModel(m, profileFlag))
+			p := tea.NewProgram(tui.NewSelectModel(m, profileFlag, isDryRun))
 			_, err = p.Run()
 			return err
 		}
@@ -66,7 +67,11 @@ var installCmd = &cobra.Command{
 		// Guided mode (default)
 		p := tea.NewProgram(tui.NewGuidedModel(session, profileFlag))
 		_, err = p.Run()
-		session.Close()
+		if closeErr := session.Close(); err == nil {
+			err = closeErr
+		} else {
+			err = errors.Join(err, closeErr)
+		}
 		return err
 	},
 }
@@ -119,6 +124,7 @@ func installAll(m *manifest.Manifest, session *installer.Session) error {
 	}
 
 	// Execute planned items via session
+	session.Planner().SetAll(installer.DecisionYes)
 	hadError := false
 	for {
 		item := session.Planner().Next()
@@ -154,7 +160,7 @@ func installAll(m *manifest.Manifest, session *installer.Session) error {
 		fmt.Fprintln(os.Stderr)
 	}
 
-	session.Close()
+	closeErr := session.Close()
 
 	if hadError && !isDryRun {
 		entries := executor.SnapshotEntries()
@@ -168,7 +174,10 @@ func installAll(m *manifest.Manifest, session *installer.Session) error {
 				}
 			}
 		}
-		return fmt.Errorf("install completed with errors and was rolled back")
+		return errors.Join(fmt.Errorf("install completed with errors and was rolled back"), closeErr)
+	}
+	if closeErr != nil {
+		return closeErr
 	}
 
 	// Snapshot handling is done inside session.Close()
