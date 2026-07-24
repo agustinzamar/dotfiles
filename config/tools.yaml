@@ -318,6 +318,13 @@ categories:
           - type: brew
             package: procs
 
+      - name: "Fileicon"
+        description: "Set custom icons on files and folders"
+        checked: true
+        steps:
+          - type: brew
+            package: fileicon
+
       - name: "Jq"
         description: "JSON processor"
         checked: true
