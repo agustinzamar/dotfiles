@@ -3,10 +3,10 @@ package tui
 import (
 	"testing"
 
+	tea "charm.land/bubbletea/v2"
 	"github.com/agustinzamar/dotfiles/internal/executor"
 	"github.com/agustinzamar/dotfiles/internal/installer"
 	"github.com/agustinzamar/dotfiles/internal/manifest"
-	tea "charm.land/bubbletea/v2"
 )
 
 func TestNewModelBuilds(t *testing.T) {
@@ -14,11 +14,19 @@ func TestNewModelBuilds(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load manifest: %v", err)
 	}
-	model := NewSelectModel(m, "")
+	model := NewSelectModel(m, "", true)
 	if model == nil {
 		t.Fatal("NewSelectModel returned nil")
 	}
 	_ = model.(tea.Model)
+}
+
+func TestSelectModelPreservesDryRun(t *testing.T) {
+	m := &manifest.Manifest{}
+	model := NewSelectModel(m, "", true).(*model)
+	if !model.dryRun {
+		t.Fatal("expected select model dry-run mode")
+	}
 }
 
 // --- test helpers ---

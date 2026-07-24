@@ -1,11 +1,45 @@
 package workflow
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
 
+func isolateHome(t *testing.T) {
+	t.Helper()
+	t.Setenv("HOME", t.TempDir())
+}
+
+func TestExpandHomeUsesUserHome(t *testing.T) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := expandHome("~/.ssh/id_ed25519"); got != filepath.Join(home, ".ssh", "id_ed25519") {
+		t.Fatalf("expandHome() = %q", got)
+	}
+}
+
+func TestGlobSSHKeys(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, ".ssh"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{"id_a.pub", "id_b.pub"} {
+		if err := os.WriteFile(filepath.Join(dir, ".ssh", name), nil, 0600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	paths, err := globSSHKeys(dir)
+	if err != nil || len(paths) != 2 {
+		t.Fatalf("globSSHKeys() = %v, %v", paths, err)
+	}
+}
+
 func TestSSHSigningUsesSelectedExistingPublicKey(t *testing.T) {
+	isolateHome(t)
 	runner := &fakeRunner{
 		outputs: map[string]string{
 			"bash -c ls ~/.ssh/*.pub 2>/dev/null || true": "/home/user/.ssh/id_ed25519.pub\n/home/user/.ssh/id_rsa.pub",
@@ -28,6 +62,7 @@ func TestSSHSigningUsesSelectedExistingPublicKey(t *testing.T) {
 }
 
 func TestSSHSigningReturnsInteractiveKeygenForNewKey(t *testing.T) {
+	isolateHome(t)
 	runner := &fakeRunner{
 		outputs: map[string]string{
 			"bash -c ls ~/.ssh/*.pub 2>/dev/null || true": "",
@@ -50,6 +85,7 @@ func TestSSHSigningReturnsInteractiveKeygenForNewKey(t *testing.T) {
 }
 
 func TestSSHSigningDoesNotOverwriteExistingKeyPath(t *testing.T) {
+	isolateHome(t)
 	runner := &fakeRunner{
 		outputs: map[string]string{
 			"bash -c ls ~/.ssh/*.pub 2>/dev/null || true": "/home/user/.ssh/id_ed25519.pub",
@@ -69,6 +105,7 @@ func TestSSHSigningDoesNotOverwriteExistingKeyPath(t *testing.T) {
 }
 
 func TestGPGSigningUsesSelectedSecretKey(t *testing.T) {
+	isolateHome(t)
 	runner := &fakeRunner{
 		outputs: map[string]string{
 			"gpg --list-secret-keys --with-colons": "sec:u:4096:1:ABCDEF01:1672531200:::u:::scESC::",
@@ -88,6 +125,7 @@ func TestGPGSigningUsesSelectedSecretKey(t *testing.T) {
 }
 
 func TestSigningRegistersPublicKeyOnlyAfterUserConsent(t *testing.T) {
+	isolateHome(t)
 	runner := &fakeRunner{
 		outputs: map[string]string{
 			"bash -c ls ~/.ssh/*.pub 2>/dev/null || true": "/home/user/.ssh/id_ed25519.pub",

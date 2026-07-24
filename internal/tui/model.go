@@ -5,14 +5,14 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/agustinzamar/dotfiles/internal/config"
-	"github.com/agustinzamar/dotfiles/internal/executor"
-	"github.com/agustinzamar/dotfiles/internal/logger"
-	"github.com/agustinzamar/dotfiles/internal/manifest"
 	"charm.land/bubbles/v2/spinner"
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
+	"github.com/agustinzamar/dotfiles/internal/config"
+	"github.com/agustinzamar/dotfiles/internal/executor"
+	"github.com/agustinzamar/dotfiles/internal/logger"
+	"github.com/agustinzamar/dotfiles/internal/manifest"
 )
 
 var manifestRef *manifest.Manifest
@@ -21,7 +21,7 @@ type state int
 
 const (
 	stateSelecting        state = iota
-	stateSelectingHelpers         // second phase: alias/function helpers
+	stateSelectingHelpers       // second phase: alias/function helpers
 	statePrompting
 	stateConfirm
 	stateInstalling
@@ -44,28 +44,29 @@ type stepResultMsg struct {
 }
 
 type model struct {
-	categories     []manifest.Category
-	originalTools  [][]toolItem
-	toolsByTab     [][]toolItem
-	helperItems    []toolItem   // helpers filtered by dependency graph
-	tabIndex       int
-	cursor         int
-	helperCursor   int
-	state          state
-	messages       []string
-	vars           map[string]string
-	spinner        spinner.Model
-	textInput      textinput.Model
+	categories    []manifest.Category
+	originalTools [][]toolItem
+	toolsByTab    [][]toolItem
+	helperItems   []toolItem // helpers filtered by dependency graph
+	tabIndex      int
+	cursor        int
+	helperCursor  int
+	state         state
+	messages      []string
+	vars          map[string]string
+	dryRun        bool
+	spinner       spinner.Model
+	textInput     textinput.Model
 	promptVars    []manifest.VarDef
-	promptIndex    int
-	stepQueue      []stepQueueItem
-	currentTool    string
-	currentStep    string
-	stepsDone      int
-	totalSteps     int
-	installed      int
-	skipped        int
-	errors         int
+	promptIndex   int
+	stepQueue     []stepQueueItem
+	currentTool   string
+	currentStep   string
+	stepsDone     int
+	totalSteps    int
+	installed     int
+	skipped       int
+	errors        int
 }
 
 type stepQueueItem struct {
@@ -73,7 +74,7 @@ type stepQueueItem struct {
 	step     manifest.Step
 }
 
-func NewSelectModel(m *manifest.Manifest, profile string) tea.Model {
+func NewSelectModel(m *manifest.Manifest, profile string, dryRun bool) tea.Model {
 	manifestRef = m
 	vars := config.GetVars()
 	var origTools [][]toolItem
@@ -114,6 +115,7 @@ func NewSelectModel(m *manifest.Manifest, profile string) tea.Model {
 		helperItems:   allHelpers,
 		state:         stateSelecting,
 		vars:          vars,
+		dryRun:        dryRun,
 		spinner:       s,
 		textInput:     ti,
 	}
@@ -763,7 +765,7 @@ func installNextStep(m *model) tea.Cmd {
 	m.currentStep = item.step.Type
 	return func() tea.Msg {
 		dotfilesDir := manifest.DotfilesDir()
-		r := executor.Run(item.step, dotfilesDir, m.vars, false)
+		r := executor.Run(item.step, dotfilesDir, m.vars, m.dryRun)
 		return stepResultMsg{toolName: item.toolName, stepType: item.step.Type, result: r}
 	}
 }

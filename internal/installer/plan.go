@@ -69,12 +69,17 @@ func NewPlanner(m *manifest.Manifest, profile string) *Planner {
 		p.byID[item.ID] = item
 		return nil
 	})
-	p.sortItems()
 	p.rebuildQueue()
 	return p
 }
 
-func (p *Planner) sortItems() {
+func (p *Planner) SetAll(decision Decision) {
+	for _, item := range p.items {
+		if item.Status == StatusPlanned {
+			item.Decision = decision
+		}
+	}
+	p.rebuildQueue()
 }
 
 func (p *Planner) rebuildQueue() {

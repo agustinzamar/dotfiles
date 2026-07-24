@@ -12,7 +12,6 @@ type Manifest struct {
 	Vars       map[string]VarDef `yaml:"vars,omitempty"`
 	Categories []Category        `yaml:"categories"`
 	byID       map[string]*Node
-	validated  bool
 }
 
 type VarDef struct {
@@ -65,10 +64,10 @@ func (n Node) MatchesProfile(profile string) bool {
 }
 
 var KnownWorkflows = map[string]bool{
-	"git-identity":     true,
-	"github-auth":      true,
-	"signed-commits":   true,
-	"hunk-git-pager":   true,
+	"git-identity":   true,
+	"github-auth":    true,
+	"signed-commits": true,
+	"hunk-git-pager": true,
 }
 
 type Step struct {
@@ -91,21 +90,21 @@ type Step struct {
 }
 
 type Tool struct {
-	Category    string     `yaml:"-"`
-	Name        string     `yaml:"name"`
-	Description string     `yaml:"description"`
-	Checked     bool       `yaml:"checked"`
-	Profiles    []string   `yaml:"profiles,omitempty"`
-	DependsOn   []string   `yaml:"depends_on,omitempty"`
-	Steps       []Step     `yaml:"steps,omitempty"`
-	Features    []Feature  `yaml:"features,omitempty"`
+	Category    string    `yaml:"-"`
+	Name        string    `yaml:"name"`
+	Description string    `yaml:"description"`
+	Checked     bool      `yaml:"checked"`
+	Profiles    []string  `yaml:"profiles,omitempty"`
+	DependsOn   []string  `yaml:"depends_on,omitempty"`
+	Steps       []Step    `yaml:"steps,omitempty"`
+	Features    []Feature `yaml:"features,omitempty"`
 }
 
 type Feature struct {
-	Name        string   `yaml:"name"`
-	Description string   `yaml:"description,omitempty"`
-	Checked     bool     `yaml:"checked"`
-	Steps       []Step   `yaml:"steps,omitempty"`
+	Name        string `yaml:"name"`
+	Description string `yaml:"description,omitempty"`
+	Checked     bool   `yaml:"checked"`
+	Steps       []Step `yaml:"steps,omitempty"`
 }
 
 func (t Tool) MatchesProfile(profile string) bool {
@@ -133,14 +132,17 @@ func Load(path string) (*Manifest, error) {
 	}
 	for ci := range m.Categories {
 		cat := &m.Categories[ci]
+		if cat.ID == "" {
+			cat.ID = cat.Name
+		}
 		hasExplicitNodes := len(cat.Nodes) > 0
 		if hasExplicitNodes && len(cat.Tools) == 0 {
 			m.Categories[ci].Tools = nodesToTools(cat.Nodes, cat.ID, cat.Name)
-			m.validated = true
 		} else if len(cat.Tools) > 0 && len(cat.Nodes) == 0 {
 			m.Categories[ci].Nodes = toolsToNodes(cat.Tools, cat.ID, cat.Name)
 		}
 	}
+	normalizeLegacyRequirements(m.Categories)
 	if err := m.buildIndex(); err != nil {
 		return nil, err
 	}
@@ -148,6 +150,34 @@ func Load(path string) (*Manifest, error) {
 		return nil, err
 	}
 	return &m, nil
+}
+
+func normalizeLegacyRequirements(categories []Category) {
+	byName := map[string]string{}
+	var collect func([]Node)
+	collect = func(nodes []Node) {
+		for i := range nodes {
+			byName[nodes[i].Name] = nodes[i].ID
+			collect(nodes[i].Children)
+		}
+	}
+	for _, category := range categories {
+		collect(category.Nodes)
+	}
+	var normalize func([]Node)
+	normalize = func(nodes []Node) {
+		for i := range nodes {
+			for j, requirement := range nodes[i].Requires {
+				if id, ok := byName[requirement]; ok {
+					nodes[i].Requires[j] = id
+				}
+			}
+			normalize(nodes[i].Children)
+		}
+	}
+	for i := range categories {
+		normalize(categories[i].Nodes)
+	}
 }
 
 func nodesToTools(nodes []Node, categoryID, category string) []Tool {
@@ -171,6 +201,10 @@ func nodesToTools(nodes []Node, categoryID, category string) []Tool {
 
 func toolsToNodes(tools []Tool, categoryID, category string) []Node {
 	nodes := make([]Node, 0, len(tools))
+	ids := make(map[string]string, len(tools))
+	for _, t := range tools {
+		ids[t.Name] = categoryID + "-" + t.Name
+	}
 	for i := range tools {
 		t := &tools[i]
 		n := Node{
@@ -181,7 +215,7 @@ func toolsToNodes(tools []Tool, categoryID, category string) []Node {
 			Description: t.Description,
 			Checked:     t.Checked,
 			Profiles:    t.Profiles,
-			Requires:    t.DependsOn,
+			Requires:    translateRequirements(t.DependsOn, ids),
 			Steps:       t.Steps,
 		}
 		if t.Checked {
@@ -205,6 +239,18 @@ func toolsToNodes(tools []Tool, categoryID, category string) []Node {
 		nodes = append(nodes, n)
 	}
 	return nodes
+}
+
+func translateRequirements(requirements []string, ids map[string]string) []string {
+	translated := make([]string, len(requirements))
+	for i, requirement := range requirements {
+		if id, ok := ids[requirement]; ok {
+			translated[i] = id
+		} else {
+			translated[i] = requirement
+		}
+	}
+	return translated
 }
 
 func (m *Manifest) Node(id string) (*Node, *Category, bool) {
@@ -297,9 +343,6 @@ func (e *DuplicateIDError) Error() string {
 }
 
 func (m *Manifest) Validate() error {
-	if !m.validated {
-		return nil
-	}
 	for ci := range m.Categories {
 		cat := &m.Categories[ci]
 		if cat.ID == "" {
@@ -337,11 +380,7 @@ func validateNode(cat *Category, n *Node, byID map[string]*Node, path map[string
 		if _, ok := byID[req]; !ok {
 			return &ValidationError{NodeID: n.ID, Reason: "requires unknown node " + req}
 		}
-		target, ok := byID[req]
-		if !ok {
-			continue
-		}
-		if err := validateRequires(cat, target, byID, map[string]bool{}); err != nil {
+		if err := validateRequires(cat, byID[req], byID, map[string]bool{}); err != nil {
 			return err
 		}
 	}

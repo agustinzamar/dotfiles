@@ -117,3 +117,46 @@ func TestSessionAcquiresAndReleasesOneLock(t *testing.T) {
 		t.Fatal("expected session to be unlocked after close")
 	}
 }
+
+func TestSessionAggregatesInstalledStatusAcrossSteps(t *testing.T) {
+	m := &manifest.Manifest{Categories: []manifest.Category{{ID: "test", Name: "Test", Nodes: []manifest.Node{{
+		ID: "node", Name: "Node", Steps: []manifest.Step{{Type: "run"}, {Type: "run"}},
+	}}}}}
+	p := NewPlanner(m, "")
+	p.Next()
+	p.Answer("node", DecisionYes)
+	runner := &fakeStepRunner{results: []executor.Result{{Status: "installed"}, {Status: "skipped"}}}
+	s := NewSession(p, runner, t.TempDir(), nil, false, "")
+	if result := s.Execute("node"); result.Status != StatusInstalled {
+		t.Fatalf("expected installed, got %s", result.Status)
+	}
+}
+
+func TestSessionHandlesEmptySteps(t *testing.T) {
+	m := &manifest.Manifest{Categories: []manifest.Category{{ID: "test", Name: "Test", Nodes: []manifest.Node{{
+		ID: "node", Name: "Node",
+	}}}}}
+	p := NewPlanner(m, "")
+	p.Next()
+	p.Answer("node", DecisionYes)
+	s := NewSession(p, &fakeStepRunner{}, t.TempDir(), nil, false, "")
+	if result := s.Execute("node"); result.Status != StatusAlreadyPresent {
+		t.Fatalf("expected already-present, got %s", result.Status)
+	}
+}
+
+func TestSessionResultsAreSortedByItemID(t *testing.T) {
+	p := plannerWithNode("z", "Z", manifest.Step{Type: "run"})
+	p.Next()
+	p.Answer("z", DecisionYes)
+	q := plannerWithNode("a", "A", manifest.Step{Type: "run"})
+	q.Next()
+	q.Answer("a", DecisionYes)
+	s := NewSession(p, &fakeStepRunner{results: []executor.Result{{Status: "installed"}}}, t.TempDir(), nil, true, "")
+	s.Execute("z")
+	s.results["a"] = Result{ItemID: "a"}
+	results := s.Results()
+	if len(results) != 2 || results[0].ItemID != "a" || results[1].ItemID != "z" {
+		t.Fatalf("results not sorted: %+v", results)
+	}
+}

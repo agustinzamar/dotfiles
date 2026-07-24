@@ -1,7 +1,9 @@
 package workflow
 
 import (
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -21,9 +23,13 @@ func SignedCommits(p Prompt, r CommandRunner) (Result, error) {
 }
 
 func configureSSHSigning(p Prompt, r CommandRunner) (Result, error) {
-	out, _ := r.Run("bash", "-c", "ls ~/.ssh/*.pub 2>/dev/null || true")
-	keys := []string{}
-	if out != "" {
+	keys, err := globSSHKeys(homeDir())
+	if err != nil {
+		return Result{Outcome: OutcomeFailed, Reason: "find SSH keys failed"}, err
+	}
+	// Keep command-runner fallback for non-filesystem runners used by callers/tests.
+	if len(keys) == 0 {
+		out, _ := r.Run("bash", "-c", "ls ~/.ssh/*.pub 2>/dev/null || true")
 		for _, line := range strings.Split(out, "\n") {
 			line = strings.TrimSpace(line)
 			if line != "" {
@@ -57,7 +63,7 @@ func configureSSHSigning(p Prompt, r CommandRunner) (Result, error) {
 		if path == "" {
 			return Result{Outcome: OutcomePending, Reason: "ssh key path empty"}, nil
 		}
-		cmd := exec.Command("ssh-keygen", "-t", "ed25519", "-f", strings.Replace(path, "~", homeDir(), 1), "-N", "")
+		cmd := exec.Command("ssh-keygen", "-t", "ed25519", "-f", expandHome(path), "-N", "")
 		return Result{Outcome: OutcomePending, Reason: "SSH key generation required", Interactive: cmd}, nil
 	}
 
@@ -74,7 +80,25 @@ func configureSSHSigning(p Prompt, r CommandRunner) (Result, error) {
 }
 
 func homeDir() string {
-	return "~"
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return ""
+	}
+	return home
+}
+
+func expandHome(path string) string {
+	if path == "~" {
+		return homeDir()
+	}
+	if strings.HasPrefix(path, "~/") {
+		return filepath.Join(homeDir(), strings.TrimPrefix(path, "~/"))
+	}
+	return path
+}
+
+func globSSHKeys(home string) ([]string, error) {
+	return filepath.Glob(filepath.Join(home, ".ssh", "*.pub"))
 }
 
 func configureGPGSigning(p Prompt, r CommandRunner) (Result, error) {
