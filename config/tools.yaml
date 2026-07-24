@@ -388,8 +388,10 @@ categories:
         description: "Command suggestions and typo fixer (thefuck replacement)"
         checked: true
         steps:
-          - type: run
-            command: "_arch=$(uname -m); case \"$_arch\" in arm64) _arch=aarch64 ;; x86_64) _arch=x86_64 ;; esac; _url=\"https://github.com/iffse/pay-respects/releases/download/nightly/pay-respects-nightly-${_arch}-apple-darwin.tar.zst\"; _tmp=$(mktemp -d); curl -fsSL \"$_url\" -o \"$_tmp/pay-respects.tar.zst\" && mkdir -p \"${HOME}/.local/bin\" && tar -xf \"$_tmp/pay-respects.tar.zst\" -C \"$_tmp\" && cp \"$_tmp/pay-respects\" \"${HOME}/.local/bin/pay-respects\" && cp \"$_tmp/_pay-respects-module-100-runtime-rules\" \"${HOME}/.local/bin/\" && cp \"$_tmp/_pay-respects-fallback-100-request-ai\" \"${HOME}/.local/bin/\" && chmod +x \"${HOME}/.local/bin/pay-respects\" \"${HOME}/.local/bin/_pay-respects-module-100-runtime-rules\" \"${HOME}/.local/bin/_pay-respects-fallback-100-request-ai\"; rm -rf \"$_tmp\""
+          - type: tap
+            repo: "timescam/tap"
+          - type: brew
+            package: timescam/tap/pay-respects
             skip: "which pay-respects"
 
       - name: "Mysql Client"
@@ -775,8 +777,10 @@ categories:
         description: "Stream web video to your TV via DLNA/Chromecast"
         checked: true
         steps:
-          - type: run
-            command: "brew install --cask stupside/tap/castor"
+          - type: tap
+            repo: "stupside/tap"
+          - type: cask
+            package: stupside/tap/castor
             skip: "test -f /Applications/Castor.app || which castor"
 
       - name: "Linear Mouse"
