@@ -44,6 +44,18 @@ func NewSession(planner *Planner, runner StepRunner, dotfilesDir string, vars ma
 	}
 }
 
+func (s *Session) Planner() *Planner {
+	return s.planner
+}
+
+func (s *Session) DryRun() bool {
+	return s.dryRun
+}
+
+func (s *Session) LockPath() string {
+	return s.lockPath
+}
+
 func (s *Session) Execute(itemID string) Result {
 	if s.lockPath != "" && !s.dryRun && !s.locked {
 		lk := lock.New(s.lockPath)
@@ -68,7 +80,71 @@ func (s *Session) Execute(itemID string) Result {
 	var lastResult executor.Result
 	hasFailure := false
 
-	runSteps := func(node manifest.Node) {
+	for _, step := range item.Node.Node.Steps {
+		r := s.runner.Run(step, s.dotfilesDir, s.vars, s.dryRun)
+		lastResult = r
+		if r.Status == "error" {
+			hasFailure = true
+			break
+		}
+		if r.Status != "skipped" && r.Status != "would-skip" {
+			s.changed = true
+		}
+	}
+
+	status := StatusAlreadyPresent
+	if hasFailure {
+		item.Status = StatusFailed
+		status = StatusFailed
+	} else if s.dryRun {
+		if lastResult.Status == "would-install" || lastResult.Status == "would-skip" {
+			item.Status = StatusWouldInstall
+			status = StatusWouldInstall
+		} else {
+			item.Status = StatusAlreadyPresent
+			status = StatusAlreadyPresent
+		}
+	} else {
+		if lastResult.Status == "installed" || lastResult.Status == "would-install" {
+			item.Status = StatusInstalled
+			status = StatusInstalled
+		} else {
+			item.Status = StatusAlreadyPresent
+			status = StatusAlreadyPresent
+		}
+	}
+
+	result := Result{ItemID: itemID, Status: status, Reason: lastResult.Msg}
+	s.results[itemID] = result
+	return result
+}
+
+func (s *Session) ExecuteSteps(itemID string) Result {
+	if s.lockPath != "" && !s.dryRun && !s.locked {
+		lk := lock.New(s.lockPath)
+		if err := lk.Acquire(); err != nil {
+			return Result{ItemID: itemID, Status: StatusFailed, Error: err}
+		}
+		s.locked = true
+	}
+
+	if !s.dryRun {
+		executor.ResetSnapshots()
+	}
+
+	item, ok := s.planner.byID[itemID]
+	if !ok {
+		return Result{ItemID: itemID, Status: StatusFailed, Error: errors.New("unknown item")}
+	}
+	if item.Status != StatusPlanned || item.Decision != DecisionYes {
+		return Result{ItemID: itemID, Status: item.Status}
+	}
+
+	var lastResult executor.Result
+	hasFailure := false
+
+	// Run parent node steps AND all accepted children's steps
+	runNodeSteps := func(node manifest.Node) {
 		for _, step := range node.Steps {
 			r := s.runner.Run(step, s.dotfilesDir, s.vars, s.dryRun)
 			lastResult = r
@@ -82,7 +158,7 @@ func (s *Session) Execute(itemID string) Result {
 		}
 	}
 
-	runSteps(*item.Node.Node)
+	runNodeSteps(*item.Node.Node)
 
 	if !hasFailure && len(item.Node.Node.Children) > 0 {
 		for _, child := range item.Node.Node.Children {
@@ -96,8 +172,7 @@ func (s *Session) Execute(itemID string) Result {
 			if declinedDep := s.planner.hasDeclinedDependency(childItem); declinedDep {
 				continue
 			}
-
-			runSteps(*childItem.Node.Node)
+			runNodeSteps(*childItem.Node.Node)
 			if hasFailure {
 				break
 			}

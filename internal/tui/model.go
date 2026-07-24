@@ -73,7 +73,7 @@ type stepQueueItem struct {
 	step     manifest.Step
 }
 
-func NewModel(m *manifest.Manifest, profile string) tea.Model {
+func NewSelectModel(m *manifest.Manifest, profile string) tea.Model {
 	manifestRef = m
 	vars := config.GetVars()
 	var origTools [][]toolItem
