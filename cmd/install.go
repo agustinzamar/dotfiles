@@ -5,11 +5,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/agustinzamar/dotfiles/internal/config"
 	"github.com/agustinzamar/dotfiles/internal/executor"
-	"github.com/agustinzamar/dotfiles/internal/lock"
+	"github.com/agustinzamar/dotfiles/internal/installer"
 	"github.com/agustinzamar/dotfiles/internal/logger"
 	"github.com/agustinzamar/dotfiles/internal/manifest"
 	"github.com/agustinzamar/dotfiles/internal/snapshot"
@@ -24,6 +23,7 @@ var profileFlag string
 var installApplyFlag bool
 var installDiffFlag bool
 var installForceFlag bool
+var selectFlag bool
 
 var installCmd = &cobra.Command{
 	Use:   "install",
@@ -33,11 +33,40 @@ var installCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		if allFlag || allDryRun {
-			return installAll(m)
+
+		// Build shared session
+		planner := installer.NewPlanner(m, profileFlag)
+		dotfilesDir := manifest.DotfilesDir()
+		vars := config.GetVars()
+
+		isDryRun := allDryRun
+		if !allDryRun && !installApplyFlag {
+			isDryRun = true
 		}
-		p := tea.NewProgram(tui.NewModel(m, profileFlag))
+
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return fmt.Errorf("home dir: %w", err)
+		}
+		lockPath := filepath.Join(homeDir, ".dotfiles", ".lock")
+
+		runner := executor.Runner{}
+		session := installer.NewSession(planner, runner, dotfilesDir, vars, isDryRun, lockPath)
+
+		if allFlag || allDryRun {
+			return installAll(m, session)
+		}
+
+		if selectFlag {
+			p := tea.NewProgram(tui.NewSelectModel(m, profileFlag))
+			_, err = p.Run()
+			return err
+		}
+
+		// Guided mode (default)
+		p := tea.NewProgram(tui.NewGuidedModel(session, profileFlag))
 		_, err = p.Run()
+		session.Close()
 		return err
 	},
 }
@@ -50,30 +79,13 @@ func init() {
 	installCmd.Flags().BoolVar(&installApplyFlag, "apply", false, "Actually perform installation (default is dry-run)")
 	installCmd.Flags().BoolVar(&installDiffFlag, "diff", false, "Show file diffs of changes")
 	installCmd.Flags().BoolVar(&installForceFlag, "force", false, "Skip confirmation and diff (headless/CI)")
+	installCmd.Flags().BoolVar(&selectFlag, "select", false, "Use advanced selection TUI instead of guided mode")
 }
 
-func installAll(m *manifest.Manifest) error {
+func installAll(m *manifest.Manifest, session *installer.Session) error {
 	vars := config.GetVars()
 	dotfilesDir := manifest.DotfilesDir()
-
-	isDryRun := allDryRun
-	if !allDryRun && !installApplyFlag {
-		isDryRun = true
-		fmt.Fprintln(os.Stderr, "Dry-run mode (pass --apply to actually install)")
-	}
-
-	if !isDryRun {
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return fmt.Errorf("home dir: %w", err)
-		}
-		lk := lock.New(filepath.Join(homeDir, ".dotfiles", ".lock"))
-		if err := lk.Acquire(); err != nil {
-			return err
-		}
-		defer lk.Release()
-		executor.ResetSnapshots()
-	}
+	isDryRun := session.DryRun()
 
 	expand := func(s string) string {
 		s = os.ExpandEnv(s)
@@ -83,6 +95,7 @@ func installAll(m *manifest.Manifest) error {
 		return s
 	}
 
+	// Diff output (preflight — read from manifest directly)
 	if installDiffFlag && !installForceFlag {
 		fmt.Fprintln(os.Stderr, "Planned changes:")
 		for _, cat := range m.Categories {
@@ -105,88 +118,43 @@ func installAll(m *manifest.Manifest) error {
 		}
 	}
 
+	// Execute planned items via session
 	hadError := false
-	for _, cat := range m.Categories {
-		fmt.Fprintf(os.Stderr, "\n%s\n", cat.Name)
-		for _, t := range cat.Tools {
-			if profileFlag != "" && !t.MatchesProfile(profileFlag) {
-				continue
-			}
-			for _, step := range t.Steps {
-				if step.Type == "template-symlink" {
-					config.PromptMissing(step.Vars)
-				}
-			}
-			for _, f := range t.Features {
-				if !f.Checked {
-					continue
-				}
-				for _, step := range f.Steps {
-					if step.Type == "template-symlink" {
-						config.PromptMissing(step.Vars)
-					}
-				}
-			}
-			// Prompt for any vars declared in manifest that weren't in template-symlink steps
-			for k := range m.Vars {
-				config.PromptMissing([]string{k})
-			}
-			vars = config.GetVars()
-
-			fmt.Fprintf(os.Stderr, "  %s...", t.Name)
-			allSkipped := true
-			for _, step := range t.Steps {
-				r := executor.Run(step, dotfilesDir, vars, isDryRun)
-				switch r.Status {
-				case "installed":
-					fmt.Fprint(os.Stderr, " \u2713")
-					allSkipped = false
-				case "skipped":
-					fmt.Fprint(os.Stderr, " \u2022")
-				case "would-install":
-					fmt.Fprint(os.Stderr, " +")
-					allSkipped = false
-				case "would-skip":
-					fmt.Fprint(os.Stderr, " \u2022")
-				case "error":
-					fmt.Fprintf(os.Stderr, " \u2717(%s)", r.Msg)
-					allSkipped = false
-					hadError = true
-				}
-				logger.Log(r.Status, t.Name, r.Msg)
-			}
-			for _, f := range t.Features {
-				if !f.Checked {
-					continue
-				}
-				for _, step := range f.Steps {
-					r := executor.Run(step, dotfilesDir, vars, isDryRun)
-					fName := t.Name + " > " + f.Name
-					switch r.Status {
-					case "installed":
-						fmt.Fprint(os.Stderr, " \u2713")
-						allSkipped = false
-					case "skipped":
-						fmt.Fprint(os.Stderr, " \u2022")
-					case "would-install":
-						fmt.Fprint(os.Stderr, " +")
-						allSkipped = false
-					case "would-skip":
-						fmt.Fprint(os.Stderr, " \u2022")
-					case "error":
-						fmt.Fprintf(os.Stderr, " \u2717(%s)", r.Msg)
-						allSkipped = false
-						hadError = true
-					}
-					logger.Log(r.Status, fName, r.Msg)
-				}
-			}
-			if allSkipped {
-				fmt.Fprint(os.Stderr, " (already done)")
-			}
-			fmt.Fprintln(os.Stderr)
+	for {
+		item := session.Planner().Next()
+		if item == nil {
+			break
 		}
+		if item.Decision != installer.DecisionYes {
+			// Mark unset items as pending if they have no default
+			if item.Decision == installer.DecisionUnset && item.Status == installer.StatusPlanned {
+				item.Status = installer.StatusPendingSetup
+			}
+			continue
+		}
+
+		fmt.Fprintf(os.Stderr, "  %s...", item.Name)
+		result := session.Execute(item.ID)
+		switch result.Status {
+		case installer.StatusInstalled:
+			fmt.Fprint(os.Stderr, " \u2713")
+		case installer.StatusAlreadyPresent:
+			fmt.Fprint(os.Stderr, " \u2022")
+		case installer.StatusWouldInstall:
+			fmt.Fprint(os.Stderr, " +")
+		case installer.StatusPendingSetup:
+			fmt.Fprint(os.Stderr, " \u25d8(pending setup)")
+		case installer.StatusFailed:
+			fmt.Fprintf(os.Stderr, " \u2717(%s)", result.Reason)
+			hadError = true
+		default:
+			fmt.Fprint(os.Stderr, " \u2022")
+		}
+		logger.Log(string(result.Status), item.Name, result.Reason)
+		fmt.Fprintln(os.Stderr)
 	}
+
+	session.Close()
 
 	if hadError && !isDryRun {
 		entries := executor.SnapshotEntries()
@@ -203,21 +171,7 @@ func installAll(m *manifest.Manifest) error {
 		return fmt.Errorf("install completed with errors and was rolled back")
 	}
 
-	if !isDryRun {
-		entries := executor.SnapshotEntries()
-		if len(entries) > 0 {
-			ts := time.Now().Format("20060102T150405")
-			sm := &snapshot.Manifest{Timestamp: ts, Entries: entries}
-			if err := snapshot.SaveManifest(sm, dotfilesDir); err != nil {
-				logger.Log("error", "snapshot", fmt.Sprintf("save manifest: %v", err))
-			}
-			if err := snapshot.PruneSnapshots(dotfilesDir, 5); err != nil {
-				logger.Log("error", "snapshot", fmt.Sprintf("prune: %v", err))
-			}
-			fmt.Fprintf(os.Stderr, "\nSnapshot saved: %s (%d files)\n", ts, len(entries))
-		}
-	}
-
+	// Snapshot handling is done inside session.Close()
 	fmt.Println("\nDone.")
 	return nil
 }
