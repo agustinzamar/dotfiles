@@ -10,7 +10,7 @@ Replace selection-first installation with a guided installer that asks for conse
 
 - Keep Go, Cobra, YAML manifests, executor, symlink, snapshot, lock, config, and logger packages.
 - Upgrade Bubble Tea, Bubbles, and Lip Gloss to their v2 module paths.
-- Add `charmbracelet/huh` v2 for confirmation, choice, text input, validation, and note forms. A Huh form is embedded in the Bubble Tea model.
+- Add `charm.land/huh/v2` for confirmation, choice, text input, validation, and note forms. A Huh form is embedded in the Bubble Tea model.
 - Do not introduce Node.js, a web UI, or another runtime.
 
 This preserves the single-binary installer and existing executor investment while replacing custom prompt state with maintained terminal form components.

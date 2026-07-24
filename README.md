@@ -1,10 +1,10 @@
 # Dotfiles
 
-Personal dotfiles managed by a Go CLI. Interactive TUI installer with checkboxes — pick which tools to install. Adding a new tool is a few lines of YAML. Fully idempotent.
+Personal dotfiles managed by a Go CLI. Guided installer asks for consent per category and tool, with dependency-aware ordering and typed Git/GitHub/SSH/GPG workflows. Adding a new tool is a few lines of YAML. Fully idempotent.
 
 ## Key Features
 
-- **Interactive TUI** — Bubble Tea checklist, check/uncheck tools before install
+- **Guided Installer** — Per-category and per-tool consent prompts via Huh forms, with optional `--select` checklist mode
 - **Data-driven** — All tools declared in `config/tools.yaml`, no per-tool Go code
 - **Generic Step Engine** — 9 step types (brew, cask, symlink, template, git-clone, vscode, omz-plugin, tap, run)
 - **Template Rendering** — Go templates for sensitive configs (git, opencode), rendered outputs gitignored
@@ -22,10 +22,13 @@ cd ~/Documents/repos/dotfiles
 # Build and install to PATH
 make install
 
-# Interactive install
+# Guided install (default)
 dotfiles install
 
-# Or non-interactive: install everything
+# Legacy checklist mode
+dotfiles install --select
+
+# Non-interactive: install everything
 dotfiles install --all
 
 # Update everything later
@@ -38,7 +41,8 @@ dotfiles update
 
 | Command | Description |
 |---------|-------------|
-| `dotfiles install` | Launch interactive TUI with category checklist |
+| `dotfiles install` | Launch guided installer (consent per category/tool) |
+| `dotfiles install --select` | Legacy checklist TUI |
 | `dotfiles install --all` | Non-interactive batch install of all tools |
 | `dotfiles install --all --dry-run` | Preview what would be installed |
 | `dotfiles update` | `git pull` + `brew update && brew upgrade` + re-sync symlinks |
@@ -289,7 +293,7 @@ lt                  eza tree view
 
 - **[Go 1.22+](https://go.dev/)** — Single static binary
 - **[Cobra](https://github.com/spf13/cobra)** — CLI framework
-- **[Bubble Tea](https://github.com/charmbracelet/bubbletea) + [Bubbles](https://github.com/charmbracelet/bubbles) + [Lipgloss](https://github.com/charmbracelet/lipgloss)** — Interactive TUI with Catppuccin theme
+- **[Bubble Tea](https://github.com/charmbracelet/bubbletea) + [Bubbles](https://github.com/charmbracelet/bubbles) + [Lipgloss](https://github.com/charmbracelet/lipgloss) + [Huh](https://github.com/charmbracelet/huh)** — Interactive TUI with Catppuccin theme
 - **[YAML](https://pkg.go.dev/gopkg.in/yaml.v3) (gopkg.in/yaml.v3)** — Tool manifest
 - **Go templates** — Config file rendering
 
