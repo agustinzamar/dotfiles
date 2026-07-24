@@ -187,13 +187,9 @@ categories:
         steps:
           - type: cask
             package: ghostty
-        features:
-          - name: "Config"
-            checked: true
-            steps:
-              - type: symlink
-                from: "config/ghostty/config"
-                to: "${HOME}/.config/ghostty/config"
+          - type: symlink
+            from: "config/ghostty/config"
+            to: "${HOME}/.config/ghostty/config"
 
       - name: "Muxy"
         description: "Terminal multiplexer"
@@ -204,19 +200,15 @@ categories:
           - type: cask
             package: "muxy-app/tap/muxy"
             skip: "test -d /Applications/Muxy.app"
-        features:
-          - name: "Config"
-            checked: true
-            steps:
-              - type: symlink
-                from: "config/muxy/conf.hjson"
-                to: "${HOME}/.config/muxy/conf.hjson"
-              - type: symlink
-                from: "config/muxy/verbs.hjson"
-                to: "${HOME}/.config/muxy/verbs.hjson"
-              - type: symlink
-                from: "config/ghostty/config"
-                to: "${HOME}/Library/Application Support/Muxy/ghostty.conf"
+          - type: symlink
+            from: "config/muxy/conf.hjson"
+            to: "${HOME}/.config/muxy/conf.hjson"
+          - type: symlink
+            from: "config/muxy/verbs.hjson"
+            to: "${HOME}/.config/muxy/verbs.hjson"
+          - type: symlink
+            from: "config/ghostty/config"
+            to: "${HOME}/Library/Application Support/Muxy/ghostty.conf"
 
       - name: "Tmux"
         description: "Terminal multiplexer"
@@ -224,13 +216,9 @@ categories:
         steps:
           - type: brew
             package: tmux
-        features:
-          - name: "Config"
-            checked: true
-            steps:
-              - type: symlink
-                from: "config/tmux/tmux.conf"
-                to: "${HOME}/.config/tmux/tmux.conf"
+          - type: symlink
+            from: "config/tmux/tmux.conf"
+            to: "${HOME}/.config/tmux/tmux.conf"
 
       - name: "Fzf"
         description: "Fuzzy finder"
@@ -271,19 +259,15 @@ categories:
         steps:
           - type: brew
             package: yazi
-        features:
-          - name: "Config"
-            checked: true
-            steps:
-              - type: symlink
-                from: "config/yazi/yazi.toml"
-                to: "${HOME}/.config/yazi/yazi.toml"
-              - type: symlink
-                from: "config/yazi/keymap.toml"
-                to: "${HOME}/.config/yazi/keymap.toml"
-              - type: symlink
-                from: "config/yazi/theme.toml"
-                to: "${HOME}/.config/yazi/theme.toml"
+          - type: symlink
+            from: "config/yazi/yazi.toml"
+            to: "${HOME}/.config/yazi/yazi.toml"
+          - type: symlink
+            from: "config/yazi/keymap.toml"
+            to: "${HOME}/.config/yazi/keymap.toml"
+          - type: symlink
+            from: "config/yazi/theme.toml"
+            to: "${HOME}/.config/yazi/theme.toml"
 
   # ── Tools ─────────────────────────────────────────────
   - name: "Tools"
@@ -403,13 +387,9 @@ categories:
         steps:
           - type: brew
             package: mysql-client
-        features:
-          - name: "Functions"
-            checked: true
-            steps:
-              - type: symlink
-                from: "home/functions/mysql.zsh"
-                to: "${HOME}/.dotfiles-home/functions/mysql.zsh"
+          - type: symlink
+            from: "home/functions/mysql.zsh"
+            to: "${HOME}/.dotfiles-home/functions/mysql.zsh"
 
       - name: "Sshpass"
         description: "Non-interactive SSH auth"
@@ -446,13 +426,9 @@ categories:
         steps:
           - type: brew
             package: composer
-        features:
-          - name: "Aliases"
-            checked: true
-            steps:
-              - type: symlink
-                from: "home/aliases/composer.zsh"
-                to: "${HOME}/.dotfiles-home/aliases/composer.zsh"
+          - type: symlink
+            from: "home/aliases/composer.zsh"
+            to: "${HOME}/.dotfiles-home/aliases/composer.zsh"
 
       - name: "Pipx"
         description: "Python package runner"
@@ -492,13 +468,9 @@ categories:
           - type: cask
             package: orbstack
             skip: "test -d /Applications/OrbStack.app"
-        features:
-          - name: "Functions"
-            checked: true
-            steps:
-              - type: symlink
-                from: "home/functions/docker.zsh"
-                to: "${HOME}/.dotfiles-home/functions/docker.zsh"
+          - type: symlink
+            from: "home/functions/docker.zsh"
+            to: "${HOME}/.dotfiles-home/functions/docker.zsh"
 
       - name: "Herd"
         description: "Laravel dev environment"
@@ -508,77 +480,47 @@ categories:
           - type: cask
             package: herd
             skip: "test -d /Applications/Herd.app"
-        features:
-          - name: "Config"
-            checked: true
-            steps:
-              - type: symlink
-                from: "config/herd/herd.json"
-                to: "${HOME}/Library/Application Support/Herd/config/herd.json"
-          - name: "Laravel Aliases"
-            checked: true
-            steps:
-              - type: symlink
-                from: "home/aliases/laravel.zsh"
-                to: "${HOME}/.dotfiles-home/aliases/laravel.zsh"
-          - name: "Laravel Functions"
-            checked: true
-            steps:
-              - type: symlink
-                from: "home/functions/laravel.zsh"
-                to: "${HOME}/.dotfiles-home/functions/laravel.zsh"
+          - type: symlink
+            from: "config/herd/herd.json"
+            to: "${HOME}/Library/Application Support/Herd/config/herd.json"
+          - type: symlink
+            from: "home/aliases/laravel.zsh"
+            to: "${HOME}/.dotfiles-home/aliases/laravel.zsh"
+          - type: symlink
+            from: "home/functions/laravel.zsh"
+            to: "${HOME}/.dotfiles-home/functions/laravel.zsh"
 
       - name: "Git Config"
         description: "Git global settings"
         depends_on: ["Xcode CLT"]
-        features:
-          - name: "Identity"
-            description: "user.name & user.email"
-            checked: true
-            steps:
-              - type: run
-                command: "git config --global user.name '${GitName}'"
-                skip: "git config --global user.name | grep -q ."
-              - type: run
-                command: "git config --global user.email '${GitEmail}'"
-                skip: "git config --global user.email | grep -q @"
-          - name: "Pager"
-            description: "core.pager = hunk"
-            checked: true
-            steps:
-              - type: run
-                command: "git config --global core.pager 'hunk pager'"
-                skip: "git config --global core.pager | grep -q hunk"
-          - name: "GitHub Auth"
-            description: "gh credential helper"
-            checked: true
-            steps:
-              - type: run
-                command: "gh auth setup-git"
-                skip: "git config --global credential.https://github.com.helper 2>/dev/null | grep -q gh"
-          - name: "Behavior"
-            description: "push.autosetupremote, autocrlf, autocorrect"
-            checked: true
-            steps:
-              - type: run
-                command: "git config --global core.autocrlf input"
-                skip: "git config --global core.autocrlf | grep -q input"
-              - type: run
-                command: "git config --global push.autoSetupRemote true"
-                skip: "git config --global push.autoSetupRemote | grep -q true"
-              - type: run
-                command: "git config --global help.autocorrect immediate"
-                skip: "git config --global help.autocorrect | grep -q immediate"
-          - name: "GPG Signing"
-            description: "commit signing key"
-            checked: false
-            steps:
-              - type: run
-                command: "git config --global user.signingkey '${GitGPGKey}'"
-                skip: "git config --global user.signingkey | grep -q ."
-              - type: run
-                command: "git config --global commit.gpgsign true"
-                skip: "git config --global commit.gpgsign | grep -q true"
+        steps:
+          - type: run
+            command: "git config --global user.name '${GitName}'"
+            skip: "git config --global user.name | grep -q ."
+          - type: run
+            command: "git config --global user.email '${GitEmail}'"
+            skip: "git config --global user.email | grep -q @"
+          - type: run
+            command: "git config --global core.pager 'hunk pager'"
+            skip: "git config --global core.pager | grep -q hunk"
+          - type: run
+            command: "gh auth setup-git"
+            skip: "git config --global credential.https://github.com.helper 2>/dev/null | grep -q gh"
+          - type: run
+            command: "git config --global core.autocrlf input"
+            skip: "git config --global core.autocrlf | grep -q input"
+          - type: run
+            command: "git config --global push.autoSetupRemote true"
+            skip: "git config --global push.autoSetupRemote | grep -q true"
+          - type: run
+            command: "git config --global help.autocorrect immediate"
+            skip: "git config --global help.autocorrect | grep -q immediate"
+          - type: run
+            command: "git config --global user.signingkey '${GitGPGKey}'"
+            skip: "git config --global user.signingkey | grep -q ."
+          - type: run
+            command: "git config --global commit.gpgsign true"
+            skip: "git config --global commit.gpgsign | grep -q true"
 
       - name: "Global .npmrc"
         description: "npm configuration"
@@ -599,74 +541,48 @@ categories:
           - type: cask
             package: visual-studio-code
             skip: "test -d '/Applications/Visual Studio Code.app'"
-        features:
-          - name: "Settings"
-            checked: true
-            steps:
-              - type: symlink
-                from: "config/vscode/settings.json"
-                to: "${HOME}/Library/Application Support/Code/User/settings.json"
-          - name: "Keybindings"
-            checked: true
-            steps:
-              - type: symlink
-                from: "config/vscode/keybindings.json"
-                to: "${HOME}/Library/Application Support/Code/User/keybindings.json"
-          - name: "Theme & Icons"
-            description: "Catppuccin, One Dark, Material Icons"
-            checked: true
-            steps:
-              - type: vscode
-                extension: "catppuccin.catppuccin-vsc"
-              - type: vscode
-                extension: "akamud.vscode-theme-onedark"
-              - type: vscode
-                extension: "pkief.material-icon-theme"
-          - name: "PHP & Laravel"
-            checked: true
-            steps:
-              - type: vscode
-                extension: "bmewburn.vscode-intelephense-client"
-              - type: vscode
-                extension: "laravel.vscode-laravel"
-              - type: vscode
-                extension: "xdebug.php-debug"
-          - name: "Tailwind & Infra"
-            description: "Tailwind CSS, XML, YAML"
-            checked: true
-            steps:
-              - type: vscode
-                extension: "bradlc.vscode-tailwindcss"
-              - type: vscode
-                extension: "redhat.vscode-xml"
-              - type: vscode
-                extension: "redhat.vscode-yaml"
-          - name: "Tweak & Format"
-            description: "Better Comments, Error Lens, Pretty TS Errors, Biome, Color Highlight, Path Intellisense, Rainbow CSV"
-            checked: true
-            steps:
-              - type: vscode
-                extension: "aaron-bond.better-comments"
-              - type: vscode
-                extension: "naumovs.color-highlight"
-              - type: vscode
-                extension: "usernamehw.errorlens"
-              - type: vscode
-                extension: "yoavbls.pretty-ts-errors"
-              - type: vscode
-                extension: "biomejs.biome"
-              - type: vscode
-                extension: "christian-kohler.path-intellisense"
-              - type: vscode
-                extension: "mechatroner.rainbow-csv"
-          - name: "Git"
-            steps:
-              - type: vscode
-                extension: "waderyan.gitblame"
-          - name: "AI"
-            steps:
-              - type: vscode
-                extension: "anthropic.claude-code"
+          - type: symlink
+            from: "config/vscode/settings.json"
+            to: "${HOME}/Library/Application Support/Code/User/settings.json"
+          - type: symlink
+            from: "config/vscode/keybindings.json"
+            to: "${HOME}/Library/Application Support/Code/User/keybindings.json"
+          - type: vscode
+            extension: "catppuccin.catppuccin-vsc"
+          - type: vscode
+            extension: "akamud.vscode-theme-onedark"
+          - type: vscode
+            extension: "pkief.material-icon-theme"
+          - type: vscode
+            extension: "bmewburn.vscode-intelephense-client"
+          - type: vscode
+            extension: "laravel.vscode-laravel"
+          - type: vscode
+            extension: "xdebug.php-debug"
+          - type: vscode
+            extension: "bradlc.vscode-tailwindcss"
+          - type: vscode
+            extension: "redhat.vscode-xml"
+          - type: vscode
+            extension: "redhat.vscode-yaml"
+          - type: vscode
+            extension: "aaron-bond.better-comments"
+          - type: vscode
+            extension: "naumovs.color-highlight"
+          - type: vscode
+            extension: "usernamehw.errorlens"
+          - type: vscode
+            extension: "yoavbls.pretty-ts-errors"
+          - type: vscode
+            extension: "biomejs.biome"
+          - type: vscode
+            extension: "christian-kohler.path-intellisense"
+          - type: vscode
+            extension: "mechatroner.rainbow-csv"
+          - type: vscode
+            extension: "waderyan.gitblame"
+          - type: vscode
+            extension: "anthropic.claude-code"
 
       - name: "Phpstorm"
         description: "JetBrains PHP IDE"
@@ -689,22 +605,18 @@ categories:
         steps:
           - type: brew
             package: claude-code
-        features:
-          - name: "Config"
-            checked: true
-            steps:
-              - type: symlink
-                from: "config/claude/settings.json"
-                to: "${HOME}/.claude/settings.json"
-              - type: symlink
-                from: "config/opencode/skills/"
-                to: "${HOME}/.claude/skills/"
-              - type: symlink
-                from: "config/opencode/agents/"
-                to: "${HOME}/.claude/agents/"
-              - type: symlink
-                from: "config/claude/CLAUDE.md"
-                to: "${HOME}/.claude/CLAUDE.md"
+          - type: symlink
+            from: "config/claude/settings.json"
+            to: "${HOME}/.claude/settings.json"
+          - type: symlink
+            from: "config/opencode/skills/"
+            to: "${HOME}/.claude/skills/"
+          - type: symlink
+            from: "config/opencode/agents/"
+            to: "${HOME}/.claude/agents/"
+          - type: symlink
+            from: "config/claude/CLAUDE.md"
+            to: "${HOME}/.claude/CLAUDE.md"
 
       - name: "Opencode"
         description: "OpenCode AI coding agent"
@@ -712,32 +624,28 @@ categories:
         steps:
           - type: brew
             package: opencode
-        features:
-          - name: "Config"
-            checked: true
-            steps:
-              - type: template-symlink
-                from: "config/opencode/opencode.json"
-                to: "${HOME}/.config/opencode/opencode.json"
-                vars: ["GitHubPAT"]
-              - type: symlink
-                from: "config/opencode/AGENTS.md"
-                to: "${HOME}/.config/opencode/AGENTS.md"
-              - type: symlink
-                from: "config/opencode/plugins/"
-                to: "${HOME}/.config/opencode/plugins/"
-              - type: symlink
-                from: "config/opencode/skills/"
-                to: "${HOME}/.config/opencode/skills/"
-              - type: symlink
-                from: "config/opencode/themes/"
-                to: "${HOME}/.config/opencode/themes/"
-              - type: symlink
-                from: "config/opencode/agents/"
-                to: "${HOME}/.config/opencode/agents/"
-              - type: symlink
-                from: "config/opencode/commands/"
-                to: "${HOME}/.config/opencode/commands/"
+          - type: template-symlink
+            from: "config/opencode/opencode.json"
+            to: "${HOME}/.config/opencode/opencode.json"
+            vars: ["GitHubPAT"]
+          - type: symlink
+            from: "config/opencode/AGENTS.md"
+            to: "${HOME}/.config/opencode/AGENTS.md"
+          - type: symlink
+            from: "config/opencode/plugins/"
+            to: "${HOME}/.config/opencode/plugins/"
+          - type: symlink
+            from: "config/opencode/skills/"
+            to: "${HOME}/.config/opencode/skills/"
+          - type: symlink
+            from: "config/opencode/themes/"
+            to: "${HOME}/.config/opencode/themes/"
+          - type: symlink
+            from: "config/opencode/agents/"
+            to: "${HOME}/.config/opencode/agents/"
+          - type: symlink
+            from: "config/opencode/commands/"
+            to: "${HOME}/.config/opencode/commands/"
 
       - name: "Google Antigravity"
         description: "Agent CLI tool"
@@ -767,13 +675,9 @@ categories:
         steps:
           - type: brew
             package: hunk
-        features:
-          - name: "Config"
-            checked: true
-            steps:
-              - type: symlink
-                from: "config/hunk/config.toml"
-                to: "${HOME}/.config/hunk/config.toml"
+          - type: symlink
+            from: "config/hunk/config.toml"
+            to: "${HOME}/.config/hunk/config.toml"
 
   # ── Apps ──────────────────────────────────────────────
   - name: "Apps"
@@ -784,13 +688,9 @@ categories:
         steps:
           - type: brew
             package: mackup
-        features:
-          - name: "Config"
-            checked: true
-            steps:
-              - type: symlink
-                from: "config/mackup/dotfiles-custom.cfg"
-                to: "${HOME}/.mackup/dotfiles-custom.cfg"
+          - type: symlink
+            from: "config/mackup/dotfiles-custom.cfg"
+            to: "${HOME}/.mackup/dotfiles-custom.cfg"
 
       - name: "Raycast"
         description: "App launcher and productivity tool"
@@ -886,136 +786,93 @@ categories:
           - type: run
             command: "killall Finder 2>/dev/null; true"
             skip: "killall -0 Finder 2>/dev/null || true"
-        features:
-          - name: "Show File Extensions"
-            checked: true
-            steps:
-              - type: defaults
-                domain: com.apple.finder
-                key: AppleShowAllExtensions
-                value: "true"
-                valueType: bool
-          - name: "Show Hidden Files"
-            checked: true
-            steps:
-              - type: defaults
-                domain: com.apple.finder
-                key: AppleShowAllFiles
-                value: "true"
-                valueType: bool
-          - name: "Show Pathbar"
-            checked: true
-            steps:
-              - type: defaults
-                domain: com.apple.finder
-                key: ShowPathbar
-                value: "true"
-                valueType: bool
-          - name: "Full Path in Title"
-            checked: true
-            steps:
-              - type: defaults
-                domain: com.apple.finder
-                key: _FXShowPosixPathInTitle
-                value: "true"
-                valueType: bool
+          - type: defaults
+            domain: com.apple.finder
+            key: AppleShowAllExtensions
+            value: "true"
+            valueType: bool
+          - type: defaults
+            domain: com.apple.finder
+            key: AppleShowAllFiles
+            value: "true"
+            valueType: bool
+          - type: defaults
+            domain: com.apple.finder
+            key: ShowPathbar
+            value: "true"
+            valueType: bool
+          - type: defaults
+            domain: com.apple.finder
+            key: _FXShowPosixPathInTitle
+            value: "true"
+            valueType: bool
 
       - name: "Dock"
         description: "Dock preferences"
         checked: true
-        features:
-          - name: "Autohide"
-            checked: true
-            steps:
-              - type: defaults
-                domain: com.apple.dock
-                key: autohide
-                value: "true"
-                valueType: bool
-          - name: "Hide Recents"
-            checked: true
-            steps:
-              - type: defaults
-                domain: com.apple.dock
-                key: show-recents
-                value: "false"
-                valueType: bool
-          - name: "Left Position"
-            checked: true
-            steps:
-              - type: defaults
-                domain: com.apple.dock
-                key: orientation
-                value: "left"
-                valueType: string
+        steps:
+          - type: defaults
+            domain: com.apple.dock
+            key: autohide
+            value: "true"
+            valueType: bool
+          - type: defaults
+            domain: com.apple.dock
+            key: show-recents
+            value: "false"
+            valueType: bool
+          - type: defaults
+            domain: com.apple.dock
+            key: orientation
+            value: "left"
+            valueType: string
 
       - name: "Screenshots"
         description: "Screenshot preferences"
         checked: true
-        features:
-          - name: "PNG Format"
-            checked: true
-            steps:
-              - type: defaults
-                domain: com.apple.screencapture
-                key: type
-                value: "png"
-                valueType: string
-          - name: "Save to Desktop"
-            checked: true
-            steps:
-              - type: defaults
-                domain: com.apple.screencapture
-                key: location
-                value: "${HOME}/Desktop"
-                valueType: string
+        steps:
+          - type: defaults
+            domain: com.apple.screencapture
+            key: type
+            value: "png"
+            valueType: string
+          - type: defaults
+            domain: com.apple.screencapture
+            key: location
+            value: "${HOME}/Desktop"
+            valueType: string
 
       - name: "Text & Input"
         description: "Keyboard and scroll preferences"
         checked: true
-        features:
-          - name: "Scrollbars"
-            checked: true
-            steps:
-              - type: defaults
-                domain: NSGlobalDomain
-                key: AppleShowScrollBars
-                value: "Always"
-                valueType: string
-          - name: "Fast Key Repeat"
-            checked: true
-            steps:
-              - type: defaults
-                domain: NSGlobalDomain
-                key: KeyRepeat
-                value: "2"
-                valueType: int
-          - name: "Initial Key Repeat"
-            checked: true
-            steps:
-              - type: defaults
-                domain: NSGlobalDomain
-                key: InitialKeyRepeat
-                value: "15"
-                valueType: int
+        steps:
+          - type: defaults
+            domain: NSGlobalDomain
+            key: AppleShowScrollBars
+            value: "Always"
+            valueType: string
+          - type: defaults
+            domain: NSGlobalDomain
+            key: KeyRepeat
+            value: "2"
+            valueType: int
+          - type: defaults
+            domain: NSGlobalDomain
+            key: InitialKeyRepeat
+            value: "15"
+            valueType: int
 
       - name: "Misc"
         description: "System tweaks"
         checked: true
-        features:
-          - name: "No .DS_Store on Network"
-            checked: true
-            steps:
-              - type: defaults
-                domain: com.apple.desktopservices
-                key: DSDontWriteNetworkStores
-                value: "true"
-                valueType: bool
-          - name: "Disable Handoff"
-            checked: true
-            steps:
-              - type: defaults
-                domain: com.apple.coreservices.useractivityd
-                key: ActivityCacheAllowed
-                value: "false"
-                valueType: bool
+        steps:
+          - type: defaults
+            domain: com.apple.desktopservices
+            key: DSDontWriteNetworkStores
+            value: "true"
+            valueType: bool
+          - type: defaults
+            domain: com.apple.coreservices.useractivityd
+            key: ActivityCacheAllowed
+            value: "false"
+            valueType: bool
