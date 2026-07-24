@@ -37,6 +37,16 @@ func SnapshotEntries() []snapshot.Entry {
 	return out
 }
 
+type StepRunner interface {
+	Run(step manifest.Step, dotfilesDir string, vars map[string]string, dryRun bool) Result
+}
+
+type Runner struct{}
+
+func (Runner) Run(step manifest.Step, dotfilesDir string, vars map[string]string, dryRun bool) Result {
+	return Run(step, dotfilesDir, vars, dryRun)
+}
+
 type Result struct {
 	Status string
 	Msg    string
