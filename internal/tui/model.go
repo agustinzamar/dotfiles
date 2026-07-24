@@ -9,10 +9,10 @@ import (
 	"github.com/agustinzamar/dotfiles/internal/executor"
 	"github.com/agustinzamar/dotfiles/internal/logger"
 	"github.com/agustinzamar/dotfiles/internal/manifest"
-	"github.com/charmbracelet/bubbles/spinner"
-	"github.com/charmbracelet/bubbles/textinput"
-	tea "github.com/charmbracelet/bubbletea"
-	"github.com/charmbracelet/lipgloss"
+	"charm.land/bubbles/v2/spinner"
+	"charm.land/bubbles/v2/textinput"
+	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 )
 
 var manifestRef *manifest.Manifest
@@ -389,20 +389,21 @@ func (m *model) flatItems() []toolItem {
 	return items
 }
 
-func (m *model) View() string {
+func (m *model) View() tea.View {
+	var content string
 	switch m.state {
 	case stateSelecting:
-		return m.selectionView()
+		content = m.selectionView()
 	case stateSelectingHelpers:
-		return m.helpersView()
+		content = m.helpersView()
 	case statePrompting:
-		return m.promptingView()
+		content = m.promptingView()
 	case stateConfirm:
-		return m.confirmView()
+		content = m.confirmView()
 	case stateInstalling, stateDone:
-		return m.installingView()
+		content = m.installingView()
 	}
-	return ""
+	return tea.NewView(content)
 }
 
 func (m *model) confirmView() string {
@@ -551,7 +552,7 @@ func (m *model) selectionView() string {
 			if item.checked {
 				name = FeatureCheckedStyle.Render(item.featureName)
 			}
-			b.WriteString(CheckboxStyle.Render(fmt.Sprintf("   %s %s %s", checkbox, bullet, name)))
+			b.WriteString(CheckboxStyle.Render(fmt.Sprintf(" %s %s %s %s", cursor, checkbox, bullet, name)))
 			b.WriteString("\n")
 			continue
 		}
