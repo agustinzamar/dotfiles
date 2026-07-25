@@ -152,6 +152,54 @@ categories:
 	}
 }
 
+func testManifestWithNeeds(id string, needs []string) *Manifest {
+	return &Manifest{
+		Categories: []Category{{
+			ID: "test", Name: "Test",
+			Nodes: []Node{{
+				ID: id, Name: "A",
+				Steps: []Step{{Type: "symlink", Needs: needs}},
+			}},
+		}},
+	}
+}
+
+func testManifestWithNeedsProvides(needID string, needs []string, provideID string, provides []string) *Manifest {
+	return &Manifest{
+		Categories: []Category{{
+			ID: "test", Name: "Test",
+			Nodes: []Node{
+				{ID: needID, Name: "Needer", Steps: []Step{{Type: "symlink", Needs: needs}}},
+				{ID: provideID, Name: "Provider", Steps: []Step{{Type: "symlink", Provides: provides}}},
+			},
+		}},
+	}
+}
+
+func TestValidate_UnrecognizedNeedsTag(t *testing.T) {
+	m := testManifestWithNeeds("a", []string{"nonexistent-provider"})
+	err := m.Validate()
+	if err == nil {
+		t.Fatal("expected error for unrecognized needs tag")
+	}
+}
+
+func TestValidate_ValidNeedsProvides(t *testing.T) {
+	m := testManifestWithNeedsProvides("a", []string{"vscode"}, "b", []string{"vscode"})
+	err := m.Validate()
+	if err != nil {
+		t.Fatalf("expected no error, got: %v", err)
+	}
+}
+
+func TestValidate_KnownImplicitTag(t *testing.T) {
+	m := testManifestWithNeeds("a", []string{"homebrew"})
+	err := m.Validate()
+	if err != nil {
+		t.Fatalf("expected no error for known implicit tag homebrew, got: %v", err)
+	}
+}
+
 func TestLoadValidatesLegacyToolsManifest(t *testing.T) {
 	yaml := `
 categories:

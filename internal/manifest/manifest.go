@@ -1,6 +1,7 @@
 package manifest
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -70,6 +71,12 @@ var KnownWorkflows = map[string]bool{
 	"hunk-git-pager": true,
 }
 
+var KnownImplicitProviders = map[string]bool{
+	"homebrew": true,
+	"vscode":   true,
+	"omz":      true,
+}
+
 type Step struct {
 	Type      string            `yaml:"type"`
 	Package   string            `yaml:"package,omitempty"`
@@ -87,6 +94,8 @@ type Step struct {
 	Key       string            `yaml:"key,omitempty"`
 	Value     string            `yaml:"value,omitempty"`
 	ValueType string            `yaml:"valueType,omitempty"`
+	Needs    []string          `yaml:"needs,omitempty"`
+	Provides []string          `yaml:"provides,omitempty"`
 }
 
 type Tool struct {
@@ -343,13 +352,18 @@ func (e *DuplicateIDError) Error() string {
 }
 
 func (m *Manifest) Validate() error {
-	for ci := range m.Categories {
-		cat := &m.Categories[ci]
-		if cat.ID == "" {
-			return &ValidationError{NodeID: "<category>", Reason: "category id is empty"}
+	if m.byID == nil {
+		if err := m.buildIndex(); err != nil {
+			return err
 		}
-		for ni := range cat.Nodes {
-			if err := validateNode(cat, &cat.Nodes[ni], m.byID, map[string]bool{}); err != nil {
+	}
+	providedTags := m.allProvidedTags()
+	for _, cat := range m.Categories {
+		if cat.ID == "" {
+			return &ValidationError{NodeID: "<category>", Reason: "category has empty ID"}
+		}
+		for _, n := range cat.Nodes {
+			if err := m.validateNode(cat, n, map[string]bool{}, providedTags); err != nil {
 				return err
 			}
 		}
@@ -357,61 +371,89 @@ func (m *Manifest) Validate() error {
 	return nil
 }
 
-func validateNode(cat *Category, n *Node, byID map[string]*Node, path map[string]bool) error {
+func (m *Manifest) allProvidedTags() map[string]bool {
+	tags := map[string]bool{}
+	for _, cat := range m.Categories {
+		for _, n := range cat.Nodes {
+			for _, step := range n.Steps {
+				for _, p := range step.Provides {
+					tags[p] = true
+				}
+			}
+		}
+	}
+	return tags
+}
+
+func (m *Manifest) validateNode(cat Category, n Node, path map[string]bool, providedTags map[string]bool) error {
 	if n.ID == "" {
 		return &ValidationError{NodeID: cat.ID, Reason: "node id is empty"}
 	}
 	if n.Name == "" {
 		return &ValidationError{NodeID: n.ID, Reason: "node name is empty"}
 	}
-	if _, ok := byID[n.ID]; !ok {
+	if _, exists := m.byID[n.ID]; !exists {
 		return &ValidationError{NodeID: n.ID, Reason: "node not indexed"}
 	}
 	if path[n.ID] {
 		return &ValidationError{NodeID: n.ID, Reason: "tree cycle detected"}
 	}
-	path[n.ID] = true
 	for _, w := range n.Setup {
 		if !KnownWorkflows[w] {
 			return &ValidationError{NodeID: n.ID, Reason: "unknown workflow " + w}
 		}
 	}
-	for _, req := range n.Requires {
-		if _, ok := byID[req]; !ok {
-			return &ValidationError{NodeID: n.ID, Reason: "requires unknown node " + req}
+
+	// Validate needs tags
+	for _, step := range n.Steps {
+		for _, need := range step.Needs {
+			if KnownImplicitProviders[need] {
+				continue
+			}
+			if _, exists := m.byID[need]; exists {
+				continue
+			}
+			if providedTags[need] {
+				continue
+			}
+			return &ValidationError{
+				NodeID: n.ID,
+				Reason: fmt.Sprintf("needs tag %q has no provider in manifest and is not a known implicit provider", need),
+			}
 		}
-		if err := validateRequires(cat, byID[req], byID, map[string]bool{}); err != nil {
+	}
+
+	// Note: `n.Requires` is still populated by `toolsToNodes()` during
+	// the Phase 2 transition. Do NOT reject it here — only warn.
+	// Strict rejection comes in Phase 2 after tools.yaml migration.
+
+	path[n.ID] = true
+	for _, child := range n.Children {
+		child.CategoryID = cat.ID
+		child.Category = cat.Name
+		child.ParentID = n.ID
+		if err := m.validateNode(cat, child, path, providedTags); err != nil {
 			return err
 		}
 	}
-	for i := range n.Children {
-		if err := validateNode(cat, &n.Children[i], byID, path); err != nil {
+	for _, req := range n.Requires {
+		if req == n.ID {
+			return &ValidationError{NodeID: n.ID, Reason: fmt.Sprintf("node requires itself: %s", n.ID)}
+		}
+		if path[req] {
+			return &ValidationError{NodeID: n.ID, Reason: "requires cycle detected"}
+		}
+		target, exists := m.byID[req]
+		if !exists {
+			return &ValidationError{NodeID: n.ID, Reason: fmt.Sprintf("requires unknown node: %s", req)}
+		}
+		path[req] = true
+		if err := m.validateNode(cat, *target, path, providedTags); err != nil {
 			return err
 		}
+		delete(path, req)
 	}
 	delete(path, n.ID)
-	return nil
-}
-
-func validateRequires(cat *Category, n *Node, byID map[string]*Node, path map[string]bool) error {
-	if path[n.ID] {
-		return &ValidationError{NodeID: n.ID, Reason: "requires cycle detected"}
-	}
-	path[n.ID] = true
-	for _, req := range n.Requires {
-		target, ok := byID[req]
-		if !ok {
-			continue
-		}
-		if err := validateRequires(cat, target, byID, path); err != nil {
-			return err
-		}
-	}
-	for i := range n.Children {
-		if err := validateNode(cat, &n.Children[i], byID, map[string]bool{}); err != nil {
-			return err
-		}
-	}
 	return nil
 }
 
