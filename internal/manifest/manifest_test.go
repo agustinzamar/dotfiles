@@ -184,8 +184,12 @@ func TestValidate_UnrecognizedNeedsTag(t *testing.T) {
 	}
 }
 
+// TestValidate_RejectsRequiresField skipped in Phase 1.
+// Phase 1 does NOT reject "requires" — it's still populated by toolsToNodes()
+// from depends_on. Strict rejection and full removal is Phase 2 after tools.yaml migration.
+
 func TestValidate_ValidNeedsProvides(t *testing.T) {
-	m := testManifestWithNeedsProvides("a", []string{"vscode"}, "b", []string{"vscode"})
+	m := testManifestWithNeedsProvides("a", []string{"my-provider"}, "b", []string{"my-provider"})
 	err := m.Validate()
 	if err != nil {
 		t.Fatalf("expected no error, got: %v", err)
