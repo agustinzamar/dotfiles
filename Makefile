@@ -1,16 +1,16 @@
-.PHONY: build install clean test
+.PHONY: install check doctor update backup
 
-build:
-	go build -o dotfiles .
+install:
+	./install.sh
 
-install: build
-	ln -sf $(PWD)/dotfiles /opt/homebrew/bin/dotfiles
-	@echo "Installed to /opt/homebrew/bin/dotfiles"
+check:
+	bash -n install.sh scripts/*.sh
 
-clean:
-	rm -f dotfiles
-	rm -f /opt/homebrew/bin/dotfiles
+doctor:
+	scripts/doctor.sh "$(PWD)"
 
-test:
-	go vet ./...
-	go test ./...
+update:
+	scripts/update.sh "$(PWD)"
+
+backup:
+	scripts/backup.sh "$(PWD)"
