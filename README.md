@@ -30,9 +30,6 @@ dotfiles install --select
 
 # Non-interactive: install everything
 dotfiles install --all
-
-# Update everything later
-dotfiles update
 ```
 
 `dotfiles` runs from anywhere — no need to be inside the repo.
@@ -45,7 +42,6 @@ dotfiles update
 | `dotfiles install --select` | Legacy checklist TUI |
 | `dotfiles install --all` | Non-interactive batch install of all tools |
 | `dotfiles install --all --dry-run` | Preview what would be installed |
-| `dotfiles update` | `git pull` + `brew update && brew upgrade` + re-sync symlinks |
 | `dotfiles list` | List all available tools in the manifest |
 | `dotfiles doctor` | Check health of installed tools and symlinks |
 | `dotfiles cleanup` | Remove `.backup` files from symlink operations |

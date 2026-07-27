@@ -52,7 +52,7 @@ var statusCmd = &cobra.Command{
 		if changed == 0 {
 			fmt.Println("No files changed since install")
 		} else {
-			fmt.Printf("\n%d file(s) changed since install — run 'dotfiles rollback' to restore\n", changed)
+			fmt.Printf("\n%d file(s) changed since install\n", changed)
 		}
 		return nil
 	},

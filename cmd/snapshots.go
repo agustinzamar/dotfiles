@@ -24,15 +24,15 @@ var snapshotsCmd = &cobra.Command{
 			return nil
 		}
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-		fmt.Fprintln(w, "TIMESTAMP\tFILES\tACTION")
+		fmt.Fprintln(w, "TIMESTAMP\tFILES")
 		for _, ts := range list {
 			m, err := snapshot.LoadManifest(ts, dotfilesDir)
 			if err != nil {
-				fmt.Fprintf(w, "%s\t-\tload error\n", ts)
+				fmt.Fprintf(w, "%s\tload error\n", ts)
 				continue
 			}
 			count := len(m.Entries)
-			fmt.Fprintf(w, "%s\t%d\trollback %s\n", ts, count, ts)
+			fmt.Fprintf(w, "%s\t%d\n", ts, count)
 		}
 		w.Flush()
 		return nil
