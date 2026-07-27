@@ -10,26 +10,6 @@ import (
 	"github.com/agustinzamar/dotfiles/internal/manifest"
 )
 
-func TestNewModelBuilds(t *testing.T) {
-	m, err := manifest.Load(manifest.DotfilesDir() + "/config/tools.yaml")
-	if err != nil {
-		t.Fatalf("Load manifest: %v", err)
-	}
-	model := NewSelectModel(m, "", true)
-	if model == nil {
-		t.Fatal("NewSelectModel returned nil")
-	}
-	_ = model.(tea.Model)
-}
-
-func TestSelectModelPreservesDryRun(t *testing.T) {
-	m := &manifest.Manifest{}
-	model := NewSelectModel(m, "", true).(*model)
-	if !model.dryRun {
-		t.Fatal("expected select model dry-run mode")
-	}
-}
-
 // --- test helpers ---
 
 func guidedTestSession(t *testing.T, nodes []manifest.Node, results []executor.Result) *installer.Session {

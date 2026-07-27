@@ -22,8 +22,6 @@ var allFlag bool
 var allDryRun bool
 var profileFlag string
 var installDiffFlag bool
-var installForceFlag bool
-var selectFlag bool
 
 var installCmd = &cobra.Command{
 	Use:   "install",
@@ -54,12 +52,6 @@ var installCmd = &cobra.Command{
 			return installAll(m, session)
 		}
 
-		if selectFlag {
-			p := tea.NewProgram(tui.NewSelectModel(m, profileFlag, isDryRun))
-			_, err = p.Run()
-			return err
-		}
-
 		// Guided mode (default)
 		p := tea.NewProgram(tui.NewGuidedModel(session, profileFlag))
 		_, err = p.Run()
@@ -77,10 +69,7 @@ func init() {
 	installCmd.Flags().BoolVar(&allFlag, "all", false, "Install all tools without TUI prompt")
 	installCmd.Flags().BoolVar(&allDryRun, "dry-run", false, "Preview what would be installed without making changes")
 	installCmd.Flags().StringVar(&profileFlag, "profile", "", "Profile to filter tools (e.g. personal, work)")
-	installCmd.Flags().Bool("apply", false, "Compatibility flag; installation applies by default")
 	installCmd.Flags().BoolVar(&installDiffFlag, "diff", false, "Show file diffs of changes")
-	installCmd.Flags().BoolVar(&installForceFlag, "force", false, "Skip confirmation and diff (headless/CI)")
-	installCmd.Flags().BoolVar(&selectFlag, "select", false, "Use advanced selection TUI instead of guided mode")
 }
 
 func installAll(m *manifest.Manifest, session *installer.Session) error {
@@ -97,7 +86,7 @@ func installAll(m *manifest.Manifest, session *installer.Session) error {
 	}
 
 	// Diff output (preflight — read from manifest directly)
-	if installDiffFlag && !installForceFlag {
+	if installDiffFlag {
 		fmt.Fprintln(os.Stderr, "Planned changes:")
 		for _, cat := range m.Categories {
 			for _, t := range cat.Tools {

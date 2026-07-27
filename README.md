@@ -4,7 +4,7 @@ Personal dotfiles managed by a Go CLI. Guided installer asks for consent per cat
 
 ## Key Features
 
-- **Guided Installer** — Per-category and per-tool consent prompts via Huh forms, with optional `--select` checklist mode
+- **Guided Installer** — Per-category and per-tool consent prompts via Huh forms
 - **Data-driven** — All tools declared in `config/tools.yaml`, no per-tool Go code
 - **Generic Step Engine** — 9 step types (brew, cask, symlink, template, git-clone, vscode, omz-plugin, tap, run)
 - **Template Rendering** — Go templates for sensitive configs (git, opencode), rendered outputs gitignored
@@ -25,9 +25,6 @@ make install
 # Guided install (default)
 dotfiles install
 
-# Legacy checklist mode
-dotfiles install --select
-
 # Non-interactive: install everything
 dotfiles install --all
 ```
@@ -39,7 +36,6 @@ dotfiles install --all
 | Command | Description |
 |---------|-------------|
 | `dotfiles install` | Launch guided installer (consent per category/tool) |
-| `dotfiles install --select` | Legacy checklist TUI |
 | `dotfiles install --all` | Non-interactive batch install of all tools |
 | `dotfiles install --all --dry-run` | Preview what would be installed |
 | `dotfiles list` | List all available tools in the manifest |
