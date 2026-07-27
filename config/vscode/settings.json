@@ -137,7 +137,7 @@
   "files.autoSave": "afterDelay",
   "git.autofetch": true,
   "git.enableCommitSigning": true,
-  "window.zoomLevel": 2,
+  "window.zoomLevel": 1,
   "window.zoomPerWindow": false,
   "settingsSync.ignoredSettings": [
     "-window.zoomLevel"
