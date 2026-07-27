@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"strings"
 	"testing"
 
 	tea "charm.land/bubbletea/v2"
@@ -43,6 +44,15 @@ func guidedTestSession(t *testing.T, nodes []manifest.Node, results []executor.R
 	return installer.NewSession(p, runner, "/tmp", nil, true, "")
 }
 
+func acceptGuidedCategory(t *testing.T, m *guidedModel) {
+	t.Helper()
+	if m.item == nil || !m.item.PromptOnly || m.item.ParentID != "" {
+		t.Fatalf("expected category prompt, got %#v", m.item)
+	}
+	m.answer = true
+	m.onPromptDone()
+}
+
 type guidedFakeRunner struct {
 	results []executor.Result
 	idx     int
@@ -72,8 +82,13 @@ func TestGuidedModelShowsCategoryBeforeTool(t *testing.T) {
 	if m.item == nil {
 		t.Fatal("expected current item, got nil")
 	}
-	if m.item.ID != "homebrew" {
-		t.Fatalf("expected homebrew item, got %s", m.item.ID)
+	if m.item.ID != "category:test" {
+		t.Fatalf("expected category prompt, got %s", m.item.ID)
+	}
+	m.answer = true
+	m.onPromptDone()
+	if m.item == nil || m.item.ID != "homebrew" {
+		t.Fatalf("expected homebrew after category, got %#v", m.item)
 	}
 }
 
@@ -81,6 +96,7 @@ func TestGuidedModelCtrlCQuitsFromForm(t *testing.T) {
 	s := guidedTestSession(t, []manifest.Node{{ID: "node", Name: "Node"}}, nil)
 	m := NewGuidedModel(s, "").(*guidedModel)
 	m.Init()
+	acceptGuidedCategory(t, m)
 
 	_, cmd := m.Update(tea.KeyPressMsg(tea.Key{Mod: tea.ModCtrl, Code: 'c'}))
 	if cmd == nil {
@@ -91,12 +107,24 @@ func TestGuidedModelCtrlCQuitsFromForm(t *testing.T) {
 	}
 }
 
+func TestGuidedPromptUsesYesNoButtons(t *testing.T) {
+	s := guidedTestSession(t, []manifest.Node{{ID: "node", Name: "Node"}}, nil)
+	m := NewGuidedModel(s, "").(*guidedModel)
+	m.Init()
+
+	view := m.View().Content
+	if !strings.Contains(view, "Yes") || !strings.Contains(view, "No") {
+		t.Fatalf("expected Yes/No controls, got:\n%s", view)
+	}
+}
+
 // TestGuidedModelPromptsEveryExtensionAfterGroupAccept
 func TestGuidedModelPromptsEveryExtensionAfterGroupAccept(t *testing.T) {
 	nodes := []manifest.Node{
 		{
-			ID:   "vscode",
-			Name: "VSCode",
+			ID:    "vscode",
+			Name:  "VSCode",
+			Steps: []manifest.Step{{Type: "cask", Package: "visual-studio-code"}},
 			Children: []manifest.Node{
 				{ID: "vscode-ext1", Name: "Extension 1", Steps: []manifest.Step{{Type: "run"}}},
 				{ID: "vscode-ext2", Name: "Extension 2", Steps: []manifest.Step{{Type: "run"}}},
@@ -106,6 +134,7 @@ func TestGuidedModelPromptsEveryExtensionAfterGroupAccept(t *testing.T) {
 	s := guidedTestSession(t, nodes, nil)
 	m := NewGuidedModel(s, "").(*guidedModel)
 	m.Init()
+	acceptGuidedCategory(t, m)
 
 	// First prompt should be for the group
 	if m.state != stateGuidePrompt {
@@ -114,19 +143,18 @@ func TestGuidedModelPromptsEveryExtensionAfterGroupAccept(t *testing.T) {
 	if m.item == nil || m.item.ID != "vscode" {
 		t.Fatalf("expected vscode group, got %s", m.item.ID)
 	}
-	if !m.hasGroup() {
-		t.Fatal("expected vscode to be a group with children")
-	}
-
-	// Accept group (set children defaults to Yes)
+	// Accept and install the group before prompting its children.
 	m.answer = true
-	m.onPromptDone()
+	cmd := m.onPromptDone()
 
-	if m.state != stateGuidePrompt {
-		t.Fatalf("expected still in prompt state after group accept, got %v", m.state)
+	if m.state != stateGuideExecuting {
+		t.Fatalf("expected group installation, got %v", m.state)
 	}
-	if m.item == nil || m.item.ID != "vscode-ext1" {
-		t.Fatalf("expected first extension prompted, got %v", m.item)
+	msg := cmd().(stepDoneMsg)
+	m.onStepDone(msg)
+
+	if m.state != stateGuidePrompt || m.item == nil || m.item.ID != "vscode-ext1" {
+		t.Fatalf("expected first extension after group installation, got %v", m.item)
 	}
 
 	// Accept first extension
@@ -149,21 +177,18 @@ func TestGuidedModelExecutesAcceptedNodeBeforeNextPrompt(t *testing.T) {
 	s := guidedTestSession(t, nodes, results)
 	m := NewGuidedModel(s, "").(*guidedModel)
 	m.Init()
+	acceptGuidedCategory(t, m)
 
 	// Accept first node
 	m.answer = true
-	m.onPromptDone()
+	cmd := m.onPromptDone()
 
 	// Should be executing
 	if m.state != stateGuideExecuting {
 		t.Fatalf("expected executing, got %v", m.state)
 	}
 
-	// Simulate step done
-	m.onStepDone(stepDoneMsg{
-		itemID: "node1",
-		result: installer.Result{ItemID: "node1", Status: installer.StatusInstalled},
-	})
+	m.onStepDone(cmd().(stepDoneMsg))
 
 	// Should advance to next item in prompt state
 	if m.state != stateGuidePrompt {
@@ -171,6 +196,10 @@ func TestGuidedModelExecutesAcceptedNodeBeforeNextPrompt(t *testing.T) {
 	}
 	if m.item == nil || m.item.ID != "node2" {
 		t.Fatalf("expected node2, got %v", m.item)
+	}
+	view := m.View().Content
+	if !strings.Contains(view, "+ Node 1") || !strings.Contains(view, "Install Node 2?") {
+		t.Fatalf("expected selection history and current checkbox, got:\n%s", view)
 	}
 }
 
@@ -188,19 +217,14 @@ func TestGuidedModelOffersRetrySkipQuitOnFailure(t *testing.T) {
 			Steps: []manifest.Step{{Type: "run", Command: "ok"}},
 		},
 	}
-	s := guidedTestSession(t, nodes, nil)
+	s := guidedTestSession(t, nodes, []executor.Result{{Status: "error", Msg: "boom"}, {Status: "installed"}})
 	m := NewGuidedModel(s, "").(*guidedModel)
 	m.Init()
+	acceptGuidedCategory(t, m)
 
-	// Accept
 	m.answer = true
-	m.onPromptDone()
-
-	// Fail it
-	m.onStepDone(stepDoneMsg{
-		itemID: "failing",
-		result: installer.Result{ItemID: "failing", Status: installer.StatusFailed, Reason: "boom"},
-	})
+	cmd := m.onPromptDone()
+	m.onStepDone(cmd().(stepDoneMsg))
 
 	// Should be in failure state
 	if m.state != stateGuideFailure {
@@ -210,7 +234,6 @@ func TestGuidedModelOffersRetrySkipQuitOnFailure(t *testing.T) {
 		t.Fatalf("expected failing item, got %s", m.failID)
 	}
 
-	// Skip the failure
 	m.onFailAction(failActionMsg{action: "skip"})
 
 	// Should advance to next item
@@ -232,6 +255,39 @@ func TestGuidedModelOffersRetrySkipQuitOnFailure(t *testing.T) {
 	}
 }
 
+func TestGuidedModelRetriesFailedItem(t *testing.T) {
+	nodes := []manifest.Node{{
+		ID: "flaky", Name: "Flaky", Steps: []manifest.Step{{Type: "run"}},
+	}}
+	s := guidedTestSession(t, nodes, []executor.Result{{Status: "error", Msg: "boom"}, {Status: "installed"}})
+	m := NewGuidedModel(s, "").(*guidedModel)
+	m.Init()
+	acceptGuidedCategory(t, m)
+	m.answer = true
+	cmd := m.onPromptDone()
+	m.onStepDone(cmd().(stepDoneMsg))
+
+	var retry tea.Cmd
+	msg := tea.Msg(tea.KeyPressMsg(tea.Key{Code: tea.KeyEnter}))
+	for range 4 {
+		_, retry = m.Update(msg)
+		if m.state == stateGuideExecuting {
+			break
+		}
+		if retry == nil {
+			t.Fatal("failure selection stopped before retry")
+		}
+		msg = retry()
+	}
+	if m.state != stateGuideExecuting || retry == nil {
+		t.Fatal("failure selection did not start retry")
+	}
+	result := retry().(stepDoneMsg)
+	if result.result.Status != installer.StatusWouldInstall {
+		t.Fatalf("expected successful dry-run retry, got %#v", result.result)
+	}
+}
+
 // TestGuidedModelResumesAndRechecksAfterInteractiveCommand
 func TestGuidedModelResumesAndRechecksAfterInteractiveCommand(t *testing.T) {
 	nodes := []manifest.Node{
@@ -244,6 +300,7 @@ func TestGuidedModelResumesAndRechecksAfterInteractiveCommand(t *testing.T) {
 	s := guidedTestSession(t, nodes, nil)
 	m := NewGuidedModel(s, "").(*guidedModel)
 	m.Init()
+	acceptGuidedCategory(t, m)
 
 	// Accept
 	m.answer = true

@@ -21,7 +21,6 @@ import (
 var allFlag bool
 var allDryRun bool
 var profileFlag string
-var installApplyFlag bool
 var installDiffFlag bool
 var installForceFlag bool
 var selectFlag bool
@@ -41,9 +40,6 @@ var installCmd = &cobra.Command{
 		vars := config.GetVars()
 
 		isDryRun := allDryRun
-		if !allDryRun && !installApplyFlag {
-			isDryRun = true
-		}
 
 		homeDir, err := os.UserHomeDir()
 		if err != nil {
@@ -54,7 +50,7 @@ var installCmd = &cobra.Command{
 		runner := executor.Runner{}
 		session := installer.NewSession(planner, runner, dotfilesDir, vars, isDryRun, lockPath)
 
-		if allFlag || allDryRun {
+		if allFlag {
 			return installAll(m, session)
 		}
 
@@ -81,7 +77,7 @@ func init() {
 	installCmd.Flags().BoolVar(&allFlag, "all", false, "Install all tools without TUI prompt")
 	installCmd.Flags().BoolVar(&allDryRun, "dry-run", false, "Preview what would be installed without making changes")
 	installCmd.Flags().StringVar(&profileFlag, "profile", "", "Profile to filter tools (e.g. personal, work)")
-	installCmd.Flags().BoolVar(&installApplyFlag, "apply", false, "Actually perform installation (default is dry-run)")
+	installCmd.Flags().Bool("apply", false, "Compatibility flag; installation applies by default")
 	installCmd.Flags().BoolVar(&installDiffFlag, "diff", false, "Show file diffs of changes")
 	installCmd.Flags().BoolVar(&installForceFlag, "force", false, "Skip confirmation and diff (headless/CI)")
 	installCmd.Flags().BoolVar(&selectFlag, "select", false, "Use advanced selection TUI instead of guided mode")
@@ -136,6 +132,9 @@ func installAll(m *manifest.Manifest, session *installer.Session) error {
 			if item.Decision == installer.DecisionUnset && item.Status == installer.StatusPlanned {
 				item.Status = installer.StatusPendingSetup
 			}
+			continue
+		}
+		if item.PromptOnly {
 			continue
 		}
 

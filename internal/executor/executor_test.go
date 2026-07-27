@@ -333,6 +333,29 @@ func TestDryRunBrewWouldInstall(t *testing.T) {
 	}
 }
 
+func TestOMZPluginClonesIntoPluginDirectory(t *testing.T) {
+	home := t.TempDir()
+	bin := t.TempDir()
+	git := filepath.Join(bin, "git")
+	if err := os.WriteFile(git, []byte("#!/bin/sh\nmkdir -p \"$4\"\n"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("HOME", home)
+	t.Setenv("PATH", bin+":"+os.Getenv("PATH"))
+
+	result := Run(manifest.Step{
+		Type: "omz-plugin",
+		Repo: "https://github.com/zsh-users/zsh-autosuggestions",
+	}, "", nil, false)
+	if result.Status != "installed" {
+		t.Fatalf("expected installed, got %s: %s", result.Status, result.Msg)
+	}
+	dest := filepath.Join(home, ".oh-my-zsh", "custom", "plugins", "zsh-autosuggestions")
+	if _, err := os.Stat(dest); err != nil {
+		t.Fatalf("expected plugin at %s: %v", dest, err)
+	}
+}
+
 func TestDryRunBrewWouldSkip(t *testing.T) {
 	step := manifest.Step{
 		Type:    "brew",

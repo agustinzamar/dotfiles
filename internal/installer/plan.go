@@ -28,14 +28,15 @@ const (
 )
 
 type Item struct {
-	ID       string
-	Name     string
-	ParentID string
-	Node     manifest.NodeRef
-	Decision Decision
-	Status   Status
-	Reason   string
-	prompted bool
+	ID         string
+	Name       string
+	ParentID   string
+	Node       manifest.NodeRef
+	PromptOnly bool
+	Decision   Decision
+	Status     Status
+	Reason     string
+	prompted   bool
 }
 
 type Planner struct {
@@ -51,26 +52,53 @@ func NewPlanner(m *manifest.Manifest, profile string) *Planner {
 		profile: profile,
 		byID:    map[string]*Item{},
 	}
-	m.Walk(func(ref manifest.NodeRef) error {
-		if !ref.Node.MatchesProfile(profile) {
-			return nil
+	for ci := range m.Categories {
+		cat := &m.Categories[ci]
+		categoryID := "category:" + cat.ID
+		start := len(p.items)
+		for ni := range cat.Nodes {
+			p.addNode(cat, &cat.Nodes[ni], categoryID)
 		}
-		item := &Item{
-			ID:       ref.Node.ID,
-			Name:     ref.Node.Name,
-			ParentID: ref.ParentID,
-			Node:     ref,
-			Status:   StatusPlanned,
+		if len(p.items) == start {
+			continue
 		}
-		if ref.Node.Default {
-			item.Decision = DecisionYes
+		category := &Item{
+			ID:         categoryID,
+			Name:       cat.Name,
+			Node:       manifest.NodeRef{Node: &manifest.Node{ID: categoryID, Name: cat.Name}, CategoryID: cat.ID, Category: cat.Name},
+			PromptOnly: true,
+			Decision:   DecisionYes,
+			Status:     StatusPlanned,
 		}
-		p.items = append(p.items, item)
-		p.byID[item.ID] = item
-		return nil
-	})
+		p.items = append(p.items, nil)
+		copy(p.items[start+1:], p.items[start:])
+		p.items[start] = category
+		p.byID[category.ID] = category
+	}
 	p.rebuildQueue()
 	return p
+}
+
+func (p *Planner) addNode(cat *manifest.Category, node *manifest.Node, parentID string) {
+	if !node.MatchesProfile(p.profile) {
+		return
+	}
+	item := &Item{
+		ID:         node.ID,
+		Name:       node.Name,
+		ParentID:   parentID,
+		Node:       manifest.NodeRef{Node: node, CategoryID: cat.ID, Category: cat.Name, ParentID: parentID},
+		PromptOnly: len(node.Steps) == 0 && len(node.Setup) == 0 && len(node.Children) > 0,
+		Status:     StatusPlanned,
+	}
+	if node.Default {
+		item.Decision = DecisionYes
+	}
+	p.items = append(p.items, item)
+	p.byID[item.ID] = item
+	for i := range node.Children {
+		p.addNode(cat, &node.Children[i], node.ID)
+	}
 }
 
 func (p *Planner) SetAll(decision Decision) {
@@ -86,26 +114,45 @@ func (p *Planner) rebuildQueue() {
 	p.queue = nil
 	for i := range p.items {
 		item := p.items[i]
-		if item.Status == StatusPlanned && !item.prompted && !p.hasDeclinedDependency(item) {
+		if item.Status == StatusPlanned && !item.prompted {
 			p.queue = append(p.queue, item)
 		}
 	}
 }
 
-func (p *Planner) hasDeclinedDependency(item *Item) bool {
+func (p *Planner) dependencyState(item *Item) (pending bool, blockedBy *Item) {
+	if parent, ok := p.byID[item.ParentID]; ok {
+		switch parent.Status {
+		case StatusDeclined, StatusSkippedDependency:
+			return false, parent
+		case StatusFailed:
+			pending = true
+		case StatusPlanned:
+			if !parent.prompted || parent.Decision != DecisionYes {
+				pending = true
+			}
+		}
+	}
 	for _, req := range item.Node.Node.Requires {
 		dep, ok := p.byID[req]
 		if !ok {
 			continue
 		}
-		if dep.Decision == DecisionNo && dep.Status == StatusDeclined {
-			return true
-		}
-		if dep.Status == StatusSkippedDependency {
-			return true
+		switch dep.Status {
+		case StatusDeclined, StatusSkippedDependency:
+			return false, dep
+		case StatusPlanned, StatusFailed:
+			if !dep.PromptOnly || dep.Decision != DecisionYes {
+				pending = true
+			}
 		}
 	}
-	return false
+	return pending, nil
+}
+
+func (p *Planner) hasDeclinedDependency(item *Item) bool {
+	_, blocked := p.dependencyState(item)
+	return blocked != nil
 }
 
 func (p *Planner) markDescendantsSkipped(item *Item) {
@@ -119,15 +166,72 @@ func (p *Planner) markDescendantsSkipped(item *Item) {
 }
 
 func (p *Planner) Next() *Item {
-	for len(p.queue) > 0 {
+	for remaining := len(p.queue); remaining > 0; remaining-- {
 		item := p.queue[0]
 		p.queue = p.queue[1:]
-		if item.Status == StatusPlanned && !item.prompted && !p.hasDeclinedDependency(item) {
-			item.prompted = true
-			return item
+		if item.Status != StatusPlanned || item.prompted {
+			continue
 		}
+		pending, blocked := p.dependencyState(item)
+		if blocked != nil {
+			item.Status = StatusSkippedDependency
+			item.Reason = "requires " + blocked.Name
+			p.markDescendantsSkipped(item)
+			continue
+		}
+		if pending {
+			p.queue = append(p.queue, item)
+			continue
+		}
+		item.prompted = true
+		return item
 	}
 	return nil
+}
+
+func (p *Planner) Retry(id string) bool {
+	item, ok := p.byID[id]
+	if !ok || item.Status != StatusFailed {
+		return false
+	}
+	item.Status = StatusPlanned
+	item.Reason = ""
+	item.Decision = DecisionYes
+	return true
+}
+
+func (p *Planner) SkipFailed(id string) bool {
+	item, ok := p.byID[id]
+	if !ok || item.Status != StatusFailed {
+		return false
+	}
+	item.Status = StatusDeclined
+	item.Decision = DecisionNo
+	item.Reason = "skipped after failure"
+	p.markDescendantsSkipped(item)
+	p.rebuildQueue()
+	return true
+}
+
+func (p *Planner) ItemCompleted(id string) {
+	var related, rest []*Item
+	for _, item := range p.queue {
+		isRelated := item.ParentID == id
+		if !isRelated {
+			for _, req := range item.Node.Node.Requires {
+				if req == id {
+					isRelated = true
+					break
+				}
+			}
+		}
+		if isRelated {
+			related = append(related, item)
+		} else {
+			rest = append(rest, item)
+		}
+	}
+	p.queue = append(related, rest...)
 }
 
 func (p *Planner) Answer(id string, decision Decision) {
@@ -150,7 +254,7 @@ func (p *Planner) Answer(id string, decision Decision) {
 func (p *Planner) Back() *Item {
 	for i := len(p.history) - 1; i >= 0; i-- {
 		item := p.history[i]
-		if item.Status != StatusPlanned {
+		if item.PromptOnly || item.Status != StatusPlanned {
 			continue
 		}
 		item.Decision = DecisionUnset
@@ -162,29 +266,19 @@ func (p *Planner) Back() *Item {
 	return nil
 }
 
-func (p *Planner) SetGroupDefault(id string, decision Decision) {
-	item, ok := p.byID[id]
-	if !ok {
-		return
-	}
-	if item.Status != StatusPlanned {
-		return
-	}
-	if item.Node.Node.Children == nil || len(item.Node.Node.Children) == 0 {
-		return
-	}
-	for _, candidate := range p.items {
-		if candidate.ParentID == id {
-			if candidate.Decision == DecisionUnset {
-				candidate.Decision = decision
-			}
+func (p *Planner) Summary() []Item {
+	out := make([]Item, 0, len(p.items))
+	for _, item := range p.items {
+		if !item.PromptOnly {
+			out = append(out, *item)
 		}
 	}
+	return out
 }
 
-func (p *Planner) Summary() []Item {
-	out := make([]Item, len(p.items))
-	for i, item := range p.items {
+func (p *Planner) History() []Item {
+	out := make([]Item, len(p.history))
+	for i, item := range p.history {
 		out[i] = *item
 	}
 	return out

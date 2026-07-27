@@ -120,10 +120,6 @@ func (m *guidedModel) nextItem() {
 	m.item = planner.Next()
 }
 
-func (m *guidedModel) hasGroup() bool {
-	return m.item != nil && len(m.item.Node.Node.Children) > 0
-}
-
 func (m *guidedModel) rebuildForm() tea.Cmd {
 	item := m.item
 	if item == nil {
@@ -132,24 +128,17 @@ func (m *guidedModel) rebuildForm() tea.Cmd {
 	}
 
 	m.answer = item.Decision == installer.DecisionYes
-
 	title := fmt.Sprintf("Install %s?", item.Name)
-	if m.hasGroup() {
-		title = fmt.Sprintf("Include %s components?", item.Name)
-	}
 	desc := item.Node.Node.Description
-	if desc == "" {
-		desc = item.Node.Node.ID
+	if item.PromptOnly {
+		desc = "Yes opens this group; No skips everything inside."
+	} else if len(item.Node.Node.Children) > 0 {
+		desc = "Related options follow after installation."
 	}
-	if m.hasGroup() {
-		desc += " (each component confirmed individually)"
-	}
-
 	confirm := huh.NewConfirm().
 		Title(title).
 		Description(desc).
 		Value(&m.answer)
-
 	m.form = huh.NewForm(huh.NewGroup(confirm).WithWidth(80))
 	if m.width > 0 {
 		m.form = m.form.WithWidth(m.width)
@@ -168,7 +157,6 @@ func (m *guidedModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, tea.Quit
 	}
 
-	// handle forms in prompt and failure states
 	if m.form != nil && (m.state == stateGuidePrompt || m.state == stateGuideFailure || m.state == stateGuideWorkflowPrompt) {
 		fm, cmd := m.form.Update(msg)
 		m.form = fm.(*huh.Form)
@@ -244,20 +232,6 @@ func (m *guidedModel) onPromptDone() tea.Cmd {
 
 	planner := m.session.Planner()
 
-	if m.hasGroup() {
-		if m.answer {
-			planner.SetGroupDefault(item.ID, installer.DecisionYes)
-		} else {
-			planner.Answer(item.ID, installer.DecisionNo)
-		}
-		m.nextItem()
-		if m.item == nil {
-			m.state = stateGuideSummary
-			return tea.Quit
-		}
-		return m.rebuildForm()
-	}
-
 	if !m.answer {
 		planner.Answer(item.ID, installer.DecisionNo)
 		m.nextItem()
@@ -270,6 +244,14 @@ func (m *guidedModel) onPromptDone() tea.Cmd {
 
 	// accepted
 	planner.Answer(item.ID, installer.DecisionYes)
+	if item.PromptOnly {
+		m.nextItem()
+		if m.item == nil {
+			m.state = stateGuideSummary
+			return tea.Quit
+		}
+		return m.rebuildForm()
+	}
 	m.state = stateGuideExecuting
 	return m.execCurrent()
 }
@@ -338,8 +320,8 @@ func (m *guidedModel) buildFailureForm() tea.Cmd {
 }
 
 func (m *guidedModel) onFailFormDone() tea.Cmd {
-	// Extract value from Select form
 	action := m.sel
+	m.form = nil
 	return func() tea.Msg {
 		return failActionMsg{action: action}
 	}
@@ -441,14 +423,16 @@ func (m *guidedModel) onWorkflowFormDone() tea.Cmd {
 }
 
 func (m *guidedModel) onFailAction(msg failActionMsg) (tea.Model, tea.Cmd) {
+	m.form = nil
 	switch msg.action {
 	case "retry":
+		if !m.session.Planner().Retry(m.failID) {
+			return m, nil
+		}
 		m.state = stateGuideExecuting
 		return m, m.execCurrent()
 	case "skip":
-		if m.item != nil {
-			m.session.Planner().Answer(m.item.ID, installer.DecisionNo)
-		}
+		m.session.Planner().SkipFailed(m.failID)
 		m.nextItem()
 		if m.item == nil {
 			m.state = stateGuideSummary
@@ -515,7 +499,7 @@ func (m *guidedModel) View() tea.View {
 	switch m.state {
 	case stateGuidePrompt:
 		if m.form != nil {
-			return tea.NewView(m.form.View())
+			return tea.NewView(m.historyView() + m.form.View())
 		}
 		return tea.NewView("")
 	case stateGuideExecuting:
@@ -529,7 +513,7 @@ func (m *guidedModel) View() tea.View {
 		return tea.NewView(m.failureView())
 	case stateGuideWorkflowPrompt:
 		if m.form != nil {
-			return tea.NewView(m.form.View())
+			return tea.NewView(m.historyView() + m.form.View())
 		}
 		return tea.NewView("")
 	case stateGuideSummary:
@@ -538,8 +522,39 @@ func (m *guidedModel) View() tea.View {
 	return tea.NewView("")
 }
 
+func (m *guidedModel) historyView() string {
+	history := m.session.Planner().History()
+	var b strings.Builder
+	b.WriteString(HelpStyle.Render("Selections"))
+	b.WriteString("\n")
+	if len(history) == 0 {
+		b.WriteString(HelpStyle.Render("  No selections yet."))
+		b.WriteString("\n\n")
+		return b.String()
+	}
+
+	limit := len(history)
+	if m.height > 0 && limit > m.height-10 {
+		limit = max(1, m.height-10)
+	}
+	for _, item := range history[len(history)-limit:] {
+		indent := ""
+		if item.ParentID != "" {
+			indent = "  "
+		}
+		icon := statusIcon(item.Status)
+		if item.PromptOnly && item.Decision == installer.DecisionYes {
+			icon = "\u2713"
+		}
+		b.WriteString(fmt.Sprintf("  %s%s %s\n", indent, icon, item.Name))
+	}
+	b.WriteString("\n")
+	return b.String()
+}
+
 func (m *guidedModel) executingView() string {
 	var b strings.Builder
+	b.WriteString(m.historyView())
 	b.WriteString(GuidePromptStyle.Render("Installing..."))
 	b.WriteString("\n\n")
 	if m.item != nil {
@@ -553,6 +568,7 @@ func (m *guidedModel) executingView() string {
 
 func (m *guidedModel) interactiveView() string {
 	var b strings.Builder
+	b.WriteString(m.historyView())
 	b.WriteString(GuideInteractiveStyle.Render("Interactive Setup"))
 	b.WriteString("\n\n")
 	b.WriteString(fmt.Sprintf("  %s\n\n", m.interactiveItem))
@@ -565,6 +581,7 @@ func (m *guidedModel) interactiveView() string {
 
 func (m *guidedModel) failureView() string {
 	var b strings.Builder
+	b.WriteString(m.historyView())
 	b.WriteString(GuideFailureStyle.Render("Installation Failed"))
 	b.WriteString("\n\n")
 	b.WriteString(ErrorStyle.Render(fmt.Sprintf("  %s: %s", m.failID, m.failMsg)))
@@ -648,6 +665,8 @@ func statusIcon(st installer.Status) string {
 		return "\u25d8"
 	case installer.StatusFailed:
 		return "\u2717"
+	case installer.StatusPlanned:
+		return "\u2026"
 	default:
 		return "?"
 	}

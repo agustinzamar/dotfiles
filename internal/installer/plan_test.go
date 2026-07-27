@@ -14,18 +14,18 @@ func testManifest() *manifest.Manifest {
 				Name: "Base",
 				Nodes: []manifest.Node{
 					{
-						ID:       "git",
-						Name:     "Git",
-						Default:  true,
-						Steps:    []manifest.Step{{Type: "run", Command: "git --version"}},
+						ID:      "git",
+						Name:    "Git",
+						Default: true,
+						Steps:   []manifest.Step{{Type: "run", Command: "git --version"}},
 						Children: []manifest.Node{
 							{ID: "git-identity", Name: "Identity", Setup: []string{"git-identity"}},
 							{ID: "signed-commits", Name: "Signed Commits", Setup: []string{"signed-commits"}},
 						},
 					},
 					{
-						ID:       "vscode",
-						Name:     "VS Code",
+						ID:   "vscode",
+						Name: "VS Code",
 						Children: []manifest.Node{
 							{ID: "vscode-settings", Name: "Settings", Steps: []manifest.Step{{Type: "symlink", From: "vscode/settings.json", To: "~/Library/Application Support/Code/User/settings.json"}}},
 							{ID: "vscode-extensions", Name: "Extensions", Children: []manifest.Node{
@@ -34,10 +34,10 @@ func testManifest() *manifest.Manifest {
 						},
 					},
 					{
-						ID:       "hunk",
-						Name:     "Hunk",
-						Default:  true,
-						Setup:    []string{"hunk-git-pager"},
+						ID:      "hunk",
+						Name:    "Hunk",
+						Default: true,
+						Setup:   []string{"hunk-git-pager"},
 						Children: []manifest.Node{
 							{ID: "hunk-pager", Name: "Git Pager", Steps: []manifest.Step{{Type: "run", Command: "git config --global core.pager hunk"}}},
 						},
@@ -61,7 +61,7 @@ func TestPlannerAsksCategoryThenEveryLeaf(t *testing.T) {
 		order = append(order, item.ID)
 		p.Answer(item.ID, DecisionYes)
 	}
-	expected := []string{"git", "git-identity", "signed-commits", "vscode", "vscode-settings", "vscode-extensions", "vscode-catppuccin", "hunk", "hunk-pager"}
+	expected := []string{"category:base", "git", "git-identity", "signed-commits", "vscode", "vscode-settings", "vscode-extensions", "vscode-catppuccin", "hunk", "hunk-pager"}
 	if len(order) != len(expected) {
 		t.Fatalf("got %d prompts, want %d", len(order), len(expected))
 	}
@@ -69,6 +69,14 @@ func TestPlannerAsksCategoryThenEveryLeaf(t *testing.T) {
 		if order[i] != id {
 			t.Fatalf("prompt[%d]: got %s, want %s", i, order[i], id)
 		}
+	}
+}
+
+func TestPlannerCategoriesDefaultToYes(t *testing.T) {
+	p := NewPlanner(testManifest(), "")
+	item := p.Next()
+	if item == nil || item.Decision != DecisionYes {
+		t.Fatalf("expected category to default to yes, got %#v", item)
 	}
 }
 
@@ -80,8 +88,8 @@ func TestPlannerDeclinedRequirementSkipsDependent(t *testing.T) {
 				Name: "Base",
 				Nodes: []manifest.Node{
 					{
-						ID:       "git",
-						Name:     "Git",
+						ID:   "git",
+						Name: "Git",
 						Children: []manifest.Node{
 							{ID: "git-identity", Name: "Identity", Setup: []string{"git-identity"}, Requires: []string{"git"}},
 						},
@@ -105,8 +113,8 @@ func TestPlannerDeclinedRequirementSkipsDependent(t *testing.T) {
 			p.Answer(item.ID, DecisionYes)
 		}
 	}
-	if len(order) != 1 || order[0] != "git" {
-		t.Fatalf("expected only git prompt, got %v", order)
+	if len(order) != 2 || order[0] != "category:base" || order[1] != "git" {
+		t.Fatalf("expected category and git prompts, got %v", order)
 	}
 	identity, ok := p.byID["git-identity"]
 	if !ok {
@@ -114,6 +122,101 @@ func TestPlannerDeclinedRequirementSkipsDependent(t *testing.T) {
 	}
 	if identity.Status != StatusSkippedDependency {
 		t.Fatalf("expected skipped-dependency, got %s", identity.Status)
+	}
+}
+
+func TestPlannerDefersDependentUntilProviderCompletes(t *testing.T) {
+	m := &manifest.Manifest{Categories: []manifest.Category{{
+		ID: "tools", Name: "Tools", Nodes: []manifest.Node{
+			{ID: "editor-alias", Name: "Editor alias", Requires: []string{"phpstorm"}, Steps: []manifest.Step{{Type: "symlink"}}},
+			{ID: "shell-tool", Name: "Shell tool", Steps: []manifest.Step{{Type: "run"}}},
+			{ID: "phpstorm", Name: "PhpStorm", Steps: []manifest.Step{{Type: "cask"}}},
+			{ID: "other", Name: "Other", Steps: []manifest.Step{{Type: "run"}}},
+		},
+	}}}
+	p := NewPlanner(m, "")
+
+	category := p.Next()
+	p.Answer(category.ID, DecisionYes)
+	if item := p.Next(); item == nil || item.ID != "shell-tool" {
+		t.Fatalf("expected unrelated shell tool while alias is blocked, got %#v", item)
+	}
+	p.Answer("shell-tool", DecisionYes)
+	p.byID["shell-tool"].Status = StatusInstalled
+
+	editor := p.Next()
+	if editor == nil || editor.ID != "phpstorm" {
+		t.Fatalf("expected PhpStorm before its alias, got %#v", editor)
+	}
+	p.Answer(editor.ID, DecisionYes)
+	editor.Status = StatusInstalled
+	p.ItemCompleted(editor.ID)
+
+	if item := p.Next(); item == nil || item.ID != "editor-alias" {
+		t.Fatalf("expected editor alias immediately after PhpStorm, got %#v", item)
+	}
+}
+
+func TestPlannerDoesNotPromoteDependentBeforeItsCategory(t *testing.T) {
+	m := &manifest.Manifest{Categories: []manifest.Category{
+		{ID: "base", Name: "Base", Nodes: []manifest.Node{
+			{ID: "git", Name: "Git", Steps: []manifest.Step{{Type: "run"}}},
+			{ID: "homebrew", Name: "Homebrew", Steps: []manifest.Step{{Type: "run"}}},
+		}},
+		{ID: "dev", Name: "Dev", Nodes: []manifest.Node{
+			{ID: "git-config", Name: "Git Config", Requires: []string{"git"}, Steps: []manifest.Step{{Type: "run"}}},
+		}},
+	}}
+	p := NewPlanner(m, "")
+	base := p.Next()
+	p.Answer(base.ID, DecisionYes)
+	git := p.Next()
+	p.Answer(git.ID, DecisionYes)
+	git.Status = StatusInstalled
+	p.ItemCompleted(git.ID)
+
+	if item := p.Next(); item == nil || item.ID != "homebrew" {
+		t.Fatalf("expected remaining Base tool before unopened Dev category, got %#v", item)
+	}
+}
+
+func TestPlannerCanRetryOrSkipFailedItem(t *testing.T) {
+	p := NewPlanner(testManifest(), "")
+	_ = p.Next()
+	p.Answer("category:base", DecisionYes)
+	item := p.Next()
+	p.Answer(item.ID, DecisionYes)
+	item.Status = StatusFailed
+
+	if !p.Retry(item.ID) || item.Status != StatusPlanned {
+		t.Fatalf("retry did not reset failed item: %#v", item)
+	}
+	item.Status = StatusFailed
+	if !p.SkipFailed(item.ID) || item.Status != StatusDeclined {
+		t.Fatalf("skip did not decline failed item: %#v", item)
+	}
+}
+
+func TestPlannerDeclinedCategorySkipsItsTools(t *testing.T) {
+	m := &manifest.Manifest{Categories: []manifest.Category{
+		{ID: "ides", Name: "IDEs", Nodes: []manifest.Node{
+			{ID: "vscode", Name: "VS Code"},
+			{ID: "phpstorm", Name: "PhpStorm"},
+		}},
+		{ID: "apps", Name: "Apps", Nodes: []manifest.Node{
+			{ID: "chatgpt", Name: "ChatGPT"},
+		}},
+	}}
+	p := NewPlanner(m, "")
+
+	item := p.Next()
+	if item == nil || item.ID != "category:ides" {
+		t.Fatalf("expected IDE category, got %#v", item)
+	}
+	p.Answer(item.ID, DecisionNo)
+	item = p.Next()
+	if item == nil || item.ID != "category:apps" {
+		t.Fatalf("expected Apps category after declining IDEs, got %#v", item)
 	}
 }
 
@@ -125,8 +228,8 @@ func TestPlannerGroupShortcutStillVisitsEachChild(t *testing.T) {
 				Name: "Editors",
 				Nodes: []manifest.Node{
 					{
-						ID:       "vscode",
-						Name:     "VS Code",
+						ID:   "vscode",
+						Name: "VS Code",
 						Children: []manifest.Node{
 							{ID: "vscode-settings", Name: "Settings", Steps: []manifest.Step{{Type: "symlink", From: "vscode/settings.json", To: "settings.json"}}},
 							{ID: "vscode-extensions", Name: "Extensions", Children: []manifest.Node{
@@ -141,6 +244,12 @@ func TestPlannerGroupShortcutStillVisitsEachChild(t *testing.T) {
 	p := NewPlanner(m, "")
 
 	item := p.Next()
+	if item == nil || item.ID != "category:editors" {
+		t.Fatalf("expected editors category first, got %v", item)
+	}
+	p.Answer(item.ID, DecisionYes)
+
+	item = p.Next()
 	if item == nil || item.ID != "vscode" {
 		t.Fatalf("expected vscode first, got %v", item)
 	}
@@ -169,6 +278,8 @@ func TestPlannerBackCannotUndoExecutedItem(t *testing.T) {
 	p := NewPlanner(m, "")
 
 	item := p.Next()
+	p.Answer(item.ID, DecisionYes)
+	item = p.Next()
 	if item == nil {
 		t.Fatal("expected item")
 	}
@@ -211,7 +322,7 @@ func TestPlannerFiltersProfileBeforePrompting(t *testing.T) {
 		count++
 		p.Answer(item.ID, DecisionYes)
 	}
-	if count != 1 {
-		t.Fatalf("expected 1 prompt for personal profile, got %d", count)
+	if count != 2 {
+		t.Fatalf("expected base category and its tool for personal profile, got %d prompts", count)
 	}
 }

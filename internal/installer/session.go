@@ -122,6 +122,9 @@ func (s *Session) Execute(itemID string) Result {
 
 	result := Result{ItemID: itemID, Status: status, Reason: lastResult.Msg}
 	s.results[itemID] = result
+	if status != StatusFailed {
+		s.planner.ItemCompleted(itemID)
+	}
 	return result
 }
 
@@ -213,6 +216,9 @@ func (s *Session) ExecuteSteps(itemID string) Result {
 
 	result := Result{ItemID: itemID, Status: status, Reason: lastResult.Msg}
 	s.results[itemID] = result
+	if status != StatusFailed {
+		s.planner.ItemCompleted(itemID)
+	}
 	return result
 }
 

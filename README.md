@@ -113,6 +113,7 @@ dotfiles update
 
 ### AI Tools
 - **Claude Code** — Claude AI coding agent (config + skills + agents synced)
+- **Codex CLI** — OpenAI coding agent for the terminal
 - **Opencode** — OpenCode AI coding agent (config + plugins/skills/themes/agents/commands synced)
 - **Google Antigravity** — Agent orchestration platform
 - **Grok Build CLI** — Grok coding agent CLI
@@ -125,6 +126,8 @@ dotfiles update
 - **Misc** — No .DS_Store on network stores, disable Handoff
 
 ### Utilities
+- **ChatGPT App** — OpenAI desktop app with Chat, Work, and Codex
+- **Claude Code App** — Claude desktop app with the Claude Code workspace
 - **mackup** — Backup sensitive configs (SSH, shell aliases) to cloud storage
 - **Finetune** — Per-app volume mixer
 - **Boring Notch** — Notch customization utility
@@ -155,7 +158,6 @@ The installer creates symlinks from your home directory to the dotfiles reposito
 | `~/.claude/settings.json` | `~/.dotfiles/config/claude/settings.json` | Claude Code settings |
 | `~/.claude/skills/` | `~/.dotfiles/config/claude/skills/` | Claude Code skills (version-controlled) |
 | `~/.claude/agents/` | `~/.dotfiles/config/claude/agents/` | Claude Code agents (version-controlled) |
-| `~/.claude/CLAUDE.md` | `~/.dotfiles/config/claude/CLAUDE.md` | Claude Code config |
 | `~/.config/opencode/opencode.json` | Rendered template | OpenCode config |
 | `~/.config/opencode/AGENTS.md` | `~/.dotfiles/config/opencode/AGENTS.md` | OpenCode agents config |
 | `~/.config/opencode/plugins/` | `~/.dotfiles/config/opencode/plugins/` | OpenCode plugins |

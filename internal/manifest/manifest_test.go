@@ -2,6 +2,7 @@ package manifest
 
 import (
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -236,5 +237,89 @@ categories:
 `
 	if _, err := Load(writeTempManifest(t, yaml)); err == nil {
 		t.Fatal("expected legacy manifest validation error")
+	}
+}
+
+func TestLegacyToolExpandsIntoInstallAndRelatedPrompts(t *testing.T) {
+	yaml := `
+categories:
+  - name: IDEs
+    tools:
+      - name: VS Code
+        checked: true
+        steps:
+          - type: cask
+            package: visual-studio-code
+          - type: symlink
+            from: settings.json
+            to: ${HOME}/settings.json
+          - type: vscode
+            extension: first.extension
+          - type: vscode
+            extension: second.extension
+`
+	m, err := Load(writeTempManifest(t, yaml))
+	if err != nil {
+		t.Fatalf("load manifest: %v", err)
+	}
+	root := m.Categories[0].Nodes[0]
+	if len(root.Steps) != 1 || root.Steps[0].Type != "cask" {
+		t.Fatalf("expected only the app install on root, got %#v", root.Steps)
+	}
+	if len(root.Children) != 2 || root.Children[0].Name != "Extensions" {
+		t.Fatalf("expected extensions group then settings, got %#v", root.Children)
+	}
+	if len(root.Children[0].Children) != 2 {
+		t.Fatalf("expected individual extension prompts, got %#v", root.Children[0].Children)
+	}
+}
+
+func TestLegacyAliasesBecomeOneGroupWithIndividualPrompts(t *testing.T) {
+	yaml := `
+categories:
+  - name: Shell
+    tools:
+      - name: "Aliases: System"
+        steps:
+          - type: symlink
+            from: system.zsh
+            to: ${HOME}/system.zsh
+      - name: "Aliases: Git"
+        steps:
+          - type: symlink
+            from: git.zsh
+            to: ${HOME}/git.zsh
+`
+	m, err := Load(writeTempManifest(t, yaml))
+	if err != nil {
+		t.Fatalf("load manifest: %v", err)
+	}
+	group := m.Categories[0].Nodes[0]
+	if group.Name != "Aliases" || len(group.Children) != 2 {
+		t.Fatalf("expected one aliases group with two prompts, got %#v", group)
+	}
+	if group.Children[0].Name != "System" || group.Children[1].Name != "Git" {
+		t.Fatalf("unexpected alias prompts: %#v", group.Children)
+	}
+}
+
+func TestRepositorySymlinkSourcesExist(t *testing.T) {
+	root := DotfilesDir()
+	m, err := Load(filepath.Join(root, "config", "tools.yaml"))
+	if err != nil {
+		t.Fatalf("load repository manifest: %v", err)
+	}
+	if err := m.Walk(func(ref NodeRef) error {
+		for _, step := range ref.Node.Steps {
+			if step.Type != "symlink" && step.Type != "template-symlink" {
+				continue
+			}
+			if _, err := os.Stat(filepath.Join(root, step.From)); err != nil {
+				t.Errorf("%s: source %q: %v", ref.Node.Name, step.From, err)
+			}
+		}
+		return nil
+	}); err != nil {
+		t.Fatal(err)
 	}
 }

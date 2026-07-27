@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"sort"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -78,6 +79,7 @@ var KnownImplicitProviders = map[string]bool{
 }
 
 type Step struct {
+	Name      string            `yaml:"name,omitempty"`
 	Type      string            `yaml:"type"`
 	Package   string            `yaml:"package,omitempty"`
 	Repo      string            `yaml:"repo,omitempty"`
@@ -110,10 +112,12 @@ type Tool struct {
 }
 
 type Feature struct {
-	Name        string `yaml:"name"`
-	Description string `yaml:"description,omitempty"`
-	Checked     bool   `yaml:"checked"`
-	Steps       []Step `yaml:"steps,omitempty"`
+	Name        string    `yaml:"name"`
+	Description string    `yaml:"description,omitempty"`
+	Checked     bool      `yaml:"checked"`
+	DependsOn   []string  `yaml:"depends_on,omitempty"`
+	Steps       []Step    `yaml:"steps,omitempty"`
+	Features    []Feature `yaml:"features,omitempty"`
 }
 
 func (t Tool) MatchesProfile(profile string) bool {
@@ -225,29 +229,147 @@ func toolsToNodes(tools []Tool, categoryID, category string) []Node {
 			Checked:     t.Checked,
 			Profiles:    t.Profiles,
 			Requires:    translateRequirements(t.DependsOn, ids),
-			Steps:       t.Steps,
 		}
 		if t.Checked {
 			n.Default = true
 		}
+
+		var extensions []Step
+		for j, step := range t.Steps {
+			if isPrimaryStep(step, len(t.Steps)) {
+				n.Steps = append(n.Steps, step)
+				continue
+			}
+			if step.Type == "vscode" {
+				extensions = append(extensions, step)
+				continue
+			}
+			n.Children = append(n.Children, stepNode(n, step, j))
+		}
+		if len(extensions) > 0 {
+			group := Node{
+				ID:       n.ID + "-Extensions",
+				Name:     "Extensions",
+				Default:  n.Default,
+				Checked:  n.Checked,
+				ParentID: n.ID,
+			}
+			for j, step := range extensions {
+				group.Children = append(group.Children, stepNode(group, step, j))
+			}
+			n.Children = append([]Node{group}, n.Children...)
+		}
 		for j := range t.Features {
-			f := t.Features[j]
-			child := Node{
-				ID:          categoryID + "-" + t.Name + "-" + f.Name,
-				Name:        f.Name,
-				Description: f.Description,
-				Checked:     f.Checked,
-				Steps:       f.Steps,
-				ParentID:    n.ID,
-			}
-			if f.Checked {
-				child.Default = true
-			}
-			n.Children = append(n.Children, child)
+			n.Children = append(n.Children, featureNode(n, t.Features[j], j, ids))
 		}
 		nodes = append(nodes, n)
 	}
-	return nodes
+	return groupNamedNodes(nodes, categoryID)
+}
+
+func groupNamedNodes(nodes []Node, categoryID string) []Node {
+	var out []Node
+	groups := map[string]int{}
+	for _, node := range nodes {
+		parts := strings.SplitN(node.Name, ": ", 2)
+		if len(parts) != 2 || (parts[0] != "Aliases" && parts[0] != "Functions") {
+			out = append(out, node)
+			continue
+		}
+		groupName := parts[0]
+		index, ok := groups[groupName]
+		if !ok {
+			index = len(out)
+			groups[groupName] = index
+			out = append(out, Node{
+				ID:          categoryID + "-" + groupName,
+				Name:        groupName,
+				Description: "Choose each " + strings.ToLower(strings.TrimSuffix(groupName, "s")) + " group",
+				Default:     true,
+				Checked:     true,
+			})
+		}
+		node.Name = parts[1]
+		node.ParentID = out[index].ID
+		out[index].Children = append(out[index].Children, node)
+	}
+	return out
+}
+
+func isPrimaryStep(step Step, total int) bool {
+	if total == 1 {
+		return true
+	}
+	switch step.Type {
+	case "brew", "cask", "tap", "git-clone", "omz-plugin":
+		return true
+	default:
+		return false
+	}
+}
+
+func stepNode(parent Node, step Step, index int) Node {
+	name := step.Name
+	if name == "" {
+		switch step.Type {
+		case "vscode":
+			name = step.Extension
+		case "symlink", "template-symlink":
+			path := strings.TrimSuffix(step.To, "/")
+			name = filepath.Base(path)
+			if name == "config" {
+				name = filepath.Base(filepath.Dir(path)) + " config"
+			}
+		case "defaults":
+			name = step.Key
+		case "run":
+			name = "Setup"
+			if fields := strings.Fields(step.Command); len(fields) >= 4 && fields[0] == "git" && fields[1] == "config" {
+				name = fields[3]
+			}
+		default:
+			name = step.Type
+		}
+	}
+	return Node{
+		ID:          fmt.Sprintf("%s-%d", parent.ID, index+1),
+		Name:        name,
+		Description: stepDescription(step),
+		Default:     parent.Default,
+		Checked:     parent.Checked,
+		Steps:       []Step{step},
+		ParentID:    parent.ID,
+	}
+}
+
+func stepDescription(step Step) string {
+	switch step.Type {
+	case "vscode":
+		return "VS Code extension"
+	case "symlink", "template-symlink":
+		return "Link " + step.To
+	case "defaults":
+		return "Set " + step.Domain + " " + step.Key
+	default:
+		return ""
+	}
+}
+
+func featureNode(parent Node, feature Feature, index int, ids map[string]string) Node {
+	n := Node{
+		ID:          fmt.Sprintf("%s-feature-%d", parent.ID, index+1),
+		Name:        feature.Name,
+		Description: feature.Description,
+		Default:     feature.Checked,
+		Checked:     feature.Checked,
+		Requires:    translateRequirements(feature.DependsOn, ids),
+		Steps:       feature.Steps,
+		ParentID:    parent.ID,
+	}
+	for i := range feature.Features {
+		n.Children = append(n.Children, featureNode(n, feature.Features[i], i, ids))
+	}
+	return n
 }
 
 func translateRequirements(requirements []string, ids map[string]string) []string {
@@ -373,14 +495,19 @@ func (m *Manifest) Validate() error {
 
 func (m *Manifest) allProvidedTags() map[string]bool {
 	tags := map[string]bool{}
-	for _, cat := range m.Categories {
-		for _, n := range cat.Nodes {
+	var collect func([]Node)
+	collect = func(nodes []Node) {
+		for _, n := range nodes {
 			for _, step := range n.Steps {
 				for _, p := range step.Provides {
 					tags[p] = true
 				}
 			}
+			collect(n.Children)
 		}
+	}
+	for _, cat := range m.Categories {
+		collect(cat.Nodes)
 	}
 	return tags
 }
