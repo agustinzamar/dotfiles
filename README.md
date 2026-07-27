@@ -33,6 +33,10 @@ dotfiles install --macos
 
 # Non-interactive: install everything
 dotfiles install --all
+
+# Remove what was installed (same flags as install)
+dotfiles uninstall --basic
+dotfiles uninstall --all --dry-run
 ```
 
 `dotfiles` runs from anywhere — no need to be inside the repo.
@@ -46,6 +50,8 @@ dotfiles install --all
 | `dotfiles install --macos` | Install macOS settings only |
 | `dotfiles install --all` | Non-interactive batch install of all tools |
 | `dotfiles install --all --dry-run` | Preview what would be installed |
+| `dotfiles uninstall --basic\|--macos\|--all` | Remove symlinks, clones, and packages for the matching scope |
+| `dotfiles uninstall --all --dry-run` | Preview what would be removed |
 | `dotfiles list` | List all available tools in the manifest |
 | `dotfiles doctor` | Check health of installed tools and symlinks |
 | `dotfiles cleanup` | Remove `.backup` files from symlink operations |
