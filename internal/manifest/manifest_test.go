@@ -2,6 +2,7 @@ package manifest
 
 import (
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -64,6 +65,26 @@ categories:
 	_, err := Load(writeTempManifest(t, yaml))
 	if err == nil {
 		t.Fatal("expected cycle error")
+	}
+	if !strings.Contains(err.Error(), "requires cycle detected") {
+		t.Fatalf("expected requires cycle error, got %v", err)
+	}
+}
+
+func TestLoadAcceptsRequirement(t *testing.T) {
+	yaml := `
+categories:
+  - id: base
+    name: Base
+    nodes:
+      - id: a
+        name: A
+        requires: [b]
+      - id: b
+        name: B
+`
+	if _, err := Load(writeTempManifest(t, yaml)); err != nil {
+		t.Fatalf("expected valid requirement, got %v", err)
 	}
 }
 

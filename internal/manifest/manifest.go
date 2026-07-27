@@ -94,8 +94,8 @@ type Step struct {
 	Key       string            `yaml:"key,omitempty"`
 	Value     string            `yaml:"value,omitempty"`
 	ValueType string            `yaml:"valueType,omitempty"`
-	Needs    []string          `yaml:"needs,omitempty"`
-	Provides []string          `yaml:"provides,omitempty"`
+	Needs     []string          `yaml:"needs,omitempty"`
+	Provides  []string          `yaml:"provides,omitempty"`
 }
 
 type Tool struct {
@@ -447,11 +447,9 @@ func (m *Manifest) validateNode(cat Category, n Node, path map[string]bool, prov
 		if !exists {
 			return &ValidationError{NodeID: n.ID, Reason: fmt.Sprintf("requires unknown node: %s", req)}
 		}
-		path[req] = true
 		if err := m.validateNode(cat, *target, path, providedTags); err != nil {
 			return err
 		}
-		delete(path, req)
 	}
 	delete(path, n.ID)
 	return nil

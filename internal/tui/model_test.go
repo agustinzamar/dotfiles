@@ -77,6 +77,20 @@ func TestGuidedModelShowsCategoryBeforeTool(t *testing.T) {
 	}
 }
 
+func TestGuidedModelCtrlCQuitsFromForm(t *testing.T) {
+	s := guidedTestSession(t, []manifest.Node{{ID: "node", Name: "Node"}}, nil)
+	m := NewGuidedModel(s, "").(*guidedModel)
+	m.Init()
+
+	_, cmd := m.Update(tea.KeyPressMsg(tea.Key{Mod: tea.ModCtrl, Code: 'c'}))
+	if cmd == nil {
+		t.Fatal("expected quit command")
+	}
+	if _, ok := cmd().(tea.QuitMsg); !ok {
+		t.Fatal("expected quit message")
+	}
+}
+
 // TestGuidedModelPromptsEveryExtensionAfterGroupAccept
 func TestGuidedModelPromptsEveryExtensionAfterGroupAccept(t *testing.T) {
 	nodes := []manifest.Node{

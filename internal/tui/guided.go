@@ -164,6 +164,9 @@ func (m *guidedModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = wm.Width
 		m.height = wm.Height
 	}
+	if key, ok := msg.(tea.KeyMsg); ok && key.String() == "ctrl+c" {
+		return m, tea.Quit
+	}
 
 	// handle forms in prompt and failure states
 	if m.form != nil && (m.state == stateGuidePrompt || m.state == stateGuideFailure || m.state == stateGuideWorkflowPrompt) {
