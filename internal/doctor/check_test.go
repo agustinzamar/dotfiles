@@ -2,6 +2,7 @@ package doctor
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"testing"
 
@@ -108,14 +109,26 @@ func TestCheckGitClone_Missing(t *testing.T) {
 		t.Fatalf("expected missing, got %s: %s", result.Status, result.Msg)
 	}
 }
+// writeScratchDefault writes a throwaway defaults domain so the test doesn't
+// depend on (or mutate) the real com.apple.finder state on the host.
+func writeScratchDefault(t *testing.T, key, value string) string {
+	t.Helper()
+	domain := "com.dotfiles-cli.doctor-test"
+	if err := exec.Command("defaults", "write", domain, key, "-bool", value).Run(); err != nil {
+		t.Skipf("defaults write unavailable: %v", err)
+	}
+	t.Cleanup(func() { exec.Command("defaults", "delete", domain, key).Run() })
+	return domain
+}
+
 func TestCheckDefaults_OK(t *testing.T) {
+	domain := writeScratchDefault(t, "TestBool", "true")
 	step := manifest.Step{
 		Type:      "defaults",
-		Domain:    "com.apple.finder",
-		Key:       "AppleShowAllExtensions",
+		Domain:    domain,
+		Key:       "TestBool",
 		Value:     "true",
 		ValueType: "bool",
-		Skip:      "defaults read com.apple.finder AppleShowAllExtensions | grep -q 1",
 	}
 	result := Check(step, "", nil)
 	if result.Status != "ok" {
@@ -124,13 +137,13 @@ func TestCheckDefaults_OK(t *testing.T) {
 }
 
 func TestCheckDefaults_BoolTrueMismatch(t *testing.T) {
+	domain := writeScratchDefault(t, "TestBool", "true")
 	step := manifest.Step{
 		Type:      "defaults",
-		Domain:    "com.apple.finder",
-		Key:       "AppleShowAllExtensions",
+		Domain:    domain,
+		Key:       "TestBool",
 		Value:     "false",
 		ValueType: "bool",
-		Skip:      "defaults read com.apple.finder AppleShowAllExtensions | grep -q 1",
 	}
 	result := Check(step, "", nil)
 	if result.Status != "broken" {
