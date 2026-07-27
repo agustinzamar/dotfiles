@@ -19,6 +19,8 @@ import (
 )
 
 var allFlag bool
+var basicFlag bool
+var macOSFlag bool
 var allDryRun bool
 var profileFlag string
 var installDiffFlag bool
@@ -34,6 +36,11 @@ var installCmd = &cobra.Command{
 
 		// Build shared session
 		planner := installer.NewPlanner(m, profileFlag)
+		if basicFlag {
+			planner = installer.NewBasicPlanner(m, profileFlag)
+		} else if macOSFlag {
+			planner = installer.NewMacOSPlanner(m, profileFlag)
+		}
 		dotfilesDir := manifest.DotfilesDir()
 		vars := config.GetVars()
 
@@ -48,7 +55,7 @@ var installCmd = &cobra.Command{
 		runner := executor.Runner{}
 		session := installer.NewSession(planner, runner, dotfilesDir, vars, isDryRun, lockPath)
 
-		if allFlag {
+		if allFlag || basicFlag || macOSFlag {
 			return installAll(m, session)
 		}
 
@@ -67,9 +74,12 @@ var installCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(installCmd)
 	installCmd.Flags().BoolVar(&allFlag, "all", false, "Install all tools without TUI prompt")
+	installCmd.Flags().BoolVar(&basicFlag, "basic", false, "Install curated essentials without TUI prompts")
+	installCmd.Flags().BoolVar(&macOSFlag, "macos", false, "Install macOS settings only without TUI prompts")
 	installCmd.Flags().BoolVar(&allDryRun, "dry-run", false, "Preview what would be installed without making changes")
 	installCmd.Flags().StringVar(&profileFlag, "profile", "", "Profile to filter tools (e.g. personal, work)")
 	installCmd.Flags().BoolVar(&installDiffFlag, "diff", false, "Show file diffs of changes")
+	installCmd.MarkFlagsMutuallyExclusive("all", "basic", "macos")
 }
 
 func installAll(m *manifest.Manifest, session *installer.Session) error {
@@ -90,6 +100,12 @@ func installAll(m *manifest.Manifest, session *installer.Session) error {
 		fmt.Fprintln(os.Stderr, "Planned changes:")
 		for _, cat := range m.Categories {
 			for _, t := range cat.Tools {
+				if basicFlag && !t.Basic {
+					continue
+				}
+				if macOSFlag && !t.MacOS {
+					continue
+				}
 				if profileFlag != "" && !t.MatchesProfile(profileFlag) {
 					continue
 				}

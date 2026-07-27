@@ -36,6 +36,8 @@ type Node struct {
 	Description string   `yaml:"description,omitempty"`
 	Default     bool     `yaml:"default"`
 	Checked     bool     `yaml:"checked,omitempty"`
+	Basic       bool     `yaml:"basic,omitempty"`
+	MacOS       bool     `yaml:"macos,omitempty"`
 	Profiles    []string `yaml:"profiles,omitempty"`
 	Requires    []string `yaml:"requires,omitempty"`
 	Steps       []Step   `yaml:"steps,omitempty"`
@@ -105,6 +107,8 @@ type Tool struct {
 	Name        string    `yaml:"name"`
 	Description string    `yaml:"description"`
 	Checked     bool      `yaml:"checked"`
+	Basic       bool      `yaml:"basic,omitempty"`
+	MacOS       bool      `yaml:"macos,omitempty"`
 	Profiles    []string  `yaml:"profiles,omitempty"`
 	DependsOn   []string  `yaml:"depends_on,omitempty"`
 	Steps       []Step    `yaml:"steps,omitempty"`
@@ -115,6 +119,8 @@ type Feature struct {
 	Name        string    `yaml:"name"`
 	Description string    `yaml:"description,omitempty"`
 	Checked     bool      `yaml:"checked"`
+	Basic       bool      `yaml:"basic,omitempty"`
+	MacOS       bool      `yaml:"macos,omitempty"`
 	DependsOn   []string  `yaml:"depends_on,omitempty"`
 	Steps       []Step    `yaml:"steps,omitempty"`
 	Features    []Feature `yaml:"features,omitempty"`
@@ -204,6 +210,8 @@ func nodesToTools(nodes []Node, categoryID, category string) []Tool {
 			Name:        n.Name,
 			Description: n.Description,
 			Checked:     n.Checked,
+			Basic:       n.Basic,
+			MacOS:       n.MacOS,
 			Profiles:    n.Profiles,
 			DependsOn:   n.Requires,
 			Steps:       n.Steps,
@@ -227,6 +235,8 @@ func toolsToNodes(tools []Tool, categoryID, category string) []Node {
 			Name:        t.Name,
 			Description: t.Description,
 			Checked:     t.Checked,
+			Basic:       t.Basic,
+			MacOS:       t.MacOS,
 			Profiles:    t.Profiles,
 			Requires:    translateRequirements(t.DependsOn, ids),
 		}
@@ -252,6 +262,8 @@ func toolsToNodes(tools []Tool, categoryID, category string) []Node {
 				Name:     "Extensions",
 				Default:  n.Default,
 				Checked:  n.Checked,
+				Basic:    n.Basic,
+				MacOS:    n.MacOS,
 				ParentID: n.ID,
 			}
 			for j, step := range extensions {
@@ -337,6 +349,8 @@ func stepNode(parent Node, step Step, index int) Node {
 		Description: stepDescription(step),
 		Default:     parent.Default,
 		Checked:     parent.Checked,
+		Basic:       parent.Basic,
+		MacOS:       parent.MacOS,
 		Steps:       []Step{step},
 		ParentID:    parent.ID,
 	}
@@ -362,6 +376,8 @@ func featureNode(parent Node, feature Feature, index int, ids map[string]string)
 		Description: feature.Description,
 		Default:     feature.Checked,
 		Checked:     feature.Checked,
+		Basic:       parent.Basic || feature.Basic,
+		MacOS:       parent.MacOS || feature.MacOS,
 		Requires:    translateRequirements(feature.DependsOn, ids),
 		Steps:       feature.Steps,
 		ParentID:    parent.ID,

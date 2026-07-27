@@ -40,24 +40,38 @@ type Item struct {
 }
 
 type Planner struct {
-	profile string
-	items   []*Item
-	queue   []*Item
-	history []*Item
-	byID    map[string]*Item
+	profile  string
+	selected func(*manifest.Node) bool
+	items    []*Item
+	queue    []*Item
+	history  []*Item
+	byID     map[string]*Item
 }
 
 func NewPlanner(m *manifest.Manifest, profile string) *Planner {
+	return newPlanner(m, profile, nil)
+}
+
+func NewBasicPlanner(m *manifest.Manifest, profile string) *Planner {
+	return newPlanner(m, profile, func(node *manifest.Node) bool { return node.Basic })
+}
+
+func NewMacOSPlanner(m *manifest.Manifest, profile string) *Planner {
+	return newPlanner(m, profile, func(node *manifest.Node) bool { return node.MacOS })
+}
+
+func newPlanner(m *manifest.Manifest, profile string, selected func(*manifest.Node) bool) *Planner {
 	p := &Planner{
-		profile: profile,
-		byID:    map[string]*Item{},
+		profile:  profile,
+		selected: selected,
+		byID:     map[string]*Item{},
 	}
 	for ci := range m.Categories {
 		cat := &m.Categories[ci]
 		categoryID := "category:" + cat.ID
 		start := len(p.items)
 		for ni := range cat.Nodes {
-			p.addNode(cat, &cat.Nodes[ni], categoryID)
+			p.addNode(cat, &cat.Nodes[ni], categoryID, false)
 		}
 		if len(p.items) == start {
 			continue
@@ -79,8 +93,12 @@ func NewPlanner(m *manifest.Manifest, profile string) *Planner {
 	return p
 }
 
-func (p *Planner) addNode(cat *manifest.Category, node *manifest.Node, parentID string) {
+func (p *Planner) addNode(cat *manifest.Category, node *manifest.Node, parentID string, selectedParent bool) {
 	if !node.MatchesProfile(p.profile) {
+		return
+	}
+	includeSubtree := selectedParent || p.selected == nil || p.selected(node)
+	if p.selected != nil && !includeSubtree && !hasSelectedDescendant(node, p.selected) {
 		return
 	}
 	item := &Item{
@@ -97,8 +115,17 @@ func (p *Planner) addNode(cat *manifest.Category, node *manifest.Node, parentID 
 	p.items = append(p.items, item)
 	p.byID[item.ID] = item
 	for i := range node.Children {
-		p.addNode(cat, &node.Children[i], node.ID)
+		p.addNode(cat, &node.Children[i], node.ID, includeSubtree)
 	}
+}
+
+func hasSelectedDescendant(node *manifest.Node, selected func(*manifest.Node) bool) bool {
+	for i := range node.Children {
+		if selected(&node.Children[i]) || hasSelectedDescendant(&node.Children[i], selected) {
+			return true
+		}
+	}
+	return false
 }
 
 func (p *Planner) SetAll(decision Decision) {

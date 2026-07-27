@@ -19,6 +19,7 @@ categories:
     tools:
       - name: "Xcode CLT"
         description: "Command Line Tools (git, compilers, etc.)"
+        basic: true
         checked: true
         steps:
           - type: run
@@ -27,6 +28,7 @@ categories:
 
       - name: "Homebrew"
         description: "Package manager"
+        basic: true
         checked: true
         steps:
           - type: run
@@ -35,6 +37,7 @@ categories:
 
       - name: "SSH Keychain"
         description: "Add SSH keys to Apple Keychain"
+        basic: true
         checked: true
         steps:
           - type: run
@@ -46,6 +49,7 @@ categories:
     tools:
       - name: "Oh My Zsh"
         description: "Zsh framework"
+        basic: true
         checked: true
         steps:
           - type: run
@@ -58,6 +62,7 @@ categories:
 
       - name: "Shell Config (.zshrc)"
         description: "Zsh config with OMZ plugins and custom loader"
+        basic: true
         checked: true
         steps:
           - type: symlink
@@ -66,6 +71,7 @@ categories:
 
       - name: "Powerlevel10k"
         description: "Prompt theme (robbyrussell style)"
+        basic: true
         depends_on: ["Oh My Zsh"]
         checked: true
         steps:
@@ -79,6 +85,7 @@ categories:
 
       - name: "Exports"
         description: "PATH, editor, and environment variables"
+        basic: true
         checked: true
         steps:
           - type: symlink
@@ -94,6 +101,7 @@ categories:
 
       - name: "zsh-autosuggestions"
         description: "Fish-like autosuggestions"
+        basic: true
         depends_on: ["Oh My Zsh"]
         checked: true
         steps:
@@ -102,6 +110,7 @@ categories:
 
       - name: "fzf-tab"
         description: "Fuzzy tab completion"
+        basic: true
         depends_on: ["Oh My Zsh"]
         checked: true
         steps:
@@ -110,6 +119,7 @@ categories:
 
       - name: "fast-syntax-highlighting"
         description: "Syntax highlighting in shell"
+        basic: true
         depends_on: ["Oh My Zsh"]
         checked: true
         steps:
@@ -131,6 +141,7 @@ categories:
 
       - name: "Aliases: Essentials"
         description: "cd, cat/bat, ls/eza aliases, catcopy"
+        basic: true
         checked: true
         features:
           - {name: "cd → zoxide", checked: true, depends_on: ["Zoxide"], steps: [{type: symlink, from: "home/aliases/essentials/cd.zsh", to: "${HOME}/.dotfiles-home/aliases/essentials/cd.zsh"}]}
@@ -180,6 +191,7 @@ categories:
 
       - name: "Functions: Util"
         description: "mkd, digga, killport, disablesleep-*"
+        basic: true
         checked: true
         steps:
           - type: symlink
@@ -227,6 +239,7 @@ categories:
 
       - name: "Fzf"
         description: "Fuzzy finder"
+        basic: true
         checked: true
         steps:
           - type: brew
@@ -238,6 +251,7 @@ categories:
 
       - name: "Zoxide"
         description: "Smarter cd"
+        basic: true
         checked: true
         steps:
           - type: brew
@@ -245,6 +259,7 @@ categories:
 
       - name: "Tldr"
         description: "Practical command examples instead of man pages"
+        basic: true
         checked: true
         steps:
           - type: brew
@@ -283,6 +298,7 @@ categories:
     tools:
       - name: "Bat"
         description: "cat with syntax highlighting"
+        basic: true
         checked: true
         steps:
           - type: brew
@@ -290,6 +306,7 @@ categories:
 
       - name: "Eza"
         description: "Modern ls replacement"
+        basic: true
         checked: true
         steps:
           - type: brew
@@ -297,6 +314,7 @@ categories:
 
       - name: "Ripgrep"
         description: "Fast grep"
+        basic: true
         checked: true
         steps:
           - type: brew
@@ -304,6 +322,7 @@ categories:
 
       - name: "Fd"
         description: "Fast find alternative"
+        basic: true
         checked: true
         steps:
           - type: brew
@@ -332,6 +351,7 @@ categories:
 
       - name: "Jq"
         description: "JSON processor"
+        basic: true
         checked: true
         steps:
           - type: brew
@@ -339,6 +359,7 @@ categories:
 
       - name: "Yq"
         description: "YAML processor"
+        basic: true
         checked: true
         steps:
           - type: brew
@@ -425,6 +446,7 @@ categories:
 
       - name: "Go"
         description: "Go programming language"
+        basic: true
         checked: true
         steps:
           - type: brew
@@ -432,6 +454,7 @@ categories:
 
       - name: "Bun"
         description: "JavaScript runtime & package manager"
+        basic: true
         checked: true
         steps:
           - type: brew
@@ -452,6 +475,7 @@ categories:
 
       - name: "Pipx"
         description: "Python package runner"
+        basic: true
         checked: true
         steps:
           - type: brew
@@ -702,6 +726,7 @@ categories:
 
       - name: "Gh"
         description: "GitHub command-line tool"
+        basic: true
         checked: true
         steps:
           - type: brew
@@ -838,6 +863,7 @@ categories:
     tools:
       - name: "Finder"
         description: "Finder preferences"
+        macos: true
         checked: true
         steps:
           - type: run
@@ -866,6 +892,7 @@ categories:
 
       - name: "Dock"
         description: "Dock preferences"
+        macos: true
         checked: true
         steps:
           - type: defaults
@@ -886,6 +913,7 @@ categories:
 
       - name: "Screenshots"
         description: "Screenshot preferences"
+        macos: true
         checked: true
         steps:
           - type: defaults
@@ -901,6 +929,7 @@ categories:
 
       - name: "Text & Input"
         description: "Keyboard and scroll preferences"
+        macos: true
         checked: true
         steps:
           - type: defaults
@@ -921,6 +950,7 @@ categories:
 
       - name: "Misc"
         description: "System tweaks"
+        macos: true
         checked: true
         steps:
           - type: defaults

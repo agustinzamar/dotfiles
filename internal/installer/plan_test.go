@@ -326,3 +326,62 @@ func TestPlannerFiltersProfileBeforePrompting(t *testing.T) {
 		t.Fatalf("expected base category and its tool for personal profile, got %d prompts", count)
 	}
 }
+
+func TestBasicPlannerIncludesMarkedSubtreesOnly(t *testing.T) {
+	m := &manifest.Manifest{Categories: []manifest.Category{{
+		ID: "tools", Name: "Tools", Nodes: []manifest.Node{
+			{ID: "basic", Name: "Basic", Basic: true, Steps: []manifest.Step{{Type: "run"}}, Children: []manifest.Node{
+				{ID: "basic-config", Name: "Config", Steps: []manifest.Step{{Type: "symlink"}}},
+			}},
+			{ID: "group", Name: "Group", Children: []manifest.Node{
+				{ID: "selected", Name: "Selected", Basic: true, Steps: []manifest.Step{{Type: "run"}}},
+				{ID: "omitted-child", Name: "Omitted Child", Steps: []manifest.Step{{Type: "run"}}},
+			}},
+			{ID: "omitted", Name: "Omitted", Steps: []manifest.Step{{Type: "run"}}},
+		},
+	}}}
+	p := NewBasicPlanner(m, "")
+
+	var got []string
+	for item := p.Next(); item != nil; item = p.Next() {
+		got = append(got, item.ID)
+		p.Answer(item.ID, DecisionYes)
+	}
+	want := []string{"category:tools", "basic", "basic-config", "group", "selected"}
+	if len(got) != len(want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("prompt[%d]: got %s, want %s", i, got[i], want[i])
+		}
+	}
+}
+
+func TestMacOSPlannerIncludesMacOSNodesOnly(t *testing.T) {
+	m := &manifest.Manifest{Categories: []manifest.Category{
+		{ID: "system", Name: "System", Nodes: []manifest.Node{
+			{ID: "finder", Name: "Finder", MacOS: true, Steps: []manifest.Step{{Type: "defaults"}}},
+			{ID: "other", Name: "Other", Steps: []manifest.Step{{Type: "run"}}},
+		}},
+		{ID: "apps", Name: "Apps", Nodes: []manifest.Node{
+			{ID: "app", Name: "App", Steps: []manifest.Step{{Type: "cask"}}},
+		}},
+	}}
+	p := NewMacOSPlanner(m, "")
+
+	var got []string
+	for item := p.Next(); item != nil; item = p.Next() {
+		got = append(got, item.ID)
+		p.Answer(item.ID, DecisionYes)
+	}
+	want := []string{"category:system", "finder"}
+	if len(got) != len(want) {
+		t.Fatalf("got %v, want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("prompt[%d]: got %s, want %s", i, got[i], want[i])
+		}
+	}
+}

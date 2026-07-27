@@ -274,6 +274,57 @@ categories:
 	}
 }
 
+func TestLegacyBasicMarkerPropagatesToRelatedSteps(t *testing.T) {
+	yaml := `
+categories:
+  - name: Tools
+    tools:
+      - name: Basic Tool
+        basic: true
+        checked: true
+        steps:
+          - type: brew
+            package: basic
+          - type: symlink
+            from: basic.conf
+            to: ${HOME}/basic.conf
+`
+	m, err := Load(writeTempManifest(t, yaml))
+	if err != nil {
+		t.Fatalf("load manifest: %v", err)
+	}
+	root := m.Categories[0].Nodes[0]
+	if !root.Basic || len(root.Children) != 1 || !root.Children[0].Basic {
+		t.Fatalf("expected basic marker on tool subtree, got %#v", root)
+	}
+}
+
+func TestLegacyMacOSMarkerPropagatesToRelatedSteps(t *testing.T) {
+	yaml := `
+categories:
+  - name: System
+    tools:
+      - name: Finder
+        macos: true
+        checked: true
+        steps:
+          - type: defaults
+            domain: com.apple.finder
+            key: ShowPathbar
+            value: "true"
+          - type: run
+            command: killall Finder
+`
+	m, err := Load(writeTempManifest(t, yaml))
+	if err != nil {
+		t.Fatalf("load manifest: %v", err)
+	}
+	root := m.Categories[0].Nodes[0]
+	if !root.MacOS || len(root.Children) != 2 || !root.Children[0].MacOS || !root.Children[1].MacOS {
+		t.Fatalf("expected macos marker on tool subtree, got %#v", root)
+	}
+}
+
 func TestLegacyAliasesBecomeOneGroupWithIndividualPrompts(t *testing.T) {
 	yaml := `
 categories:

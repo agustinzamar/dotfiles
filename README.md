@@ -25,6 +25,12 @@ make install
 # Guided install (default)
 dotfiles install
 
+# Install curated command-line essentials
+dotfiles install --basic
+
+# Install macOS settings only
+dotfiles install --macos
+
 # Non-interactive: install everything
 dotfiles install --all
 ```
@@ -36,6 +42,8 @@ dotfiles install --all
 | Command | Description |
 |---------|-------------|
 | `dotfiles install` | Launch guided installer (consent per category/tool) |
+| `dotfiles install --basic` | Install curated command-line essentials |
+| `dotfiles install --macos` | Install macOS settings only |
 | `dotfiles install --all` | Non-interactive batch install of all tools |
 | `dotfiles install --all --dry-run` | Preview what would be installed |
 | `dotfiles list` | List all available tools in the manifest |
