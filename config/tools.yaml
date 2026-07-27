@@ -762,16 +762,6 @@ categories:
             package: claude
             skip: "test -d /Applications/Claude.app"
 
-      - name: "Mackup"
-        description: "Backup app configs to cloud storage"
-        checked: true
-        steps:
-          - type: brew
-            package: mackup
-          - type: symlink
-            from: "config/mackup/dotfiles-custom.cfg"
-            to: "${HOME}/.mackup/dotfiles-custom.cfg"
-
       - name: "Raycast"
         description: "App launcher and productivity tool"
         checked: true

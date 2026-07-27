@@ -13,21 +13,11 @@ import (
 
 var backupCmd = &cobra.Command{
 	Use:   "backup",
-	Short: "Run mackup backup, then commit and push dotfiles changes",
+	Short: "Commit and push dotfiles changes",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		dotfilesDir := manifest.DotfilesDir()
 
-		// Step 1: Run mackup backup
-		fmt.Println("Running mackup backup...")
-		mackup := exec.Command("mackup", "backup", "dotfiles-custom", "--force")
-		mackup.Stdout = os.Stdout
-		mackup.Stderr = os.Stderr
-		if err := mackup.Run(); err != nil {
-			fmt.Fprintf(os.Stderr, "  mackup backup failed: %v\n", err)
-			fmt.Println("  Continuing with git backup...")
-		}
-
-		// Step 2: Check for changes
+		// Step 1: Check for changes
 		status := exec.Command("git", "-C", dotfilesDir, "status", "--porcelain")
 		out, err := status.Output()
 		if err != nil {
@@ -38,7 +28,7 @@ var backupCmd = &cobra.Command{
 			return nil
 		}
 
-		// Step 3: Collect list of changed files
+		// Step 2: Collect list of changed files
 		files := strings.Split(strings.TrimSpace(string(out)), "\n")
 		var filenames []string
 		for _, f := range files {
@@ -48,7 +38,7 @@ var backupCmd = &cobra.Command{
 			}
 		}
 
-		// Step 4: Stage all changes
+		// Step 3: Stage all changes
 		fmt.Println("Staging changes...")
 		add := exec.Command("git", "-C", dotfilesDir, "add", "-A")
 		add.Stdout = os.Stdout
@@ -57,7 +47,7 @@ var backupCmd = &cobra.Command{
 			return fmt.Errorf("git add failed: %w", err)
 		}
 
-		// Step 5: Commit with timestamp and file list
+		// Step 4: Commit with timestamp and file list
 		now := time.Now().Format("2006-01-02 15:04")
 		msg := fmt.Sprintf("backup: %s\n\nFiles:\n", now)
 		for _, f := range filenames {
@@ -72,7 +62,7 @@ var backupCmd = &cobra.Command{
 			return fmt.Errorf("git commit failed: %w", err)
 		}
 
-		// Step 6: Push
+		// Step 5: Push
 		fmt.Println("Pushing...")
 		push := exec.Command("git", "-C", dotfilesDir, "push")
 		push.Stdout = os.Stdout

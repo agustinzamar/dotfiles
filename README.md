@@ -55,7 +55,7 @@ dotfiles uninstall --all --dry-run
 | `dotfiles list` | List all available tools in the manifest |
 | `dotfiles doctor` | Check health of installed tools and symlinks |
 | `dotfiles cleanup` | Remove `.backup` files from symlink operations |
-| `dotfiles backup` | Mackup sync + commit & push dotfiles changes |
+| `dotfiles backup` | Commit & push dotfiles changes |
 
 ## What's Included
 
@@ -134,16 +134,12 @@ dotfiles uninstall --all --dry-run
 ### Utilities
 - **ChatGPT App** — OpenAI desktop app with Chat, Work, and Codex
 - **Claude Code App** — Claude desktop app with the Claude Code workspace
-- **mackup** — Backup sensitive configs (SSH, shell aliases) to cloud storage
 - **Finetune** — Per-app volume mixer
 - **Boring Notch** — Notch customization utility
 - **Raycast** — App launcher and productivity tool
 - **TypeWhisper** — Speech-to-text transcription tool
 - **AltTab** — Window switcher with previews
 - **Spotify** — Music streaming player
-
-### Backup & Sync
-- **mackup** — Backup app configs
 
 ## How It Works
 
@@ -230,7 +226,6 @@ These are prompted on first install and cached. Delete `~/.dotfiles-custom/vars.
 - `~/.dotfiles-custom/vars.json` is created with `0600` permissions (owner read/write only) and never leaves your machine
 - Rendered config files containing sensitive values (e.g. `opencode.rendered.json`, `.gitconfig.rendered`) are gitignored via `*.rendered.*` patterns in `.gitignore`
 - The `~/.dotfiles-custom/` directory is outside the repo and never committed
-- `dotfiles backup` uses Mackup to sync `dotfiles-custom` to cloud storage for cross-machine backup
 
 ## Customization
 
