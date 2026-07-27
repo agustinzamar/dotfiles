@@ -1,4 +1,5 @@
 .PHONY: build install clean test ensure-go
+.DEFAULT_GOAL := build
 
 ensure-go:
 	@command -v go >/dev/null 2>&1 || { \
