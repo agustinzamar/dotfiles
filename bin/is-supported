@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+# is-supported <test> [<if-true> <if-false>]
+# With one argument, exits 0/1. With three, echoes the second or third.
+
+if [ $# -eq 1 ]; then
+  if eval "$1" >/dev/null 2>&1; then exit 0; else exit 1; fi
+else
+  if eval "$1" >/dev/null 2>&1; then printf '%s' "$2"; else printf '%s' "$3"; fi
+fi

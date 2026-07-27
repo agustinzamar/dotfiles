@@ -1,16 +1,39 @@
-.PHONY: install check doctor update backup
+DOTFILES_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+SHELL := /bin/bash
+
+# `export` rather than `SHELL := env PATH=...` so that a PATH containing
+# spaces (Homebrew casks under ~/Library/Application Support) survives.
+export PATH := $(DOTFILES_DIR)/bin:$(PATH)
+
+SCRIPTS := bin/dot bin/is-* lib/*.sh install/*.sh macos/*.sh install.sh
+
+# `install` and `test` are also directory names, so these must stay phony.
+.PHONY: install link unlink update doctor backup test check lint
 
 install:
-	./install.sh
+	dot install
 
-check:
-	bash -n install.sh scripts/*.sh
+link:
+	dot link
 
-doctor:
-	scripts/doctor.sh "$(PWD)"
+unlink:
+	dot unlink
 
 update:
-	scripts/update.sh "$(PWD)"
+	dot update
+
+doctor:
+	dot doctor
 
 backup:
-	scripts/backup.sh "$(PWD)"
+	dot backup
+
+test:
+	dot test
+
+check:
+	bash -n $(SCRIPTS)
+
+lint:
+	shellcheck -x $(SCRIPTS)
+	shfmt -d $(SCRIPTS)

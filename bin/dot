@@ -1,0 +1,206 @@
+#!/usr/bin/env bash
+# shellcheck source-path=SCRIPTDIR
+set -Eeuo pipefail
+
+BIN_NAME=$(basename "$0")
+DOTFILES_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+export DOTFILES_DIR
+export PATH="$DOTFILES_DIR/bin:$PATH"
+
+# --dry-run is global: pull it out before working out which subcommand ran.
+DRY_RUN=false
+args=()
+for arg in "$@"; do
+  case "$arg" in
+    --dry-run) DRY_RUN=true ;;
+    *) args+=("$arg") ;;
+  esac
+done
+export DRY_RUN
+set -- ${args[@]+"${args[@]}"}
+
+# shellcheck source=../lib/common.sh
+. "$DOTFILES_DIR/lib/common.sh"
+# shellcheck source=../install/links.sh
+. "$DOTFILES_DIR/install/links.sh"
+# shellcheck source=../install/zsh.sh
+. "$DOTFILES_DIR/install/zsh.sh"
+# shellcheck source=../install/tools.sh
+. "$DOTFILES_DIR/install/tools.sh"
+# shellcheck source=../install/git.sh
+. "$DOTFILES_DIR/install/git.sh"
+
+sub_help() {
+  echo "Usage: $BIN_NAME <command> [--dry-run]"
+  echo
+  echo "Commands:"
+  echo "   backup           Back up with Mackup, then commit and push this repo"
+  echo "   brew             Install Homebrew and the shared package set"
+  echo "   brew-personal    Install the personal-only package set"
+  echo "   clean            Clean up caches (brew, npm)"
+  echo "   dock             Apply macOS Dock settings"
+  echo "   doctor           Check that required tools and symlinks are in place"
+  echo "   edit             Open dotfiles in \$VISUAL"
+  echo "   git              Configure Git identity and render generated configs"
+  echo "   help             This help message"
+  echo "   install          Run the full install (brew, link, zsh, tools, git, macos)"
+  echo "   link             Symlink every config into place"
+  echo "   link-shell       Symlink the shell configs only"
+  echo "   macos            Apply macOS system defaults"
+  echo "   test             Run tests"
+  echo "   tools            Install tools Homebrew Bundle does not cover"
+  echo "   unlink           Remove symlinks that point into this repo"
+  echo "   update           Pull, upgrade packages, then re-run the install"
+  echo "   zsh              Install Oh My Zsh, its theme and plugins"
+}
+
+sub_install() {
+  sub_brew
+  sub_link
+  sub_zsh
+  sub_tools
+  sub_git
+  sub_macos
+  sub_dock
+  log "Installation complete"
+}
+
+sub_brew() {
+  log "Installing Homebrew"
+  if is-executable brew; then
+    :
+  elif "$DRY_RUN"; then
+    echo '+ install Homebrew'
+  else
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+  fi
+
+  log "Installing packages"
+  run brew bundle --file="$DOTFILES_DIR/install/Brewfile"
+}
+
+sub_brew_personal() {
+  log "Installing personal packages"
+  run brew bundle --file="$DOTFILES_DIR/install/Brewfile.personal"
+}
+
+sub_link() {
+  log "Linking dotfiles"
+  link_all
+}
+
+sub_link_shell() {
+  log "Linking shell dotfiles"
+  link_shell
+}
+
+sub_unlink() {
+  log "Removing symlinks"
+  unlink_all
+}
+
+sub_zsh() {
+  log "Setting up Zsh"
+  install_zsh
+}
+
+sub_tools() {
+  log "Installing extra tools"
+  install_tools
+}
+
+sub_git() {
+  log "Configuring Git"
+  setup_git
+}
+
+sub_macos() {
+  local file
+  for file in "$DOTFILES_DIR"/macos/defaults*.sh; do
+    log "Applying ${file#"$DOTFILES_DIR"/}"
+    # shellcheck source=../macos/defaults.sh
+    . "$file"
+  done
+  echo "Some changes may require a logout or restart to take effect."
+}
+
+sub_dock() {
+  log "Applying Dock settings"
+  # shellcheck source=../macos/dock.sh
+  . "$DOTFILES_DIR/macos/dock.sh"
+}
+
+sub_doctor() {
+  local failed=0 command
+  check() {
+    command -v "$1" >/dev/null 2>&1 || {
+      echo "missing: $1"
+      failed=1
+    }
+  }
+  check_link() {
+    [[ -L "$2" && "$(readlink "$2")" == "$DOTFILES_DIR/$1" ]] || {
+      echo "broken: $2"
+      failed=1
+    }
+  }
+
+  for command in brew git zsh jq; do check "$command"; done
+  check_link config/zsh/.zshrc "$HOME/.zshrc"
+  check_link config/p10k/.p10k.zsh "$HOME/.p10k.zsh"
+  check_link config/ghostty/config "$HOME/.config/ghostty/config"
+  check_link config/tmux/tmux.conf "$HOME/.config/tmux/tmux.conf"
+  if ((failed == 0)); then echo "dotfiles: healthy"; fi
+  return "$failed"
+}
+
+sub_update() {
+  run git -C "$DOTFILES_DIR" pull
+  run brew update
+  run brew upgrade
+  sub_install
+}
+
+sub_backup() {
+  run mackup backup dotfiles-custom --force || echo "mackup backup failed; continuing with git"
+  if [[ -z "$(git -C "$DOTFILES_DIR" status --porcelain)" ]]; then
+    echo "No changes to commit."
+    return 0
+  fi
+  run git -C "$DOTFILES_DIR" add -A
+  run git -C "$DOTFILES_DIR" commit -m "backup: $(date '+%Y-%m-%d %H:%M')"
+  run git -C "$DOTFILES_DIR" push
+}
+
+sub_clean() {
+  run brew cleanup
+  if is-executable npm; then run npm cache clean --force; fi
+}
+
+sub_edit() {
+  sh -c "${VISUAL:-code} $DOTFILES_DIR"
+}
+
+sub_test() {
+  bats "$DOTFILES_DIR"/test/*.bats
+}
+
+COMMAND_NAME=${1:-}
+case "$COMMAND_NAME" in
+  "" | -h | --help | help)
+    sub_help
+    ;;
+  *)
+    shift
+    # `set -Eeuo pipefail` means webpro's `[ $? = 127 ]` check never runs, so
+    # look the function up instead of calling it and inspecting the status.
+    SUB_NAME="sub_${COMMAND_NAME//-/_}"
+    if declare -F "$SUB_NAME" >/dev/null; then
+      "$SUB_NAME" "$@"
+    else
+      echo "'$COMMAND_NAME' is not a known command." >&2
+      sub_help >&2
+      exit 1
+    fi
+    ;;
+esac

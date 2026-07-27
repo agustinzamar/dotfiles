@@ -42,6 +42,11 @@ brew "gh"
 brew "hunk"
 brew "mackup"
 
+# Tooling for `dot test` / `make lint`
+brew "bats-core"
+brew "shellcheck"
+brew "shfmt"
+
 cask "ghostty"
 cask "orbstack"
 cask "visual-studio-code"

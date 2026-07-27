@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Exit 0 when running on macOS.
+
+[ "$(uname -s)" = "Darwin" ]
