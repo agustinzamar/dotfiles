@@ -1,9 +1,5 @@
 # config/tools.yaml
 vars:
-  GitHubPAT:
-    description: "GitHub Personal Access Token"
-    why: "Used by shadcn/ui MCP server to fetch component data from GitHub"
-    hint: "Create at github.com/settings/tokens → New token (classic) → scope: public_repo"
   GitName:
     description: "Your full name"
     why: "Used in .gitconfig for commit authorship"
@@ -660,11 +656,10 @@ categories:
         steps:
           - type: brew
             package: opencode
-          - type: template-symlink
+          - type: symlink
             name: "Configuration"
             from: "config/opencode/opencode.json"
             to: "${HOME}/.config/opencode/opencode.json"
-            vars: ["GitHubPAT"]
           - type: symlink
             name: "Agent instructions"
             from: "config/opencode/AGENTS.md"
