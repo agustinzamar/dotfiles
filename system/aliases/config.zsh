@@ -1,7 +1,7 @@
 alias hostfile="code /etc/hosts"
 alias sshconfig="code ~/.ssh/config"
 alias zshconfig="code ~/.zshrc"
-alias ohmyzsh="code ~/.oh-my-zsh"
+alias zinitdir="code ~/.local/share/zinit"
 alias occonfig="code ~/.config/opencode/opencode.json"
 alias clconfig="code ~/.claude/CLAUDE.md"
 

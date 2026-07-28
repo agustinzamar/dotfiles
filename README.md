@@ -114,5 +114,5 @@ No secret is written to disk. `config/opencode/opencode.json` passes
 environment at runtime — export it from wherever you keep it. Unset, the server
 runs without a GitHub token.
 
-`~/.dotfiles-custom/shell/` is sourced if present, for anything that should not
+`~/.dotfiles-home/custom/` is sourced if present, for anything that should not
 be committed.
