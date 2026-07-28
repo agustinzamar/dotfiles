@@ -124,10 +124,12 @@ sub_install_apps() {
   for f in "$TOPIC_DIR"/*; do
     [[ -f "$f" ]] || continue
     topic=$(basename "$f")
-    while IFS=' "' read -r _ type name _; do
-      [[ -z "$name" ]] && continue
+    while IFS=' ' read -r type rest; do
+      [[ -z "$rest" ]] && continue
+      name=${rest#\"}
+      name=${name%\"}
       items+=("$name|$type|$topic")
-    done < <(grep -E '^(brew|cask|mas) "' "$f")
+    done < <(grep -E '^(brew|cask|mas) "' "$f" 2>/dev/null)
   done
 
   if ((${#items[@]} == 0)); then
