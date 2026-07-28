@@ -1,0 +1,8 @@
+# Browsers and communication
+cask "google-chrome"
+cask "brave-browser"
+cask "firefox"
+
+cask "discord"
+cask "telegram"
+cask "whatsapp"

@@ -1,0 +1,5 @@
+# Agents and assistants
+brew "muxy-app/tap/muxy"
+brew "opencode"
+brew "claude-code"
+brew "chatgpt"

@@ -1,0 +1,17 @@
+# Languages, runtimes, editors, and the tooling `dot test` needs
+brew "make"
+brew "go"
+brew "bun"
+brew "nvm"
+brew "pipx"
+brew "rust"
+brew "shellcheck"
+brew "shfmt"
+brew "bats-core"
+brew "mysql-client"
+brew "sqlite"
+brew "sshpass"
+
+cask "visual-studio-code"
+cask "phpstorm"
+cask "orbstack"

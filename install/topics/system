@@ -1,0 +1,12 @@
+# Monitoring, maintenance, and desktop behaviour
+brew "bottom"
+brew "procs"
+brew "mole"
+brew "topgrade"
+brew "duti"
+brew "dust"
+
+cask "raycast"
+cask "alt-tab"
+cask "linearmouse"
+cask "finetune"

@@ -32,8 +32,7 @@ sub_help() {
   echo
   echo "Commands:"
   echo "   backup           Commit and push this repo"
-  echo "   brew             Install Homebrew, the formulae and the casks"
-  echo "   brew-personal    Install the personal-only package set"
+  echo "   brew             Install Homebrew and every topic"
   echo "   clean            Clean up caches"
   echo "   code             Install the VS Code extensions in install/Codefile"
   echo "   dock             Apply macOS Dock settings"
@@ -51,6 +50,12 @@ sub_help() {
   echo "   unlink           Remove symlinks that point into this repo"
   echo "   update           Pull, upgrade packages, then re-run the install"
   echo "   zsh              Install Oh My Zsh, its theme and plugins"
+  echo
+  echo "Topics (install one package group):"
+  local topic
+  while read -r topic; do
+    printf '   %-16s %s\n' "$topic" "$(head -1 "$DOTFILES_DIR/install/topics/$topic" | sed 's/^# *//')"
+  done < <(topics)
 }
 
 sub_install() {
@@ -66,6 +71,20 @@ sub_install() {
   log "Installation complete"
 }
 
+# Every file in install/topics/ is a Brewfile and a command: `dot media`
+# installs install/topics/media. Adding a topic is adding one file.
+topics() {
+  local file
+  for file in "$DOTFILES_DIR"/install/topics/*; do
+    [[ -f "$file" ]] && basename "$file"
+  done
+}
+
+install_topic() {
+  log "Installing $1"
+  run brew bundle --file="$DOTFILES_DIR/install/topics/$1"
+}
+
 sub_brew() {
   log "Installing Homebrew"
   if is_executable brew; then
@@ -76,9 +95,8 @@ sub_brew() {
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   fi
 
-  log "Installing formulae and casks"
-  run brew bundle --file="$DOTFILES_DIR/install/Brewfile"
-  run brew bundle --file="$DOTFILES_DIR/install/Caskfile"
+  local topic
+  while read -r topic; do install_topic "$topic"; done < <(topics)
 }
 
 # The package files are plain lists: one name per line, `#` comments and blank
@@ -111,11 +129,6 @@ sub_duti() {
   is_executable duti || return 0
   log "Setting default apps for file types"
   run duti -v "$DOTFILES_DIR/install/duti"
-}
-
-sub_brew_personal() {
-  log "Installing personal packages"
-  run brew bundle --file="$DOTFILES_DIR/install/Brewfile.personal"
 }
 
 sub_link() {
@@ -237,6 +250,8 @@ case "$COMMAND_NAME" in
     SUB_NAME="sub_${COMMAND_NAME//-/_}"
     if declare -F "$SUB_NAME" >/dev/null; then
       "$SUB_NAME" "$@"
+    elif [[ -f "$DOTFILES_DIR/install/topics/$COMMAND_NAME" ]]; then
+      install_topic "$COMMAND_NAME"
     else
       echo "'$COMMAND_NAME' is not a known command." >&2
       sub_help >&2

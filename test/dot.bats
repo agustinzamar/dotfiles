@@ -19,15 +19,29 @@ setup() {
   [[ "$output" == *"doctor"* ]]
 }
 
-@test "every command in help has a matching sub_ function" {
+@test "every command in help is dispatchable" {
   local command name
   while read -r command; do
     name="sub_${command//-/_}"
-    grep -q "^$name()" "$DOT" || {
-      echo "no $name() for '$command'"
+    grep -q "^$name()" "$DOT" || [ -f "$DOTFILES_DIR/install/topics/$command" ] || {
+      echo "'$command' has neither $name() nor install/topics/$command"
       return 1
     }
   done < <("$DOT" help | sed -n 's/^   \([a-z-]*\) .*/\1/p' | grep -v '^help$')
+}
+
+@test "every topic is listed in help and runs as a command" {
+  local topic
+  for topic in "$DOTFILES_DIR"/install/topics/*; do
+    topic=$(basename "$topic")
+    "$DOT" help | grep -q "^   $topic " || {
+      echo "topic '$topic' missing from help"
+      return 1
+    }
+    run "$DOT" "$topic" --dry-run
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"install/topics/$topic"* ]]
+  done
 }
 
 # Deleting a config without removing its line from the map leaves the target a

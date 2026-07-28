@@ -6,19 +6,27 @@ macOS dotfiles installed with Bash and Homebrew Bundle, driven by a single
 ## Install
 
 ```bash
-git clone git@github.com:agustinzamar/dotfiles.git ~/Documents/repos/dotfiles
-cd ~/Documents/repos/dotfiles
+git clone git@github.com:agustinzamar/dotfiles.git ~/dotfiles
+cd ~/dotfiles
 bin/dot install
-```
-
-On a personal machine, follow up with the personal-only packages:
-
-```bash
-bin/dot brew-personal
 ```
 
 `system/.exports` puts `~/.dotfiles/bin` on your `PATH`, so `dot` works from
 anywhere once the shell configs are linked and the shell has been restarted.
+
+## Topics
+
+Packages are grouped into topics under `install/topics/`. Each file is a
+Brewfile and each is a command, so a machine that does not need PHP just skips
+`dot laravel`:
+
+```bash
+dot laravel    # composer, herd, dbngin
+dot media      # ffmpeg, imagemagick, vlc
+```
+
+`dot brew` installs every topic. Adding a topic means adding one file — it
+shows up in `dot help` and becomes a command with no code change.
 
 ## Usage
 
@@ -27,8 +35,7 @@ anywhere once the shell configs are linked and the shell has been restarted.
 | Command | What it does |
 | --- | --- |
 | `install` | Everything below, in order |
-| `brew` | Install Homebrew, the formulae and the casks |
-| `brew-personal` | Install the personal-only package set |
+| `brew` | Install Homebrew and every topic |
 | `link` | Symlink every config into place |
 | `link-shell` | Symlink the shell configs only |
 | `unlink` | Remove symlinks that point into this repo |
@@ -61,8 +68,9 @@ dot link --dry-run
 
 - `bin/dot` — the CLI; one `sub_<command>` function per command
 - `install/common.sh` — `run`, `log`, `link_file`; the only copies
-- `install/` — package lists (`Brewfile`, `Caskfile`, `Codefile`, `npmfile`,
-  `duti`) plus the per-topic install steps
+- `install/topics/` — one Brewfile per package group; each is also a command
+- `install/` — the other package lists (`Codefile`, `npmfile`, `duti`) plus
+  the per-topic install steps
 - `config/` — application configuration
 - `system/` — shell aliases, functions, exports, and `macos/`
 - `test/` — Bats tests
