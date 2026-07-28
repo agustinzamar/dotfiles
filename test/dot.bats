@@ -137,12 +137,25 @@ setup() {
 # from it, install silently stops doing that work.
 @test "install runs every phase through the failure-collecting loop" {
   local phase
-  for phase in brew link zsh tools npm code macos dock duti; do
+  for phase in brew link zsh tools npm code macos duti; do
     grep -q "for phase in .*\b$phase\b" "$DOT" || {
       echo "phase '$phase' missing from the install loop"
       return 1
     }
   done
+}
+
+# dock-defaults.sh is in the macos glob, so installing it again as its own
+# phase kills the Dock twice and the second killall exits 1.
+@test "install does not run dock as a separate phase" {
+  grep -q "for phase in .*\bdock\b" "$DOT" && {
+    echo "dock is back in the install loop; macos already sources it"
+    return 1
+  }
+  # Still reachable on its own.
+  run "$DOT" dock --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"dock-defaults.sh"* ]]
 }
 
 # The whole point of optional/: a machine opts in by name, `brew` never does.

@@ -66,8 +66,10 @@ sub_help() {
 # One broken package should not cost you the symlinks: run every phase, then
 # report. Exits non-zero so CI and `make install` still fail loudly.
 sub_install() {
+  # No `dock`: sub_macos already sources dock-defaults.sh via the glob, and
+  # running it twice kills the Dock while it is still restarting.
   local phase failures=()
-  for phase in brew link zsh tools npm code macos dock duti; do
+  for phase in brew link zsh tools npm code macos duti; do
     "sub_$phase" || failures+=("$phase")
   done
 

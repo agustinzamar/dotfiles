@@ -321,6 +321,8 @@ defaults write com.apple.commerce AutoUpdateRestartRequired -bool true
 # Kill affected applications                                                  #
 ###############################################################################
 
+# `|| true`: killall exits 1 for an app that is not running, and as the last
+# statement in the file that would fail the whole sourced script under `set -e`.
 for app in "Address Book" "Calendar" "Contacts" "Dock" "Finder" "Mail" "Safari" "SystemUIServer" "iCal"; do
-  killall "${app}" &>/dev/null
+  killall "${app}" &>/dev/null || true
 done

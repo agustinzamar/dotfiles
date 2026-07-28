@@ -27,4 +27,6 @@ for dock_app in "${DOCK_APPS[@]}"; do
   fi
 done
 
-killall Dock
+# `|| true`: killall exits 1 when the Dock is not running, which under the
+# caller's `set -e` would abort the run.
+killall Dock || true
