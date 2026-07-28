@@ -255,16 +255,6 @@ sub_install_ai() {
             fi
           fi
 
-          local agent_cmd
-          for agent_pair in "gemini:.install.gemini.command" "pi:.install.pi.command"; do
-            local bin="${agent_pair%%:*}"
-            local jqpath="${agent_pair##*:}"
-            if is_executable "$bin"; then
-              agent_cmd=$(jq -r --arg n "$name" ".plugins[] | select(.name == \$n) | $jqpath // empty" "$manifest" 2>/dev/null)
-              [[ -n "$agent_cmd" ]] && log "  $bin: $agent_cmd" && run eval "$agent_cmd"
-            fi
-          done
-
           local cc_cmd cc_install cx_cmd
           cc_cmd=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .install["claude-code"].command // empty' "$manifest" 2>/dev/null)
           cc_install=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .install["claude-code"].install // empty' "$manifest" 2>/dev/null)
