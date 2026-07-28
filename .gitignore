@@ -1,3 +1,7 @@
+# Raycast exports: encrypted, but this repo is public and the export bundles
+# every extension preference. Keep them in iCloud instead.
+*.rayconfig
+
 # OS
 .DS_Store
 
