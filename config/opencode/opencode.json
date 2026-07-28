@@ -7,7 +7,7 @@
         "npx",
         "@jpisnice/shadcn-ui-mcp-server",
         "--github-api-key",
-        "{{ .GitHubPAT }}"
+        "{env:GITHUB_PAT}"
       ]
     },
     "chrome-devtools": {

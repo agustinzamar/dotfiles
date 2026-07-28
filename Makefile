@@ -1,9 +1,10 @@
 DOTFILES_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 SHELL := /bin/bash
 
-# `export` rather than `SHELL := env PATH=...` so that a PATH containing
-# spaces (Homebrew casks under ~/Library/Application Support) survives.
-export PATH := $(DOTFILES_DIR)/bin:$(PATH)
+# Call the CLI by path. Exporting PATH here does not work: make 3.81 (what
+# macOS ships) execs single-word recipes itself, using the PATH it started
+# with, so a bare `dot` is not found.
+DOT := $(DOTFILES_DIR)/bin/dot
 
 SCRIPTS := bin/dot bin/is-* lib/*.sh install/*.sh macos/*.sh install.sh
 
@@ -11,25 +12,25 @@ SCRIPTS := bin/dot bin/is-* lib/*.sh install/*.sh macos/*.sh install.sh
 .PHONY: install link unlink update doctor backup test check lint
 
 install:
-	dot install
+	$(DOT) install
 
 link:
-	dot link
+	$(DOT) link
 
 unlink:
-	dot unlink
+	$(DOT) unlink
 
 update:
-	dot update
+	$(DOT) update
 
 doctor:
-	dot doctor
+	$(DOT) doctor
 
 backup:
-	dot backup
+	$(DOT) backup
 
 test:
-	dot test
+	$(DOT) test
 
 check:
 	bash -n $(SCRIPTS)

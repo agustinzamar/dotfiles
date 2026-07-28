@@ -1,0 +1,955 @@
+# config/tools.yaml
+vars:
+  GitName:
+    description: "Your full name"
+    why: "Used in .gitconfig for commit authorship"
+    hint: "e.g. Agustin Zamar"
+  GitEmail:
+    description: "Your email address"
+    why: "Used in .gitconfig for commit authorship"
+    hint: "e.g. agustin@example.com"
+  GitGPGKey:
+    description: "GPG signing key"
+    why: "Used to sign Git commits"
+    hint: "Enter GPG key ID, for example 0123456789ABCDEF"
+
+categories:
+  # ── Base ──────────────────────────────────────────────
+  - name: "Base"
+    tools:
+      - name: "Xcode CLT"
+        description: "Command Line Tools (git, compilers, etc.)"
+        basic: true
+        checked: true
+        steps:
+          - type: run
+            command: "xcode-select --install 2>/dev/null; true"
+            skip: "xcode-select -p &>/dev/null"
+
+      - name: "Homebrew"
+        description: "Package manager"
+        basic: true
+        checked: true
+        steps:
+          - type: run
+            command: '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
+            skip: "which brew"
+
+      - name: "SSH Keychain"
+        description: "Add SSH keys to Apple Keychain"
+        basic: true
+        checked: true
+        steps:
+          - type: run
+            command: 'for key in ${HOME}/.ssh/id_*; do case "$key" in *.pub|*.revoked) continue ;; esac; ssh-add --apple-use-keychain "$key" 2>/dev/null; done'
+            skip: "ssh-add -l | grep -q ."
+
+  # ── Shell ─────────────────────────────────────────────
+  - name: "Shell"
+    tools:
+      - name: "Oh My Zsh"
+        description: "Zsh framework"
+        basic: true
+        checked: true
+        steps:
+          - type: run
+            command: 'sh -c "$(curl -fsSL https://raw.githubusercontent.com/ohmyzsh/ohmyzsh/master/tools/install.sh)"'
+            env:
+              RUNZSH: "no"
+              CHSH: "no"
+              KEEP_ZSHRC: "yes"
+            skip: "test -d ${HOME}/.oh-my-zsh"
+
+      - name: "Shell Config (.zshrc)"
+        description: "Zsh config with OMZ plugins and custom loader"
+        basic: true
+        checked: true
+        steps:
+          - type: symlink
+            from: "config/zsh/.zshrc"
+            to: "${HOME}/.zshrc"
+
+      - name: "Powerlevel10k"
+        description: "Prompt theme (robbyrussell style)"
+        basic: true
+        depends_on: ["Oh My Zsh"]
+        checked: true
+        steps:
+          - type: git-clone
+            repo: "https://github.com/romkatv/powerlevel10k.git"
+            dest: "${HOME}/.oh-my-zsh/custom/themes/powerlevel10k"
+            depth: 1
+          - type: symlink
+            from: "config/p10k/.p10k.zsh"
+            to: "${HOME}/.p10k.zsh"
+
+      - name: "Exports"
+        description: "PATH, editor, and environment variables"
+        basic: true
+        checked: true
+        steps:
+          - type: symlink
+            from: "home/.exports"
+            to: "${HOME}/.dotfiles-home/.exports"
+
+      - name: "Bash"
+        description: "Modern Bourne-Again Shell"
+        checked: true
+        steps:
+          - type: brew
+            package: bash
+
+      - name: "zsh-autosuggestions"
+        description: "Fish-like autosuggestions"
+        basic: true
+        depends_on: ["Oh My Zsh"]
+        checked: true
+        steps:
+          - type: omz-plugin
+            repo: "https://github.com/zsh-users/zsh-autosuggestions"
+
+      - name: "fzf-tab"
+        description: "Fuzzy tab completion"
+        basic: true
+        depends_on: ["Oh My Zsh"]
+        checked: true
+        steps:
+          - type: omz-plugin
+            repo: "https://github.com/Aloxaf/fzf-tab"
+
+      - name: "fast-syntax-highlighting"
+        description: "Syntax highlighting in shell"
+        basic: true
+        depends_on: ["Oh My Zsh"]
+        checked: true
+        steps:
+          - type: omz-plugin
+            repo: "https://github.com/zdharma-continuum/fast-syntax-highlighting"
+
+      - name: "Aliases: System"
+        description: "sudo, flushdns, showfiles, ports, mysqlroot"
+        checked: true
+        features:
+          - {name: "sudo", checked: true, steps: [{type: symlink, from: "home/aliases/system/sudo.zsh", to: "${HOME}/.dotfiles-home/aliases/system/sudo.zsh"}]}
+          - {name: "hostfile", checked: true, depends_on: ["Vs Code"], steps: [{type: symlink, from: "home/aliases/system/hostfile.zsh", to: "${HOME}/.dotfiles-home/aliases/system/hostfile.zsh"}]}
+          - {name: "sshconfig", checked: true, depends_on: ["Vs Code"], steps: [{type: symlink, from: "home/aliases/system/sshconfig.zsh", to: "${HOME}/.dotfiles-home/aliases/system/sshconfig.zsh"}]}
+          - {name: "flushdns", checked: true, steps: [{type: symlink, from: "home/aliases/system/flushdns.zsh", to: "${HOME}/.dotfiles-home/aliases/system/flushdns.zsh"}]}
+          - {name: "showfiles", checked: true, steps: [{type: symlink, from: "home/aliases/system/showfiles.zsh", to: "${HOME}/.dotfiles-home/aliases/system/showfiles.zsh"}]}
+          - {name: "hidefiles", checked: true, steps: [{type: symlink, from: "home/aliases/system/hidefiles.zsh", to: "${HOME}/.dotfiles-home/aliases/system/hidefiles.zsh"}]}
+          - {name: "ports", checked: true, steps: [{type: symlink, from: "home/aliases/system/ports.zsh", to: "${HOME}/.dotfiles-home/aliases/system/ports.zsh"}]}
+          - {name: "mysqlroot", checked: true, depends_on: ["Mysql Client"], steps: [{type: symlink, from: "home/aliases/system/mysqlroot.zsh", to: "${HOME}/.dotfiles-home/aliases/system/mysqlroot.zsh"}]}
+
+      - name: "Aliases: Essentials"
+        description: "cd, cat/bat, ls/eza aliases, catcopy"
+        basic: true
+        checked: true
+        features:
+          - {name: "cd → zoxide", checked: true, depends_on: ["Zoxide"], steps: [{type: symlink, from: "home/aliases/essentials/cd.zsh", to: "${HOME}/.dotfiles-home/aliases/essentials/cd.zsh"}]}
+          - {name: "cat → bat", checked: true, depends_on: ["Bat"], steps: [{type: symlink, from: "home/aliases/essentials/cat.zsh", to: "${HOME}/.dotfiles-home/aliases/essentials/cat.zsh"}]}
+          - {name: "catcopy", checked: true, depends_on: ["Bat"], steps: [{type: symlink, from: "home/aliases/essentials/catcopy.zsh", to: "${HOME}/.dotfiles-home/aliases/essentials/catcopy.zsh"}]}
+          - {name: "ls → eza", checked: true, depends_on: ["Eza"], steps: [{type: symlink, from: "home/aliases/essentials/ls.zsh", to: "${HOME}/.dotfiles-home/aliases/essentials/ls.zsh"}]}
+          - {name: "ll", checked: true, depends_on: ["Eza"], steps: [{type: symlink, from: "home/aliases/essentials/ll.zsh", to: "${HOME}/.dotfiles-home/aliases/essentials/ll.zsh"}]}
+          - {name: "lt", checked: true, depends_on: ["Eza"], steps: [{type: symlink, from: "home/aliases/essentials/lt.zsh", to: "${HOME}/.dotfiles-home/aliases/essentials/lt.zsh"}]}
+
+      - name: "Aliases: Git"
+        description: "nah, push, pull, uncommit, branches, gecor"
+        depends_on: ["Xcode CLT"]
+        checked: true
+        features:
+          - {name: "nah", checked: true, steps: [{type: symlink, from: "home/aliases/git/nah.zsh", to: "${HOME}/.dotfiles-home/aliases/git/nah.zsh"}]}
+          - {name: "push", checked: true, steps: [{type: symlink, from: "home/aliases/git/push.zsh", to: "${HOME}/.dotfiles-home/aliases/git/push.zsh"}]}
+          - {name: "pull", checked: true, steps: [{type: symlink, from: "home/aliases/git/pull.zsh", to: "${HOME}/.dotfiles-home/aliases/git/pull.zsh"}]}
+          - {name: "gpo", checked: true, steps: [{type: symlink, from: "home/aliases/git/gpo.zsh", to: "${HOME}/.dotfiles-home/aliases/git/gpo.zsh"}]}
+          - {name: "uncommit", checked: true, steps: [{type: symlink, from: "home/aliases/git/uncommit.zsh", to: "${HOME}/.dotfiles-home/aliases/git/uncommit.zsh"}]}
+          - {name: "branches", checked: true, steps: [{type: symlink, from: "home/aliases/git/branches.zsh", to: "${HOME}/.dotfiles-home/aliases/git/branches.zsh"}]}
+          - {name: "gecor", checked: true, depends_on: ["Fzf"], steps: [{type: symlink, from: "home/aliases/git/gecor.zsh", to: "${HOME}/.dotfiles-home/aliases/git/gecor.zsh"}]}
+
+      - name: "Aliases: Editors"
+        description: "PhpStorm launcher"
+        checked: true
+        features:
+          - {name: "phpstorm", checked: true, depends_on: ["Phpstorm"], steps: [{type: symlink, from: "home/aliases/editors/phpstorm.zsh", to: "${HOME}/.dotfiles-home/aliases/editors/phpstorm.zsh"}]}
+
+      - name: "Aliases: Config"
+        description: "zshconfig, ohmyzsh, opencodeconfig, claudeconfig"
+        depends_on: ["Vs Code"]
+        checked: true
+        features:
+          - {name: "zshconfig", checked: true, steps: [{type: symlink, from: "home/aliases/config/zshconfig.zsh", to: "${HOME}/.dotfiles-home/aliases/config/zshconfig.zsh"}]}
+          - {name: "ohmyzsh", checked: true, steps: [{type: symlink, from: "home/aliases/config/ohmyzsh.zsh", to: "${HOME}/.dotfiles-home/aliases/config/ohmyzsh.zsh"}]}
+          - {name: "opencodeconfig", checked: true, steps: [{type: symlink, from: "home/aliases/config/opencodeconfig.zsh", to: "${HOME}/.dotfiles-home/aliases/config/opencodeconfig.zsh"}]}
+          - {name: "claudeconfig", checked: true, steps: [{type: symlink, from: "home/aliases/config/claudeconfig.zsh", to: "${HOME}/.dotfiles-home/aliases/config/claudeconfig.zsh"}]}
+
+      - name: "Functions: Git"
+        description: "ghopen, clone, pr, git-prune-local"
+        depends_on: ["Gh", "Fzf"]
+        checked: true
+        steps:
+          - type: symlink
+            from: "home/functions/git.zsh"
+            to: "${HOME}/.dotfiles-home/functions/git.zsh"
+
+      - name: "Functions: Util"
+        description: "mkd, digga, killport, disablesleep-*"
+        basic: true
+        checked: true
+        steps:
+          - type: symlink
+            from: "home/functions/util.zsh"
+            to: "${HOME}/.dotfiles-home/functions/util.zsh"
+
+  # ── Terminal ──────────────────────────────────────────
+  - name: "Terminal"
+    tools:
+      - name: "Ghostty"
+        description: "Terminal emulator"
+        checked: true
+        steps:
+          - type: cask
+            package: ghostty
+          - type: symlink
+            name: "Configuration"
+            from: "config/ghostty/config"
+            to: "${HOME}/.config/ghostty/config"
+
+      - name: "Muxy"
+        description: "Terminal multiplexer"
+        checked: true
+        steps:
+          - type: tap
+            repo: "muxy-app/tap"
+          - type: cask
+            package: "muxy-app/tap/muxy"
+            skip: "test -d /Applications/Muxy.app"
+          - type: symlink
+            name: "Ghostty integration"
+            from: "config/ghostty/config"
+            to: "${HOME}/Library/Application Support/Muxy/ghostty.conf"
+
+      - name: "Tmux"
+        description: "Terminal multiplexer"
+        checked: true
+        steps:
+          - type: brew
+            package: tmux
+          - type: symlink
+            name: "Configuration"
+            from: "config/tmux/tmux.conf"
+            to: "${HOME}/.config/tmux/tmux.conf"
+
+      - name: "Fzf"
+        description: "Fuzzy finder"
+        basic: true
+        checked: true
+        steps:
+          - type: brew
+            package: fzf
+          - type: run
+            name: "Shell integration"
+            command: "$(brew --prefix)/opt/fzf/install --all --no-bash --no-fish"
+            skip: "test -f ${HOME}/.fzf.zsh"
+
+      - name: "Zoxide"
+        description: "Smarter cd"
+        basic: true
+        checked: true
+        steps:
+          - type: brew
+            package: zoxide
+
+      - name: "Tldr"
+        description: "Practical command examples instead of man pages"
+        basic: true
+        checked: true
+        steps:
+          - type: brew
+            package: tlrc
+
+      - name: "Opentmux"
+        description: "tmux session manager wrapper"
+        depends_on: ["Tmux"]
+        checked: true
+        steps:
+          - type: run
+            command: "npm install -g opentmux"
+            skip: "which opentmux"
+
+      - name: "Yazi"
+        description: "Terminal file manager"
+        checked: true
+        steps:
+          - type: brew
+            package: yazi
+          - type: symlink
+            name: "Configuration"
+            from: "config/yazi/yazi.toml"
+            to: "${HOME}/.config/yazi/yazi.toml"
+          - type: symlink
+            name: "Keybindings"
+            from: "config/yazi/keymap.toml"
+            to: "${HOME}/.config/yazi/keymap.toml"
+          - type: symlink
+            name: "Theme"
+            from: "config/yazi/theme.toml"
+            to: "${HOME}/.config/yazi/theme.toml"
+
+  # ── Tools ─────────────────────────────────────────────
+  - name: "Tools"
+    tools:
+      - name: "Bat"
+        description: "cat with syntax highlighting"
+        basic: true
+        checked: true
+        steps:
+          - type: brew
+            package: bat
+
+      - name: "Eza"
+        description: "Modern ls replacement"
+        basic: true
+        checked: true
+        steps:
+          - type: brew
+            package: eza
+
+      - name: "Ripgrep"
+        description: "Fast grep"
+        basic: true
+        checked: true
+        steps:
+          - type: brew
+            package: ripgrep
+
+      - name: "Fd"
+        description: "Fast find alternative"
+        basic: true
+        checked: true
+        steps:
+          - type: brew
+            package: fd
+
+      - name: "Dust"
+        description: "Visual disk usage tree (du replacement)"
+        checked: true
+        steps:
+          - type: brew
+            package: dust
+
+      - name: "Procs"
+        description: "Colorized ps replacement with tree view"
+        checked: true
+        steps:
+          - type: brew
+            package: procs
+
+      - name: "Fileicon"
+        description: "Set custom icons on files and folders"
+        checked: true
+        steps:
+          - type: brew
+            package: fileicon
+
+      - name: "Jq"
+        description: "JSON processor"
+        basic: true
+        checked: true
+        steps:
+          - type: brew
+            package: jq
+
+      - name: "Yq"
+        description: "YAML processor"
+        basic: true
+        checked: true
+        steps:
+          - type: brew
+            package: yq
+
+      - name: "Bottom"
+        description: "System monitor"
+        checked: true
+        steps:
+          - type: brew
+            package: bottom
+
+      - name: "Hyperfine"
+        description: "Command benchmarking tool"
+        checked: true
+        steps:
+          - type: brew
+            package: hyperfine
+
+      - name: "Mole"
+        description: "Mac cleaning app"
+        checked: true
+        steps:
+          - type: brew
+            package: mole
+
+      - name: "Direnv"
+        description: "Per-directory env vars"
+        checked: true
+        steps:
+          - type: brew
+            package: direnv
+
+      - name: "Ffmpeg"
+        description: "Audio/video converter"
+        checked: true
+        steps:
+          - type: brew
+            package: ffmpeg
+
+      - name: "Unar"
+        description: "Multi-format unarchiver"
+        checked: true
+        steps:
+          - type: brew
+            package: unar
+
+  # ── Dev ───────────────────────────────────────────────
+  - name: "Dev"
+    tools:
+      - name: "Pay-respects"
+        description: "Command suggestions and typo fixer (thefuck replacement)"
+        checked: true
+        steps:
+          - type: tap
+            repo: "timescam/tap"
+          - type: brew
+            package: timescam/tap/pay-respects
+            skip: "which pay-respects"
+
+      - name: "Mysql Client"
+        description: "MySQL database CLI"
+        checked: true
+        steps:
+          - type: brew
+            package: mysql-client
+          - type: symlink
+            from: "home/functions/mysql.zsh"
+            to: "${HOME}/.dotfiles-home/functions/mysql.zsh"
+
+      - name: "Sshpass"
+        description: "Non-interactive SSH auth"
+        checked: true
+        steps:
+          - type: brew
+            package: sshpass
+
+      - name: "Nvm"
+        description: "Node version manager (used by Herd)"
+        checked: true
+        steps:
+          - type: brew
+            package: nvm
+
+      - name: "Go"
+        description: "Go programming language"
+        basic: true
+        checked: true
+        steps:
+          - type: brew
+            package: go
+
+      - name: "Bun"
+        description: "JavaScript runtime & package manager"
+        basic: true
+        checked: true
+        steps:
+          - type: brew
+            package: bun
+
+      - name: "Composer"
+        description: "PHP package manager"
+        checked: true
+        profiles: ["personal"]
+        steps:
+          - type: brew
+            package: composer
+        features:
+          - {name: "Alias: cu", checked: true, steps: [{type: symlink, from: "home/aliases/composer/cu.zsh", to: "${HOME}/.dotfiles-home/aliases/composer/cu.zsh"}]}
+          - {name: "Alias: cr", checked: true, steps: [{type: symlink, from: "home/aliases/composer/cr.zsh", to: "${HOME}/.dotfiles-home/aliases/composer/cr.zsh"}]}
+          - {name: "Alias: ci", checked: true, steps: [{type: symlink, from: "home/aliases/composer/ci.zsh", to: "${HOME}/.dotfiles-home/aliases/composer/ci.zsh"}]}
+          - {name: "Alias: cda", checked: true, steps: [{type: symlink, from: "home/aliases/composer/cda.zsh", to: "${HOME}/.dotfiles-home/aliases/composer/cda.zsh"}]}
+
+      - name: "Pipx"
+        description: "Python package runner"
+        basic: true
+        checked: true
+        steps:
+          - type: brew
+            package: pipx
+
+      - name: "Dbngin"
+        description: "Database manager"
+        checked: true
+        profiles: ["personal"]
+        steps:
+          - type: cask
+            package: dbngin
+            skip: "test -d /Applications/DBngin.app"
+
+      - name: "Mysql-to-sqlite3"
+        description: "MySQL to SQLite converter"
+        checked: true
+        profiles: ["personal"]
+        steps:
+          - type: brew
+            package: mysql-to-sqlite3
+
+      - name: "Sqlite3"
+        description: "SQLite CLI"
+        checked: true
+        steps:
+          - type: brew
+            package: sqlite
+
+      - name: "OrbStack"
+        description: "Docker & Linux VMs"
+        checked: true
+        steps:
+          - type: cask
+            package: orbstack
+            skip: "test -d /Applications/OrbStack.app"
+          - type: symlink
+            from: "home/functions/docker.zsh"
+            to: "${HOME}/.dotfiles-home/functions/docker.zsh"
+
+      - name: "Herd"
+        description: "Laravel dev environment"
+        checked: true
+        profiles: ["personal"]
+        steps:
+          - type: cask
+            package: herd
+            skip: "test -d /Applications/Herd.app"
+          - type: symlink
+            from: "config/herd/herd.json"
+            to: "${HOME}/Library/Application Support/Herd/config/herd.json"
+          - type: symlink
+            from: "home/functions/laravel.zsh"
+            to: "${HOME}/.dotfiles-home/functions/laravel.zsh"
+        features:
+          - {name: "Alias: ar", checked: true, steps: [{type: symlink, from: "home/aliases/laravel/ar.zsh", to: "${HOME}/.dotfiles-home/aliases/laravel/ar.zsh"}]}
+          - {name: "Alias: mfs", checked: true, steps: [{type: symlink, from: "home/aliases/laravel/mfs.zsh", to: "${HOME}/.dotfiles-home/aliases/laravel/mfs.zsh"}]}
+          - {name: "Alias: pest", checked: true, steps: [{type: symlink, from: "home/aliases/laravel/pest.zsh", to: "${HOME}/.dotfiles-home/aliases/laravel/pest.zsh"}]}
+          - {name: "Alias: pint", checked: true, steps: [{type: symlink, from: "home/aliases/laravel/pint.zsh", to: "${HOME}/.dotfiles-home/aliases/laravel/pint.zsh"}]}
+
+      - name: "Git Config"
+        description: "Git global settings"
+        depends_on: ["Xcode CLT"]
+        steps:
+          - type: run
+            command: "git config --global user.name '${GitName}'"
+            skip: "git config --global user.name | grep -q ."
+          - type: run
+            command: "git config --global user.email '${GitEmail}'"
+            skip: "git config --global user.email | grep -q @"
+          - type: run
+            command: "git config --global core.pager 'hunk pager'"
+            skip: "git config --global core.pager | grep -q hunk"
+          - type: run
+            name: "GitHub credential helper"
+            command: "gh auth setup-git"
+            skip: "git config --global credential.https://github.com.helper 2>/dev/null | grep -q gh"
+          - type: run
+            command: "git config --global core.autocrlf input"
+            skip: "git config --global core.autocrlf | grep -q input"
+          - type: run
+            command: "git config --global push.autoSetupRemote true"
+            skip: "git config --global push.autoSetupRemote | grep -q true"
+          - type: run
+            command: "git config --global help.autocorrect immediate"
+            skip: "git config --global help.autocorrect | grep -q immediate"
+          - type: run
+            command: "git config --global user.signingkey '${GitGPGKey}'"
+            skip: "git config --global user.signingkey | grep -q ."
+          - type: run
+            command: "git config --global commit.gpgsign true"
+            skip: "git config --global commit.gpgsign | grep -q true"
+
+      - name: "Global .npmrc"
+        description: "npm configuration"
+        depends_on: ["Nvm"]
+        steps:
+          - type: symlink
+            from: "config/npm/.npmrc"
+            to: "${HOME}/.npmrc"
+            skip: "test -f ${HOME}/.npmrc"
+
+  # ── Editors & AI ──────────────────────────────────────
+  - name: "IDEs & AI"
+    tools:
+      - name: "Vs Code"
+        description: "Editor + settings + extensions"
+        checked: true
+        steps:
+          - type: cask
+            package: visual-studio-code
+            skip: "test -d '/Applications/Visual Studio Code.app'"
+          - type: symlink
+            name: "Settings"
+            from: "config/vscode/settings.json"
+            to: "${HOME}/Library/Application Support/Code/User/settings.json"
+          - type: symlink
+            name: "Keybindings"
+            from: "config/vscode/keybindings.json"
+            to: "${HOME}/Library/Application Support/Code/User/keybindings.json"
+          - type: vscode
+            extension: "catppuccin.catppuccin-vsc"
+          - type: vscode
+            extension: "akamud.vscode-theme-onedark"
+          - type: vscode
+            extension: "pkief.material-icon-theme"
+          - type: vscode
+            extension: "bmewburn.vscode-intelephense-client"
+          - type: vscode
+            extension: "laravel.vscode-laravel"
+          - type: vscode
+            extension: "xdebug.php-debug"
+          - type: vscode
+            extension: "bradlc.vscode-tailwindcss"
+          - type: vscode
+            extension: "redhat.vscode-xml"
+          - type: vscode
+            extension: "redhat.vscode-yaml"
+          - type: vscode
+            extension: "aaron-bond.better-comments"
+          - type: vscode
+            extension: "naumovs.color-highlight"
+          - type: vscode
+            extension: "usernamehw.errorlens"
+          - type: vscode
+            extension: "yoavbls.pretty-ts-errors"
+          - type: vscode
+            extension: "biomejs.biome"
+          - type: vscode
+            extension: "christian-kohler.path-intellisense"
+          - type: vscode
+            extension: "mechatroner.rainbow-csv"
+          - type: vscode
+            extension: "waderyan.gitblame"
+          - type: vscode
+            extension: "anthropic.claude-code"
+
+      - name: "Phpstorm"
+        description: "JetBrains PHP IDE"
+        checked: true
+        steps:
+          - type: cask
+            package: phpstorm
+            skip: "test -d /Applications/PhpStorm.app"
+
+      - name: "Neovim"
+        description: "Modern Vim-based editor"
+        checked: true
+        steps:
+          - type: brew
+            package: neovim
+
+      - name: "Claude Code"
+        description: "Claude AI coding agent"
+        checked: true
+        steps:
+          - type: cask
+            package: claude-code
+          - type: symlink
+            name: "Settings"
+            from: "config/claude/settings.json"
+            to: "${HOME}/.claude/settings.json"
+          - type: symlink
+            name: "Skills"
+            from: "config/opencode/skills/"
+            to: "${HOME}/.claude/skills/"
+          - type: symlink
+            name: "Agents"
+            from: "config/opencode/agents/"
+            to: "${HOME}/.claude/agents/"
+      - name: "Codex CLI"
+        description: "OpenAI coding agent for the terminal"
+        checked: true
+        steps:
+          - type: cask
+            package: codex
+            skip: "which codex"
+
+      - name: "Opencode"
+        description: "OpenCode AI coding agent"
+        checked: true
+        steps:
+          - type: brew
+            package: opencode
+          - type: symlink
+            name: "Configuration"
+            from: "config/opencode/opencode.json"
+            to: "${HOME}/.config/opencode/opencode.json"
+          - type: symlink
+            name: "Agent instructions"
+            from: "config/opencode/AGENTS.md"
+            to: "${HOME}/.config/opencode/AGENTS.md"
+          - type: symlink
+            name: "Plugins"
+            from: "config/opencode/plugins/"
+            to: "${HOME}/.config/opencode/plugins/"
+          - type: symlink
+            name: "Skills"
+            from: "config/opencode/skills/"
+            to: "${HOME}/.config/opencode/skills/"
+          - type: symlink
+            name: "Themes"
+            from: "config/opencode/themes/"
+            to: "${HOME}/.config/opencode/themes/"
+          - type: symlink
+            name: "Agents"
+            from: "config/opencode/agents/"
+            to: "${HOME}/.config/opencode/agents/"
+          - type: symlink
+            name: "Commands"
+            from: "config/opencode/commands/"
+            to: "${HOME}/.config/opencode/commands/"
+
+      - name: "Google Antigravity"
+        description: "Agent CLI tool"
+        checked: true
+        steps:
+          - type: brew
+            package: antigravity
+
+      - name: "Grok Build CLI"
+        description: "Grok coding agent CLI"
+        checked: true
+        steps:
+          - type: cask
+            package: grok-build
+            skip: "which grok"
+
+      - name: "Gh"
+        description: "GitHub command-line tool"
+        basic: true
+        checked: true
+        steps:
+          - type: brew
+            package: gh
+
+      - name: "Hunk"
+        description: "Review-first terminal diff viewer"
+        checked: true
+        steps:
+          - type: brew
+            package: hunk
+          - type: symlink
+            name: "Configuration"
+            from: "config/hunk/config.toml"
+            to: "${HOME}/.config/hunk/config.toml"
+
+  # ── Apps ──────────────────────────────────────────────
+  - name: "Apps"
+    tools:
+      - name: "ChatGPT App"
+        description: "OpenAI desktop app with Chat, Work, and Codex"
+        checked: true
+        steps:
+          - type: cask
+            package: chatgpt
+            skip: "test -d /Applications/ChatGPT.app"
+
+      - name: "Claude Code App"
+        description: "Claude desktop app with the Claude Code workspace"
+        checked: true
+        steps:
+          - type: cask
+            package: claude
+            skip: "test -d /Applications/Claude.app"
+
+      - name: "Raycast"
+        description: "App launcher and productivity tool"
+        checked: true
+        steps:
+          - type: cask
+            package: raycast
+            skip: "test -d '/Applications/Raycast.app'"
+
+      - name: "Boring Notch"
+        description: "Notch customization utility"
+        checked: true
+        steps:
+          - type: tap
+            repo: "TheBoredTeam/boring-notch"
+          - type: cask
+            package: "TheBoredTeam/boring-notch/boring-notch"
+            skip: "test -d '/Applications/Boring Notch.app'"
+
+      - name: "AltTab"
+        description: "Window switcher with previews"
+        checked: true
+        steps:
+          - type: cask
+            package: alt-tab
+            skip: "test -d '/Applications/AltTab.app'"
+
+      - name: "Rendercv"
+        description: "LaTeX-based CV/resume renderer"
+        checked: true
+        steps:
+          - type: run
+            command: "pipx install rendercv"
+            skip: "which rendercv"
+
+      - name: "Finetune"
+        description: "Per-app volume mixer"
+        checked: true
+        steps:
+          - type: cask
+            package: finetune
+            skip: "test -d /Applications/Finetune.app"
+
+      - name: "TypeWhisper"
+        description: "Speech-to-text transcription tool"
+        checked: true
+        steps:
+          - type: tap
+            repo: "typewhisper/tap"
+          - type: cask
+            package: "typewhisper/tap/typewhisper"
+            skip: "test -d '/Applications/TypeWhisper.app'"
+
+      - name: "Spotify"
+        description: "Music streaming app"
+        checked: true
+        steps:
+          - type: cask
+            package: spotify
+            skip: "test -d '/Applications/Spotify.app'"
+
+      - name: "Ytsage"
+        description: "Modern YouTube downloader with PySide6 GUI"
+        checked: true
+        steps:
+          - type: run
+            command: "pipx install ytsage"
+            skip: "which ytsage"
+
+      - name: "Castor"
+        description: "Stream web video to your TV via DLNA/Chromecast"
+        checked: true
+        steps:
+          - type: tap
+            repo: "stupside/tap"
+          - type: cask
+            package: stupside/tap/castor
+            skip: "test -f /Applications/Castor.app || which castor"
+
+      - name: "Linear Mouse"
+        description: "Customize mouse buttons, speed, and gestures"
+        checked: true
+        steps:
+          - type: cask
+            package: linearmouse
+            skip: "test -d /Applications/LinearMouse.app"
+
+  # ── System ────────────────────────────────────────────
+  - name: "System"
+    tools:
+      - name: "Finder"
+        description: "Finder preferences"
+        macos: true
+        checked: true
+        steps:
+          - type: run
+            command: "killall Finder 2>/dev/null; true"
+            skip: "killall -0 Finder 2>/dev/null || true"
+          - type: defaults
+            domain: com.apple.finder
+            key: AppleShowAllExtensions
+            value: "true"
+            valueType: bool
+          - type: defaults
+            domain: com.apple.finder
+            key: AppleShowAllFiles
+            value: "true"
+            valueType: bool
+          - type: defaults
+            domain: com.apple.finder
+            key: ShowPathbar
+            value: "true"
+            valueType: bool
+          - type: defaults
+            domain: com.apple.finder
+            key: _FXShowPosixPathInTitle
+            value: "true"
+            valueType: bool
+
+      - name: "Dock"
+        description: "Dock preferences"
+        macos: true
+        checked: true
+        steps:
+          - type: defaults
+            domain: com.apple.dock
+            key: autohide
+            value: "true"
+            valueType: bool
+          - type: defaults
+            domain: com.apple.dock
+            key: show-recents
+            value: "false"
+            valueType: bool
+          - type: defaults
+            domain: com.apple.dock
+            key: orientation
+            value: "left"
+            valueType: string
+
+      - name: "Screenshots"
+        description: "Screenshot preferences"
+        macos: true
+        checked: true
+        steps:
+          - type: defaults
+            domain: com.apple.screencapture
+            key: type
+            value: "png"
+            valueType: string
+          - type: defaults
+            domain: com.apple.screencapture
+            key: location
+            value: "${HOME}/Desktop"
+            valueType: string
+
+      - name: "Text & Input"
+        description: "Keyboard and scroll preferences"
+        macos: true
+        checked: true
+        steps:
+          - type: defaults
+            domain: NSGlobalDomain
+            key: AppleShowScrollBars
+            value: "Always"
+            valueType: string
+          - type: defaults
+            domain: NSGlobalDomain
+            key: KeyRepeat
+            value: "2"
+            valueType: int
+          - type: defaults
+            domain: NSGlobalDomain
+            key: InitialKeyRepeat
+            value: "15"
+            valueType: int
+
+      - name: "Misc"
+        description: "System tweaks"
+        macos: true
+        checked: true
+        steps:
+          - type: defaults
+            domain: com.apple.desktopservices
+            key: DSDontWriteNetworkStores
+            value: "true"
+            valueType: bool
+          - type: defaults
+            domain: com.apple.coreservices.useractivityd
+            key: ActivityCacheAllowed
+            value: "false"
+            valueType: bool

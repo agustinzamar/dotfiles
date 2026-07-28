@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Git identity and the generated configs that carry secrets. Sourced by bin/dot.
+# Git identity and the generated gitconfig. Sourced by bin/dot.
 #
 # Private values live in ~/.dotfiles-custom/vars.json (mode 0600) and are
-# prompted for once. The rendered outputs stay ignored by Git.
+# prompted for once. The rendered output stays ignored by Git.
 
 VARS_FILE="$HOME/.dotfiles-custom/vars.json"
 
@@ -34,11 +34,10 @@ render_git_config() {
 }
 
 setup_git() {
-  local name email gpg_key pat
+  local name email gpg_key
   name=$(ask_var GitName)
   email=$(ask_var GitEmail)
   gpg_key=$(ask_var GitGPGKey)
-  pat=$(ask_var GitHubPAT)
 
   # if/fi rather than `&&`: inside a function under `set -e`, an unset value
   # would abort the run instead of just skipping that setting.
@@ -56,15 +55,9 @@ setup_git() {
 
   if "$DRY_RUN"; then
     echo '+ render config/git/.gitconfig.rendered'
-    echo '+ render config/opencode/opencode.rendered.json'
   else
-    mkdir -p "$DOTFILES_DIR/config/opencode"
-    jq --arg pat "$pat" 'walk(if type == "string" then gsub("\\{\\{ \\.GitHubPAT \\}\\}"; $pat) else . end)' \
-      "$DOTFILES_DIR/config/opencode/opencode.json" >"$DOTFILES_DIR/config/opencode/opencode.rendered.json"
-    chmod 600 "$DOTFILES_DIR/config/opencode/opencode.rendered.json"
     render_git_config "$name" "$email" "$gpg_key"
   fi
 
   link_file config/git/.gitconfig.rendered "$HOME/.gitconfig"
-  link_file config/opencode/opencode.rendered.json "$HOME/.config/opencode/opencode.json"
 }

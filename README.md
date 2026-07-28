@@ -38,7 +38,7 @@ Add `bin/` to your `PATH` to use `dot` from anywhere.
 | `dock` | Apply Dock settings |
 | `doctor` | Check required tools and symlinks |
 | `update` | Pull, upgrade packages, re-run the install |
-| `backup` | Mackup, then commit and push this repo |
+| `backup` | Commit and push this repo |
 | `clean` | Clean up caches |
 | `edit` | Open this repo in `$VISUAL` |
 | `test` | Run the Bats suite |

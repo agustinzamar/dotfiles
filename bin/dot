@@ -34,7 +34,7 @@ sub_help() {
   echo "Usage: $BIN_NAME <command> [--dry-run]"
   echo
   echo "Commands:"
-  echo "   backup           Back up with Mackup, then commit and push this repo"
+  echo "   backup           Commit and push this repo"
   echo "   brew             Install Homebrew and the shared package set"
   echo "   brew-personal    Install the personal-only package set"
   echo "   clean            Clean up caches (brew, npm)"
@@ -162,7 +162,6 @@ sub_update() {
 }
 
 sub_backup() {
-  run mackup backup dotfiles-custom --force || echo "mackup backup failed; continuing with git"
   if [[ -z "$(git -C "$DOTFILES_DIR" status --porcelain)" ]]; then
     echo "No changes to commit."
     return 0

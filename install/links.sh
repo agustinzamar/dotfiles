@@ -36,6 +36,7 @@ all_links() {
 		config/claude/settings.json|$HOME/.claude/settings.json
 		config/opencode/skills|$HOME/.claude/skills
 		config/opencode/agents|$HOME/.claude/agents
+		config/opencode/opencode.json|$HOME/.config/opencode/opencode.json
 		config/opencode/AGENTS.md|$HOME/.config/opencode/AGENTS.md
 		config/opencode/plugins|$HOME/.config/opencode/plugins
 		config/opencode/skills|$HOME/.config/opencode/skills
@@ -43,7 +44,6 @@ all_links() {
 		config/opencode/agents|$HOME/.config/opencode/agents
 		config/opencode/commands|$HOME/.config/opencode/commands
 		config/hunk/config.toml|$HOME/.config/hunk/config.toml
-		config/mackup/dotfiles-custom.cfg|$HOME/.mackup/dotfiles-custom.cfg
 	EOF
 }
 

@@ -158,7 +158,7 @@ fi
 
 # === Added by dotfiles ===
 
-for f in "${HOME}"/.dotfiles-home/aliases/*.zsh(N); do source "$f"; done
+for f in "${HOME}"/.dotfiles-home/aliases/**/*.zsh(N); do source "$f"; done
 for f in "${HOME}"/.dotfiles-home/functions/*.zsh(N); do source "$f"; done
 
 # Load private custom configs (not committed)
