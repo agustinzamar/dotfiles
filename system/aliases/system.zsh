@@ -1,6 +1,5 @@
+alias reload="source ~/.zshrc"
 alias sudo='sudo '
-alias hostfile="code /etc/hosts"
-alias sshconfig="code ~/.ssh/config"
 alias mysqlroot='mysql -u root -h 127.0.0.1'
 
 alias flushdns="sudo dscacheutil -flushcache; sudo killall -HUP mDNSResponder"

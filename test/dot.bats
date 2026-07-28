@@ -47,6 +47,70 @@ setup() {
   done
 }
 
+# duti reads a file with no final newline as an unterminated extra line and
+# fails with "line too long". .editorconfig asks for one; nothing enforced it.
+@test "every package file ends with a newline" {
+  local file bad=0
+  for file in "$DOTFILES_DIR"/install/duti \
+    "$DOTFILES_DIR"/install/npmfile \
+    "$DOTFILES_DIR"/install/Codefile \
+    "$DOTFILES_DIR"/install/topics/* \
+    "$DOTFILES_DIR"/install/topics/optional/*; do
+    [ -f "$file" ] || continue
+    [ -z "$(tail -c 1 "$file")" ] || {
+      echo "no final newline: ${file#"$DOTFILES_DIR"/}"
+      bad=1
+    }
+  done
+  [ "$bad" -eq 0 ]
+}
+
+# `brew "chatgpt"` on a cask fails only once a real install reaches it, which
+# is how three casks sat in the AI topic declared as formulae.
+@test "every package is declared with the right type" {
+  command -v brew >/dev/null || skip "brew not installed"
+  local file line name wrong=0
+  for file in "$DOTFILES_DIR"/install/topics/* "$DOTFILES_DIR"/install/topics/optional/*; do
+    [ -f "$file" ] || continue
+    while IFS= read -r line; do
+      case "$line" in
+        'brew "'*)
+          name=${line#brew \"}
+          name=${name%\"}
+          brew info --formula "$name" >/dev/null 2>&1 || {
+            echo "$(basename "$file"): brew \"$name\" is not a formula"
+            wrong=1
+          }
+          ;;
+        'cask "'*)
+          name=${line#cask \"}
+          name=${name%\"}
+          brew info --cask "$name" >/dev/null 2>&1 || {
+            echo "$(basename "$file"): cask \"$name\" is not a cask"
+            wrong=1
+          }
+          ;;
+      esac
+    done < "$file"
+  done
+  [ "$wrong" -eq 0 ]
+}
+
+# A broken package used to abort the run before `link`, leaving the shell
+# sourcing symlinks that no longer resolve.
+@test "a failing topic does not stop the rest of the install" {
+  local stub
+  stub="$(mktemp -d)"
+  printf '#!/bin/sh\nexit 1\n' > "$stub/brew"
+  chmod +x "$stub/brew"
+
+  PATH="$stub:$PATH" HOME="$(mktemp -d)" run "$DOT" install
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Linking dotfiles"* ]]
+  [[ "$output" == *"Finished with failures:"* ]]
+  [[ "$output" == *"brew"* ]]
+}
+
 # The whole point of optional/: a machine opts in by name, `brew` never does.
 @test "brew installs every default topic and no optional one" {
   local topic

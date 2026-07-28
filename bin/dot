@@ -63,16 +63,18 @@ sub_help() {
   done < <(optional_topics)
 }
 
+# One broken package should not cost you the symlinks: run every phase, then
+# report. Exits non-zero so CI and `make install` still fail loudly.
 sub_install() {
-  sub_brew
-  sub_link
-  sub_zsh
-  sub_tools
-  sub_npm
-  sub_code
-  sub_macos
-  sub_dock
-  sub_duti
+  local phase failures=()
+  for phase in brew link zsh tools npm code macos dock duti; do
+    "sub_$phase" || failures+=("$phase")
+  done
+
+  if ((${#failures[@]})); then
+    log "Finished with failures: ${failures[*]}"
+    return 1
+  fi
   log "Installation complete"
 }
 
@@ -128,8 +130,15 @@ sub_brew() {
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   fi
 
-  local topic
-  while read -r topic; do install_topic "$topic"; done < <(topics)
+  local topic failures=()
+  while read -r topic; do
+    install_topic "$topic" || failures+=("$topic")
+  done < <(topics)
+
+  if ((${#failures[@]})); then
+    echo "topics that failed: ${failures[*]}" >&2
+    return 1
+  fi
 }
 
 # The package files are plain lists: one name per line, `#` comments and blank

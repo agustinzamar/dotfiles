@@ -1,6 +1,3 @@
 # PHP and Laravel local development
-brew "composer"
-brew "mysql-to-sqlite3"
-
 cask "herd"
 cask "dbngin"

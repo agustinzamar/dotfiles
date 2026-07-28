@@ -125,73 +125,25 @@ export NVM_DIR="$HOME/Library/Application Support/Herd/config/nvm"
 
 [[ -f "/Applications/Herd.app/Contents/Resources/config/shell/zshrc.zsh" ]] && builtin source "/Applications/Herd.app/Contents/Resources/config/shell/zshrc.zsh"
 
-# Herd injected PHP binary.
-export PATH="$HOME/Library/Application Support/Herd/bin/":$PATH
-
-# Herd injected PHP 8.1 configuration.
-export HERD_PHP_81_INI_SCAN_DIR="$HOME/Library/Application Support/Herd/config/php/81/"
-
-# Herd injected PHP 8.2 configuration.
-export HERD_PHP_82_INI_SCAN_DIR="$HOME/Library/Application Support/Herd/config/php/82/"
-
-# Herd injected PHP 8.3 configuration.
-export HERD_PHP_83_INI_SCAN_DIR="$HOME/Library/Application Support/Herd/config/php/83/"
-
-# Herd injected PHP 8.4 configuration.
-export HERD_PHP_84_INI_SCAN_DIR="$HOME/Library/Application Support/Herd/config/php/84/"
-
-# Opencode Completions
-_opencode_yargs_completions()
-{
-  local reply
-  local si=$IFS
-  IFS=$'
-' reply=($(COMP_CWORD="$((CURRENT-1))" COMP_LINE="$BUFFER" COMP_POINT="$CURSOR" opencode --get-yargs-completions "${words[@]}"))
-  IFS=$si
-  if [[ ${#reply} -gt 0 ]]; then
-    _describe 'values' reply
-  else
-    _default
-  fi
-}
-
-if [[ "'${zsh_eval_context[-1]}" == "loadautofunc" ]]; then
-  _opencode_yargs_completions "$@"
-else
-  compdef _opencode_yargs_completions opencode
-fi
-
 # Hook inits
 if command -v direnv &> /dev/null; then
     eval "$(direnv hook zsh)"
-fi
-if command -v pay-respects &> /dev/null; then
-    eval "$(pay-respects zsh --alias)"
 fi
 
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
-# Added by Antigravity CLI installer
-export PATH="/Users/agustin/.local/bin:$PATH"
-
-# >>> grok installer >>>
-export PATH="$HOME/.grok/bin:$PATH"
-# <<< grok installer <<<
-
-
-
 # Herd injected PHP 8.4 configuration.
 export HERD_PHP_84_INI_SCAN_DIR="/Users/agustin/Library/Application Support/Herd/config/php/84/"
-
 
 # Herd injected PHP 8.3 configuration.
 export HERD_PHP_83_INI_SCAN_DIR="/Users/agustin/Library/Application Support/Herd/config/php/83/"
 
-
 # Herd injected PHP 8.2 configuration.
 export HERD_PHP_82_INI_SCAN_DIR="/Users/agustin/Library/Application Support/Herd/config/php/82/"
 
-
 # Herd injected PHP 8.1 configuration.
 export HERD_PHP_81_INI_SCAN_DIR="/Users/agustin/Library/Application Support/Herd/config/php/81/"
+
+# FZF configuration
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
