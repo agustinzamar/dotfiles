@@ -1,6 +1,7 @@
 # Languages, runtimes, editors, and the tooling `dot test` needs
 brew "make"
 brew "go"
+brew "node"
 brew "bun"
 brew "pnpm"
 brew "npm-check-updates"
