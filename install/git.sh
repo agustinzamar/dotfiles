@@ -10,7 +10,8 @@ set_git_config() {
   if [[ "$(git config --global "$key" 2>/dev/null)" == "$value" ]]; then
     return 0
   fi
-  run git config --global "$key" "$value"
+  run git config --global --replace-all "$key" "$value" 2>/dev/null ||
+    run git config --global "$key" "$value"
 }
 
 install_git() {
