@@ -1,4 +1,7 @@
 # Herd: PHP binaries, NVM, the shell integration, and the per-version ini dirs.
+#
+# NVM (loaded below) prepends its Node dir to PATH, so Herd's Node takes
+# precedence over /opt/homebrew/bin/node from `brew install node`.
 
 # Ahead of /opt/homebrew/bin, so `php` is Herd's switchable one (php, php82..85)
 # rather than whatever Homebrew pulled in as a dependency.
