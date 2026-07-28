@@ -58,6 +58,16 @@ sudo systemsetup -setusingnetworktime on
 # Restart automatically if the computer freezes (Error:-99 can be ignored)
 sudo systemsetup -setrestartfreeze on 2>/dev/null
 
+# Touch ID for sudo. sudo_local is the supported place for this: unlike
+# /etc/pam.d/sudo it is not replaced by OS updates. Appended rather than
+# written so any other local rules survive.
+if ! grep -qs '^auth.*pam_tid' /etc/pam.d/sudo_local; then
+  if [ ! -f /etc/pam.d/sudo_local ]; then
+    printf '# sudo_local: local customizations for sudo\n' | sudo tee /etc/pam.d/sudo_local >/dev/null
+  fi
+  printf 'auth       sufficient     pam_tid.so\n' | sudo tee -a /etc/pam.d/sudo_local >/dev/null
+fi
+
 # Menu bar: show battery percentage
 defaults write com.apple.menuextra.battery ShowPercent YES
 

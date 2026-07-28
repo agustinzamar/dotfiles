@@ -4,3 +4,5 @@ alias zshconfig="code ~/.zshrc"
 alias ohmyzsh="code ~/.oh-my-zsh"
 alias occonfig="code ~/.config/opencode/opencode.json"
 alias clconfig="code ~/.claude/CLAUDE.md"
+
+alias reload="source ~/.zshrc"

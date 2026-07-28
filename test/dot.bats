@@ -114,19 +114,35 @@ setup() {
   [ "$wrong" -eq 0 ]
 }
 
-# A broken package used to abort the run before `link`, leaving the shell
-# sourcing symlinks that no longer resolve.
-@test "a failing topic does not stop the rest of the install" {
+# A broken package used to abort the run, so `link` never ran and the shell
+# kept sourcing symlinks that no longer resolved.
+#
+# Scoped to `brew`, deliberately. Testing this through `dot install` means
+# really running sub_macos, which sources system/macos/_defaults.sh and writes
+# a few hundred settings to the preferences of whoever runs the suite.
+@test "a failing topic does not stop the other topics" {
   local stub
   stub="$(mktemp -d)"
   printf '#!/bin/sh\nexit 1\n' > "$stub/brew"
   chmod +x "$stub/brew"
 
-  PATH="$stub:$PATH" HOME="$(mktemp -d)" run "$DOT" install
+  PATH="$stub:$PATH" run "$DOT" brew
   [ "$status" -eq 1 ]
-  [[ "$output" == *"Linking dotfiles"* ]]
-  [[ "$output" == *"Finished with failures:"* ]]
-  [[ "$output" == *"brew"* ]]
+  [[ "$output" == *"topics that failed:"* ]]
+  # Every topic was attempted rather than the run stopping at the first.
+  [[ "$output" == *"ai"* && "$output" == *"system"* ]]
+}
+
+# The phase list drives the loop that collects failures; if a phase is dropped
+# from it, install silently stops doing that work.
+@test "install runs every phase through the failure-collecting loop" {
+  local phase
+  for phase in brew link zsh tools npm code macos dock duti; do
+    grep -q "for phase in .*\b$phase\b" "$DOT" || {
+      echo "phase '$phase' missing from the install loop"
+      return 1
+    }
+  done
 }
 
 # The whole point of optional/: a machine opts in by name, `brew` never does.
