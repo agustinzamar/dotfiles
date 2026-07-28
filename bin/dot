@@ -316,6 +316,7 @@ sub_install_ai() {
 
   $do_skills && _install_skills "$target"
   $do_plugins && _install_plugins "$target"
+  return 0
 }
 
 sub_full() {

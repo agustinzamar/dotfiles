@@ -259,6 +259,28 @@ setup() {
   [ -z "$(find "$home" -mindepth 1)" ]
 }
 
+@test "AI skills target selected agent" {
+  run "$DOT" install ai claude --skills --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"--agent claude-code"* ]]
+  [[ "$output" != *"Plugin [claude]"* ]]
+}
+
+@test "AI plugins target selected tool" {
+  run "$DOT" install ai codex --plugins --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Plugin [codex]"* ]]
+  [[ "$output" == *"Codex"* ]]
+  [[ "$output" != *"Installing skill"* ]]
+}
+
+@test "AI accepts both customization flags" {
+  run "$DOT" install ai opencode --skills --plugins --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"--agent opencode"* ]]
+  [[ "$output" == *"Plugin [opencode]"* ]]
+}
+
 @test "link and unlink round-trip" {
   local home
   home="$(mktemp -d)"
