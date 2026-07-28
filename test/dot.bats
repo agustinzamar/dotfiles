@@ -94,16 +94,36 @@ setup() {
   [ "$(cat "$home"/.dotfiles-backup/*/.config/ghostty/config)" = "original" ]
 }
 
-@test "is-executable detects present and absent commands" {
-  run "$DOTFILES_DIR/bin/is-executable" bash
+# Renaming a shell file leaves the old symlink dangling; zsh matches it and
+# fails to source it on every prompt.
+@test "link prunes shell symlinks whose source is gone" {
+  home="$(mktemp -d)"
+  mkdir -p "$home/.dotfiles-home/aliases"
+  ln -s "$DOTFILES_DIR/system/aliases/gone.zsh" "$home/.dotfiles-home/aliases/gone.zsh"
+  HOME="$home" run "$DOT" link-shell
   [ "$status" -eq 0 ]
-  run "$DOTFILES_DIR/bin/is-executable" definitely-not-installed-xyz
-  [ "$status" -eq 1 ]
+  [ ! -L "$home/.dotfiles-home/aliases/gone.zsh" ]
 }
 
-@test "is-supported echoes the matching branch" {
-  run "$DOTFILES_DIR/bin/is-supported" true yes no
-  [ "$output" = "yes" ]
-  run "$DOTFILES_DIR/bin/is-supported" false yes no
-  [ "$output" = "no" ]
+# Stale links point through ~/.dotfiles or at an old clone, not at
+# $DOTFILES_DIR, so the sweep must not match on the target path.
+@test "link prunes a stale symlink pointing at another clone" {
+  home="$(mktemp -d)"
+  mkdir -p "$home/.dotfiles-home/functions"
+  ln -s /somewhere/else/dotfiles/system/functions/old.zsh \
+    "$home/.dotfiles-home/functions/old.zsh"
+  HOME="$home" run "$DOT" link-shell
+  [ "$status" -eq 0 ]
+  [ ! -L "$home/.dotfiles-home/functions/old.zsh" ]
+}
+
+# A link that still resolves is left alone, stale-looking target or not.
+@test "link leaves resolving symlinks alone" {
+  home="$(mktemp -d)"
+  mkdir -p "$home/.dotfiles-home/aliases"
+  echo "alias x=y" > "$home/real.zsh"
+  ln -s "$home/real.zsh" "$home/.dotfiles-home/aliases/keep.zsh"
+  HOME="$home" run "$DOT" link-shell
+  [ "$status" -eq 0 ]
+  [ -L "$home/.dotfiles-home/aliases/keep.zsh" ]
 }

@@ -1,4 +1,0 @@
-#!/usr/bin/env bash
-# Exit 0 on Apple Silicon.
-
-[ "$(uname -m)" = "arm64" ]

@@ -6,7 +6,7 @@ SHELL := /bin/bash
 # with, so a bare `dot` is not found.
 DOT := $(DOTFILES_DIR)/bin/dot
 
-SCRIPTS := bin/dot bin/is-* lib/*.sh install/*.sh system/macos/*.sh install.sh
+SCRIPTS := bin/dot install/*.sh system/macos/*.sh install.sh
 
 # `install` and `test` are also directory names, so these must stay phony.
 .PHONY: install link unlink update doctor backup test check lint

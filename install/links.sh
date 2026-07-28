@@ -54,6 +54,30 @@ _walk_links() {
   done < <("$1")
 }
 
-link_shell() { _walk_links shell_links link_file; }
-link_all() { _walk_links all_links link_file; }
+# The shell files are globbed, not listed, so renaming one leaves the old
+# symlink behind pointing at a source that no longer exists. Zsh still matches
+# it and fails to source it on every prompt, so sweep those after linking.
+#
+# Any dangling link here is ours: link_file creates every entry under
+# .dotfiles-home and nothing else writes there. Matching on the target path
+# would miss the stale ones, which point through ~/.dotfiles or at a previous
+# clone rather than at $DOTFILES_DIR.
+prune_shell_links() {
+  local link
+  for link in "$HOME"/.dotfiles-home/aliases/* "$HOME"/.dotfiles-home/functions/*; do
+    [[ -L "$link" && ! -e "$link" ]] && run rm "$link"
+  done
+  return 0
+}
+
+link_shell() {
+  _walk_links shell_links link_file
+  prune_shell_links
+}
+
+link_all() {
+  _walk_links all_links link_file
+  prune_shell_links
+}
+
 unlink_all() { _walk_links all_links unlink_file; }

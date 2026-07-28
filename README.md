@@ -17,7 +17,8 @@ On a personal machine, follow up with the personal-only packages:
 bin/dot brew-personal
 ```
 
-Add `bin/` to your `PATH` to use `dot` from anywhere.
+`system/.exports` puts `~/.dotfiles/bin` on your `PATH`, so `dot` works from
+anywhere once the shell configs are linked and the shell has been restarted.
 
 ## Usage
 
@@ -59,8 +60,7 @@ dot link --dry-run
 ## Layout
 
 - `bin/dot` — the CLI; one `sub_<command>` function per command
-- `bin/is-*` — small predicates (`is-macos`, `is-executable`, …)
-- `lib/common.sh` — `run`, `log`, `link_file`; the only copies
+- `install/common.sh` — `run`, `log`, `link_file`; the only copies
 - `install/` — package lists (`Brewfile`, `Caskfile`, `Codefile`, `npmfile`,
   `duti`) plus the per-topic install steps
 - `config/` — application configuration

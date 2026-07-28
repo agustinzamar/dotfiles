@@ -2,7 +2,7 @@
 # Shared helpers for bin/dot. Sourced, never executed.
 # Expects DOTFILES_DIR and DRY_RUN to be exported by bin/dot.
 
-: "${DOTFILES_DIR:?lib/common.sh requires DOTFILES_DIR}"
+: "${DOTFILES_DIR:?install/common.sh requires DOTFILES_DIR}"
 : "${DRY_RUN:=false}"
 
 BACKUP_DIR="$HOME/.dotfiles-backup/$(date +%Y%m%dT%H%M%S)"
@@ -19,6 +19,8 @@ run() {
 }
 
 log() { printf '\n==> %s\n' "$*"; }
+
+is_executable() { type "$1" >/dev/null 2>&1; }
 
 defaults_write() { run defaults write "$1" "$2" "-$3" "$4"; }
 

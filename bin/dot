@@ -5,7 +5,6 @@ set -Eeuo pipefail
 BIN_NAME=$(basename "$0")
 DOTFILES_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 export DOTFILES_DIR
-export PATH="$DOTFILES_DIR/bin:$PATH"
 
 # --dry-run is global: pull it out before working out which subcommand ran.
 DRY_RUN=false
@@ -19,8 +18,8 @@ done
 export DRY_RUN
 set -- ${args[@]+"${args[@]}"}
 
-# shellcheck source=../lib/common.sh
-. "$DOTFILES_DIR/lib/common.sh"
+# shellcheck source=../install/common.sh
+. "$DOTFILES_DIR/install/common.sh"
 # shellcheck source=../install/links.sh
 . "$DOTFILES_DIR/install/links.sh"
 # shellcheck source=../install/zsh.sh
@@ -69,7 +68,7 @@ sub_install() {
 
 sub_brew() {
   log "Installing Homebrew"
-  if is-executable brew; then
+  if is_executable brew; then
     :
   elif "$DRY_RUN"; then
     echo '+ install Homebrew'
@@ -89,7 +88,7 @@ read_package_file() {
 }
 
 sub_npm() {
-  is-executable npm || return 0
+  is_executable npm || return 0
   log "Installing global npm packages"
   local package
   while read -r package; do
@@ -98,7 +97,7 @@ sub_npm() {
 }
 
 sub_code() {
-  is-executable code || return 0
+  is_executable code || return 0
   log "Installing VS Code extensions"
   local installed extension
   installed=$(code --list-extensions 2>/dev/null | tr '[:upper:]' '[:lower:]')
@@ -109,7 +108,7 @@ sub_code() {
 }
 
 sub_duti() {
-  is-executable duti || return 0
+  is_executable duti || return 0
   log "Setting default apps for file types"
   run duti -v "$DOTFILES_DIR/install/duti"
 }
@@ -176,6 +175,12 @@ sub_doctor() {
   }
 
   for command in brew git zsh; do check "$command"; done
+  # Catches system/.exports not being linked, or the shell not having been
+  # restarted since it was.
+  is_executable dot || {
+    echo "not on PATH: dot (link system/.exports, then restart your shell)"
+    failed=1
+  }
   check_link config/zsh/.zshrc "$HOME/.zshrc"
   check_link config/p10k/.p10k.zsh "$HOME/.p10k.zsh"
   check_link config/ghostty/config "$HOME/.config/ghostty/config"
@@ -187,7 +192,7 @@ sub_doctor() {
 
 sub_update() {
   run git -C "$DOTFILES_DIR" pull
-  if is-executable topgrade; then
+  if is_executable topgrade; then
     run topgrade
   else
     run brew update
@@ -207,9 +212,9 @@ sub_backup() {
 }
 
 sub_clean() {
-  if is-executable mole; then run mole clean; fi
+  if is_executable mole; then run mole clean; fi
   run brew cleanup
-  if is-executable npm; then run npm cache clean --force; fi
+  if is_executable npm; then run npm cache clean --force; fi
 }
 
 sub_edit() {
