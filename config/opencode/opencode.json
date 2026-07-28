@@ -27,6 +27,7 @@
   "plugin": [
     "opencode-kilo-auth@latest",
     "superpowers@git+https://github.com/obra/superpowers.git",
+    "@dietrichgebert/ponytail",
     "@tarquinen/opencode-dcp@latest",
     "@nick-vi/opencode-type-inject",
     "opencode-pty",
