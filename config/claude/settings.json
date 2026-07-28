@@ -1,64 +1,56 @@
 {
-  "enabledPlugins" : {
-    "frontend-design@claude-plugins-official" : true
-  },
-  "extraKnownMarketplaces" : {
-    "caveman" : {
-      "source" : {
-        "repo" : "JuliusBrussee\/caveman",
-        "source" : "github"
-      }
-    }
-  },
-  "hooks" : {
-    "Notification" : [
+  "enabledPlugins": {},
+  "extraKnownMarketplaces": {},
+  "defaultModel": "opusplan",
+  "hooks": {
+    "Notification": [
       {
-        "hooks" : [
+        "hooks": [
           {
-            "command" : "'\/Applications\/Muxy.app\/Contents\/Resources\/Muxy_Muxy.bundle\/muxy-claude-hook.sh' notification # muxy-notification-hook",
-            "timeout" : 10,
-            "type" : "command"
+            "command": "'\/Applications\/Muxy.app\/Contents\/Resources\/Muxy_Muxy.bundle\/muxy-claude-hook.sh' notification # muxy-notification-hook",
+            "timeout": 10,
+            "type": "command"
           }
         ],
-        "matcher" : ""
+        "matcher": ""
       }
     ],
-    "PreToolUse" : [
+    "PreToolUse": [
       {
-        "hooks" : [
+        "hooks": [
           {
-            "command" : "'\/Applications\/Muxy.app\/Contents\/Resources\/Muxy_Muxy.bundle\/muxy-claude-hook.sh' pre-tool-use # muxy-notification-hook",
-            "timeout" : 10,
-            "type" : "command"
+            "command": "'\/Applications\/Muxy.app\/Contents\/Resources\/Muxy_Muxy.bundle\/muxy-claude-hook.sh' pre-tool-use # muxy-notification-hook",
+            "timeout": 10,
+            "type": "command"
           }
         ],
-        "matcher" : ""
+        "matcher": ""
       }
     ],
-    "Stop" : [
+    "Stop": [
       {
-        "hooks" : [
+        "hooks": [
           {
-            "command" : "'\/Applications\/Muxy.app\/Contents\/Resources\/Muxy_Muxy.bundle\/muxy-claude-hook.sh' stop # muxy-notification-hook",
-            "timeout" : 10,
-            "type" : "command"
+            "command": "'\/Applications\/Muxy.app\/Contents\/Resources\/Muxy_Muxy.bundle\/muxy-claude-hook.sh' stop # muxy-notification-hook",
+            "timeout": 10,
+            "type": "command"
           }
         ],
-        "matcher" : ""
+        "matcher": ""
       }
     ],
-    "UserPromptSubmit" : [
+    "UserPromptSubmit": [
       {
-        "hooks" : [
+        "hooks": [
           {
-            "command" : "'\/Applications\/Muxy.app\/Contents\/Resources\/Muxy_Muxy.bundle\/muxy-claude-hook.sh' user-prompt-submit # muxy-notification-hook",
-            "timeout" : 10,
-            "type" : "command"
+            "command": "'\/Applications\/Muxy.app\/Contents\/Resources\/Muxy_Muxy.bundle\/muxy-claude-hook.sh' user-prompt-submit # muxy-notification-hook",
+            "timeout": 10,
+            "type": "command"
           }
         ],
-        "matcher" : ""
+        "matcher": ""
       }
     ]
   },
-  "model" : "opusplan"
+  "model": "opusplan"
 }

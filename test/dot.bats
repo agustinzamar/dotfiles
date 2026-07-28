@@ -30,6 +30,20 @@ setup() {
   done < <("$DOT" help | sed -n 's/^   \([a-z-]*\) .*/\1/p' | grep -v '^help$')
 }
 
+# Deleting a config without removing its line from the map leaves the target a
+# dangling symlink after `dot link`. That is how ~/.claude/skills broke.
+@test "every source in the link map exists" {
+  local source target missing=0
+  while IFS='|' read -r source target; do
+    [ -n "$source" ] || continue
+    [ -e "$DOTFILES_DIR/$source" ] || {
+      echo "missing source: $source"
+      missing=1
+    }
+  done < <(DOTFILES_DIR="$DOTFILES_DIR" bash -c '. "$0/install/links.sh"; all_links' "$DOTFILES_DIR")
+  [ "$missing" -eq 0 ]
+}
+
 @test "an unknown command exits 1" {
   run "$DOT" definitely-not-a-command
   [ "$status" -eq 1 ]

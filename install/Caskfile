@@ -1,0 +1,31 @@
+# Terminal
+cask "ghostty"
+
+# IDEs
+cask "visual-studio-code"
+cask "phpstorm"
+
+# Services
+cask "orbstack"
+
+# Browsers
+cask "google-chrome"
+cask "brave-browser"
+cask "firefox"
+
+# System Enhancements
+cask "raycast"
+cask "alt-tab"
+cask "linearmouse"
+cask "finetune"
+
+# Media
+cask "spotify"
+cask "stupside/tap/castor"
+cask "stremio"
+cask "vlc"
+
+# Communication
+cask "discord"
+cask "telegram"
+cask "whatsapp"

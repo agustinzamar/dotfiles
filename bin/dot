@@ -27,26 +27,26 @@ set -- ${args[@]+"${args[@]}"}
 . "$DOTFILES_DIR/install/zsh.sh"
 # shellcheck source=../install/tools.sh
 . "$DOTFILES_DIR/install/tools.sh"
-# shellcheck source=../install/git.sh
-. "$DOTFILES_DIR/install/git.sh"
 
 sub_help() {
   echo "Usage: $BIN_NAME <command> [--dry-run]"
   echo
   echo "Commands:"
   echo "   backup           Commit and push this repo"
-  echo "   brew             Install Homebrew and the shared package set"
+  echo "   brew             Install Homebrew, the formulae and the casks"
   echo "   brew-personal    Install the personal-only package set"
-  echo "   clean            Clean up caches (brew, npm)"
+  echo "   clean            Clean up caches"
+  echo "   code             Install the VS Code extensions in install/Codefile"
   echo "   dock             Apply macOS Dock settings"
   echo "   doctor           Check that required tools and symlinks are in place"
+  echo "   duti             Set default apps for file types"
   echo "   edit             Open dotfiles in \$VISUAL"
-  echo "   git              Configure Git identity and render generated configs"
   echo "   help             This help message"
-  echo "   install          Run the full install (brew, link, zsh, tools, git, macos)"
+  echo "   install          Run the full install"
   echo "   link             Symlink every config into place"
   echo "   link-shell       Symlink the shell configs only"
   echo "   macos            Apply macOS system defaults"
+  echo "   npm              Install the global packages in install/npmfile"
   echo "   test             Run tests"
   echo "   tools            Install tools Homebrew Bundle does not cover"
   echo "   unlink           Remove symlinks that point into this repo"
@@ -59,9 +59,11 @@ sub_install() {
   sub_link
   sub_zsh
   sub_tools
-  sub_git
+  sub_npm
+  sub_code
   sub_macos
   sub_dock
+  sub_duti
   log "Installation complete"
 }
 
@@ -75,8 +77,41 @@ sub_brew() {
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   fi
 
-  log "Installing packages"
+  log "Installing formulae and casks"
   run brew bundle --file="$DOTFILES_DIR/install/Brewfile"
+  run brew bundle --file="$DOTFILES_DIR/install/Caskfile"
+}
+
+# The package files are plain lists: one name per line, `#` comments and blank
+# lines ignored. Keeping them as data means adding a package is a one-line diff.
+read_package_file() {
+  sed -e 's/#.*//' -e 's/[[:space:]]*$//' "$1" | grep -v '^$' || true
+}
+
+sub_npm() {
+  is-executable npm || return 0
+  log "Installing global npm packages"
+  local package
+  while read -r package; do
+    npm list -g --depth=0 "$package" >/dev/null 2>&1 || run npm install -g "$package"
+  done < <(read_package_file "$DOTFILES_DIR/install/npmfile")
+}
+
+sub_code() {
+  is-executable code || return 0
+  log "Installing VS Code extensions"
+  local installed extension
+  installed=$(code --list-extensions 2>/dev/null | tr '[:upper:]' '[:lower:]')
+  while read -r extension; do
+    grep -qxF "$(tr '[:upper:]' '[:lower:]' <<<"$extension")" <<<"$installed" ||
+      run code --install-extension "$extension"
+  done < <(read_package_file "$DOTFILES_DIR/install/Codefile")
+}
+
+sub_duti() {
+  is-executable duti || return 0
+  log "Setting default apps for file types"
+  run duti -v "$DOTFILES_DIR/install/duti"
 }
 
 sub_brew_personal() {
@@ -109,16 +144,11 @@ sub_tools() {
   install_tools
 }
 
-sub_git() {
-  log "Configuring Git"
-  setup_git
-}
-
 sub_macos() {
   local file
-  for file in "$DOTFILES_DIR"/macos/defaults*.sh; do
+  for file in "$DOTFILES_DIR"/system/macos/defaults*.sh; do
     log "Applying ${file#"$DOTFILES_DIR"/}"
-    # shellcheck source=../macos/defaults.sh
+    # shellcheck source=../system/macos/defaults.sh
     . "$file"
   done
   echo "Some changes may require a logout or restart to take effect."
@@ -126,8 +156,8 @@ sub_macos() {
 
 sub_dock() {
   log "Applying Dock settings"
-  # shellcheck source=../macos/dock.sh
-  . "$DOTFILES_DIR/macos/dock.sh"
+  # shellcheck source=../system/macos/dock.sh
+  . "$DOTFILES_DIR/system/macos/dock.sh"
 }
 
 sub_doctor() {
@@ -145,19 +175,24 @@ sub_doctor() {
     }
   }
 
-  for command in brew git zsh jq; do check "$command"; done
+  for command in brew git zsh; do check "$command"; done
   check_link config/zsh/.zshrc "$HOME/.zshrc"
   check_link config/p10k/.p10k.zsh "$HOME/.p10k.zsh"
   check_link config/ghostty/config "$HOME/.config/ghostty/config"
   check_link config/tmux/tmux.conf "$HOME/.config/tmux/tmux.conf"
+  check_link config/git/config "$HOME/.config/git/config"
   if ((failed == 0)); then echo "dotfiles: healthy"; fi
   return "$failed"
 }
 
 sub_update() {
   run git -C "$DOTFILES_DIR" pull
-  run brew update
-  run brew upgrade
+  if is-executable topgrade; then
+    run topgrade
+  else
+    run brew update
+    run brew upgrade
+  fi
   sub_install
 }
 
@@ -172,6 +207,7 @@ sub_backup() {
 }
 
 sub_clean() {
+  if is-executable mole; then run mole clean; fi
   run brew cleanup
   if is-executable npm; then run npm cache clean --force; fi
 }

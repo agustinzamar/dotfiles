@@ -48,7 +48,7 @@ zstyle ':omz:update' frequency 7
 # DISABLE_AUTO_TITLE="true"
 
 # Uncomment the following line to enable command auto-correction.
-# ENABLE_CORRECTION="true"
+ENABLE_CORRECTION="true"
 
 # Uncomment the following line to display red dots whilst waiting for completion.
 # You can also set it to another string to have that shown instead of the default red dots.
@@ -59,7 +59,7 @@ zstyle ':omz:update' frequency 7
 # Uncomment the following line if you want to disable marking untracked files
 # under VCS as dirty. This makes repository status check for large repositories
 # much, much faster.
-# DISABLE_UNTRACKED_FILES_DIRTY="true"
+DISABLE_UNTRACKED_FILES_DIRTY="true"
 
 # Uncomment the following line if you want to change the command execution time
 # stamp shown in the history command output.
@@ -99,9 +99,6 @@ plugins=(
   fast-syntax-highlighting
 )
 
-# Grok completions (before OMZ compinit)
-fpath=(~/.grok/completions/zsh $fpath)
-
 # Source exports early so OMZ plugins find brewed binaries
 source "${HOME}/.dotfiles-home/.exports"
 
@@ -109,8 +106,16 @@ source $ZSH/oh-my-zsh.sh
 
 typeset -U path PATH
 
-# Tool-specific PATH and environment
+# === Added by dotfiles ===
+for f in "${HOME}"/.dotfiles-home/aliases/*.zsh(N); do source "$f"; done
+for f in "${HOME}"/.dotfiles-home/functions/*.zsh(N); do source "$f"; done
 
+# Load private custom configs (not committed)
+for file in ${HOME}/.dotfiles-custom/shell/.{exports,aliases,functions,zshrc}; do
+    [ -r "$file" ] && [ -f "$file" ] && source "$file"
+done
+
+# Tool-specific PATH and environment
 export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"
 
 # Herd injected NVM configuration
@@ -155,16 +160,6 @@ if [[ "'${zsh_eval_context[-1]}" == "loadautofunc" ]]; then
 else
   compdef _opencode_yargs_completions opencode
 fi
-
-# === Added by dotfiles ===
-
-for f in "${HOME}"/.dotfiles-home/aliases/**/*.zsh(N); do source "$f"; done
-for f in "${HOME}"/.dotfiles-home/functions/*.zsh(N); do source "$f"; done
-
-# Load private custom configs (not committed)
-for file in ${HOME}/.dotfiles-custom/shell/.{exports,aliases,functions,zshrc}; do
-    [ -r "$file" ] && [ -f "$file" ] && source "$file"
-done
 
 # Hook inits
 if command -v direnv &> /dev/null; then

@@ -9,14 +9,14 @@ shell_links() {
   cat <<-EOF
 		config/zsh/.zshrc|$HOME/.zshrc
 		config/p10k/.p10k.zsh|$HOME/.p10k.zsh
-		home/.exports|$HOME/.dotfiles-home/.exports
+		system/.exports|$HOME/.dotfiles-home/.exports
 	EOF
 
   local file rel
-  for file in "$DOTFILES_DIR"/home/aliases/*.zsh "$DOTFILES_DIR"/home/functions/*.zsh; do
+  for file in "$DOTFILES_DIR"/system/aliases/*.zsh "$DOTFILES_DIR"/system/functions/*.zsh; do
     [[ -e "$file" ]] || continue
     rel=${file#"$DOTFILES_DIR"/}
-    printf '%s|%s\n' "$rel" "$HOME/.dotfiles-home/${rel#home/}"
+    printf '%s|%s\n' "$rel" "$HOME/.dotfiles-home/${rel#system/}"
   done
 }
 
@@ -35,15 +35,13 @@ all_links() {
 		config/vscode/keybindings.json|$HOME/Library/Application Support/Code/User/keybindings.json
 		config/claude/settings.json|$HOME/.claude/settings.json
 		config/opencode/skills|$HOME/.claude/skills
-		config/opencode/agents|$HOME/.claude/agents
 		config/opencode/opencode.json|$HOME/.config/opencode/opencode.json
 		config/opencode/AGENTS.md|$HOME/.config/opencode/AGENTS.md
-		config/opencode/plugins|$HOME/.config/opencode/plugins
 		config/opencode/skills|$HOME/.config/opencode/skills
 		config/opencode/themes|$HOME/.config/opencode/themes
-		config/opencode/agents|$HOME/.config/opencode/agents
-		config/opencode/commands|$HOME/.config/opencode/commands
 		config/hunk/config.toml|$HOME/.config/hunk/config.toml
+		config/git/config|$HOME/.config/git/config
+		config/git/ignore|$HOME/.config/git/ignore
 	EOF
 }
 

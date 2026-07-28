@@ -1,7 +1,3 @@
-# Sensitive rendered configs (never commit these)
-config/git/.gitconfig.rendered
-*.rendered.*
-
 # OS
 .DS_Store
 

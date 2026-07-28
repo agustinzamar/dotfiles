@@ -26,14 +26,16 @@ Add `bin/` to your `PATH` to use `dot` from anywhere.
 | Command | What it does |
 | --- | --- |
 | `install` | Everything below, in order |
-| `brew` | Install Homebrew and the shared package set |
+| `brew` | Install Homebrew, the formulae and the casks |
 | `brew-personal` | Install the personal-only package set |
 | `link` | Symlink every config into place |
 | `link-shell` | Symlink the shell configs only |
 | `unlink` | Remove symlinks that point into this repo |
 | `zsh` | Install Oh My Zsh, its theme and plugins |
 | `tools` | Install what Homebrew Bundle does not cover |
-| `git` | Configure Git identity, render generated configs |
+| `npm` | Install the global packages in `install/npmfile` |
+| `code` | Install the VS Code extensions in `install/Codefile` |
+| `duti` | Set default apps for file types |
 | `macos` | Apply macOS system defaults |
 | `dock` | Apply Dock settings |
 | `doctor` | Check required tools and symlinks |
@@ -59,13 +61,16 @@ dot link --dry-run
 - `bin/dot` — the CLI; one `sub_<command>` function per command
 - `bin/is-*` — small predicates (`is-macos`, `is-executable`, …)
 - `lib/common.sh` — `run`, `log`, `link_file`; the only copies
-- `install/` — `Brewfile*` plus the per-topic install steps
-- `macos/` — `defaults.sh`, `dock.sh`
+- `install/` — package lists (`Brewfile`, `Caskfile`, `Codefile`, `npmfile`,
+  `duti`) plus the per-topic install steps
 - `config/` — application configuration
-- `home/` — shell aliases, functions, and exports
+- `system/` — shell aliases, functions, exports, and `macos/`
 - `test/` — Bats tests
 
-`install/*.sh` and `macos/*.sh` are sourced by `bin/dot`, not executed
+The package lists are plain data: one entry per line, `#` comments ignored.
+Adding a package is a one-line diff.
+
+`install/*.sh` and `system/macos/*.sh` are sourced by `bin/dot`, not executed
 directly. They read `DOTFILES_DIR` and `DRY_RUN` from the environment.
 
 Adding a command means adding one `sub_*` function and one line in `sub_help`;
