@@ -139,7 +139,7 @@ sub_install() {
       local sub
       case "$cmd" in
         links) sub=sub_link_shell ;;
-         *)     sub="sub_$cmd" ;;
+        *) sub="sub_$cmd" ;;
       esac
       if declare -F "$sub" >/dev/null; then
         "$sub"
@@ -163,11 +163,11 @@ sub_install_apps() {
       topic=$(basename "$f")
       [[ "$dir" == "$TOPIC_DIR/optional" ]] && topic="optional/$topic"
       while IFS=' ' read -r type rest; do
-      [[ -z "$rest" ]] && continue
-      name=${rest#\"}
-      name=${name%\"}
-      items+=("$name|$type|$topic")
-    done < <(grep -E '^(brew|cask|mas) "' "$f" 2>/dev/null)
+        [[ -z "$rest" ]] && continue
+        name=${rest#\"}
+        name=${name%\"}
+        items+=("$name|$type|$topic")
+      done < <(grep -E '^(brew|cask|mas) "' "$f" 2>/dev/null)
     done
   done
 
@@ -187,7 +187,7 @@ sub_install_apps() {
     while IFS='|' read -r pkg type _; do
       case "$type" in
         cask) run brew install --cask "$pkg" ;;
-         mas)  run mas install "$pkg" ;;
+        mas) run mas install "$pkg" ;;
         brew) run brew install "$pkg" ;;
       esac
     done <<<"$selected"
@@ -257,7 +257,7 @@ sub_install_ai() {
             if "$DRY_RUN"; then
               run jq --arg p "$opencode_pkg" '.plugin += [$p]' "$cfg"
             else
-              jq --arg p "$opencode_pkg" '.plugin += [$p]' "$cfg" > "${cfg}.tmp" && mv "${cfg}.tmp" "$cfg"
+              jq --arg p "$opencode_pkg" '.plugin += [$p]' "$cfg" >"${cfg}.tmp" && mv "${cfg}.tmp" "$cfg"
             fi
           fi
         fi
