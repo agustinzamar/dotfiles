@@ -230,6 +230,7 @@ sub_install_ai() {
       ;;
     opencode)
       _link_ai_skill "$HOME/.config/opencode/skills"
+      _link_ai_skill "$HOME/.agents/skills"
       ;;
     skills)
       case "$what" in
