@@ -18,11 +18,11 @@ open = [{ run = 'open "$1"', orphan = true }]
 [open]
 rules = [
   { mime = "text/*", use = "edit" },
-  { name = "*.md", use = "edit" },
-  { name = "*.{csv,tsv}", use = "edit" },
-  { name = "*.{png,jpg,jpeg,gif,webp,svg}", use = "open" },
-  { name = "*.{mp4,mkv,webm,avi,mov}", use = "open" },
-  { name = "*.{mp3,flac,wav,ogg,m4a}", use = "open" },
-  { name = "*.{pdf,doc,docx,xls,xlsx}", use = "open" },
-  { name = "*", use = "open" },
+  { mime = "text/csv", use = "edit" },
+  { mime = "text/tab-separated-values", use = "edit" },
+  { url = "*.{png,jpg,jpeg,gif,webp,svg}", use = "open" },
+  { url = "*.{mp4,mkv,webm,avi,mov}", use = "open" },
+  { url = "*.{mp3,flac,wav,ogg,m4a}", use = "open" },
+  { url = "*.{pdf,doc,docx,xls,xlsx}", use = "open" },
+  { url = "*", use = "open" },
 ]
