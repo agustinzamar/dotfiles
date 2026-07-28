@@ -9,13 +9,10 @@ DOT := $(DOTFILES_DIR)/bin/dot
 SCRIPTS := bin/dot install/*.sh system/macos/*.sh install.sh remote-install.sh
 
 # `install` and `test` are also directory names, so these must stay phony.
-.PHONY: install link unlink update doctor backup test check lint
+.PHONY: install unlink update doctor backup test check lint
 
 install:
 	$(DOT) install
-
-link:
-	$(DOT) link
 
 unlink:
 	$(DOT) unlink
