@@ -2,7 +2,6 @@
 brew "make"
 brew "go"
 brew "bun"
-brew "nvm"
 brew "pnpm"
 brew "npm-check-updates"
 brew "pipx"
