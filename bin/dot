@@ -210,12 +210,17 @@ sub_install_ai() {
   _install_skills() {
     local manifest="$DOTFILES_DIR/ai/skills.json"
     if [[ -f "$manifest" ]]; then
-      local skill
-      while IFS= read -r skill; do
-        [[ -z "$skill" ]] && continue
-        log "Installing skill: $skill"
-        run npx skills add "$skill"
-      done < <(jq -r '.skills[]' "$manifest" 2>/dev/null || grep '"' "$manifest" | sed -n 's/.*"\(.*\)".*/\1/p')
+      local source skill
+      while IFS=$'\t' read -r source skill; do
+        [[ -z "$source" ]] && continue
+        if [[ -z "$skill" || "$skill" == "null" ]]; then
+          log "Installing skill: $source"
+          run npx skills add "$source"
+        else
+          log "Installing skill: $source/$skill"
+          run npx skills add "$source" --skill "$skill"
+        fi
+      done < <(jq -r '.skills[] | [.source, (.skill // null)] | @tsv' "$manifest" 2>/dev/null)
     fi
     # Link any local/custom skills not on skills.sh
     [[ -d "$DOTFILES_DIR/ai/skills" && "$(ls -A "$DOTFILES_DIR/ai/skills" 2>/dev/null)" ]] && {
