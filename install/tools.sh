@@ -25,4 +25,8 @@ install_tools() {
     [[ -f "$key" ]] || continue
     run ssh-add --apple-use-keychain "$key"
   done
+
+  if is_executable npm; then
+    run npm config set allow-scripts=@opencode-ai/cli --location=user
+  fi
 }
