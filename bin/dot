@@ -216,7 +216,6 @@ sub_install_ai() {
     all)
       log "Installing AI assets"
       _link_ai_skill "$HOME/.claude/skills"
-      _link_ai_skill "$HOME/.config/opencode/skills"
       _link_ai_skill "$HOME/.agents/skills"
       mkdir -p "$HOME/.agents/plugins" 2>/dev/null || true
       log "AI assets installed"
@@ -229,7 +228,6 @@ sub_install_ai() {
       mkdir -p "$HOME/.agents/plugins" 2>/dev/null || true
       ;;
     opencode)
-      _link_ai_skill "$HOME/.config/opencode/skills"
       _link_ai_skill "$HOME/.agents/skills"
       ;;
     skills)

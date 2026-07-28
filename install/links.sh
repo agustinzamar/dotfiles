@@ -40,7 +40,6 @@ all_links() {
 		config/vscode/keybindings.json|$HOME/Library/Application Support/Code/User/keybindings.json
 		config/claude/settings.json|$HOME/.claude/settings.json
 		ai/skills|$HOME/.claude/skills
-		ai/skills|$HOME/.config/opencode/skills
 		ai/skills|$HOME/.agents/skills
 		config/opencode/opencode.json|$HOME/.config/opencode/opencode.json
 		config/opencode/AGENTS.md|$HOME/.config/opencode/AGENTS.md
