@@ -215,10 +215,10 @@ sub_install_ai() {
         [[ -z "$source" ]] && continue
         if [[ -z "$skill" || "$skill" == "null" ]]; then
           log "Installing skill: $source"
-          run npx skills add "$source"
+          run npx skills add "$source" -y
         else
           log "Installing skill: $source/$skill"
-          run npx skills add "$source" --skill "$skill"
+          run npx skills add "$source" --skill "$skill" -y
         fi
       done < <(jq -r '.skills[] | [.source, (.skill // null)] | @tsv' "$manifest" 2>/dev/null)
     fi
@@ -229,40 +229,43 @@ sub_install_ai() {
     }
   }
 
+  _install_plugins() {
+    local manifest="$DOTFILES_DIR/ai/plugins.json"
+    if [[ ! -f "$manifest" ]]; then return; fi
+    local name repo
+    while IFS=$'\t' read -r name repo; do
+      [[ -z "$name" ]] && continue
+      log "Installing plugin: $name ($repo)"
+
+      local opencode_pkg
+      opencode_pkg=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .install.opencode.package // empty' "$manifest" 2>/dev/null)
+      if [[ -n "$opencode_pkg" ]]; then
+        local cfg="$HOME/.config/opencode/opencode.json"
+        if [[ -f "$cfg" ]] && ! jq -e --arg p "$opencode_pkg" '.plugin | index($p)' "$cfg" &>/dev/null; then
+          log "  opencode.json += $opencode_pkg"
+          jq --arg p "$opencode_pkg" '.plugin += [$p]' "$cfg" > "${cfg}.tmp" && mv "${cfg}.tmp" "$cfg"
+        fi
+      fi
+
+      local cc_cmd cc_install cx_cmd
+      cc_cmd=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .install["claude-code"].command // empty' "$manifest" 2>/dev/null)
+      cc_install=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .install["claude-code"].install // empty' "$manifest" 2>/dev/null)
+      cx_cmd=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .install.codex.command // empty' "$manifest" 2>/dev/null)
+      [[ -n "$cc_cmd" ]] && log "  Claude Code → $cc_cmd" && [[ -n "$cc_install" ]] && log "               $cc_install"
+      [[ -n "$cx_cmd" ]] && log "  Codex       → $cx_cmd"
+    done < <(jq -r '.plugins[] | [.name, .repo] | @tsv' "$manifest" 2>/dev/null)
+  }
+
   case "$target" in
     all)
       _install_skills
-      "$0" install ai plugins
+      _install_plugins
       ;;
     skills)
       _install_skills
       ;;
     plugins)
-      local manifest="$DOTFILES_DIR/ai/plugins.json"
-      if [[ -f "$manifest" ]]; then
-        local name repo
-        while IFS=$'\t' read -r name repo; do
-          [[ -z "$name" ]] && continue
-          log "Installing plugin: $name ($repo)"
-
-          local opencode_pkg
-          opencode_pkg=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .install.opencode.package // empty' "$manifest" 2>/dev/null)
-          if [[ -n "$opencode_pkg" ]]; then
-            local cfg="$HOME/.config/opencode/opencode.json"
-            if [[ -f "$cfg" ]] && ! jq -e --arg p "$opencode_pkg" '.plugin | index($p)' "$cfg" &>/dev/null; then
-              log "  opencode.json += $opencode_pkg"
-              jq --arg p "$opencode_pkg" '.plugin += [$p]' "$cfg" > "${cfg}.tmp" && mv "${cfg}.tmp" "$cfg"
-            fi
-          fi
-
-          local cc_cmd cc_install cx_cmd
-          cc_cmd=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .install["claude-code"].command // empty' "$manifest" 2>/dev/null)
-          cc_install=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .install["claude-code"].install // empty' "$manifest" 2>/dev/null)
-          cx_cmd=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .install.codex.command // empty' "$manifest" 2>/dev/null)
-          [[ -n "$cc_cmd" ]] && log "  Claude Code → $cc_cmd" && [[ -n "$cc_install" ]] && log "               $cc_install"
-          [[ -n "$cx_cmd" ]] && log "  Codex       → $cx_cmd"
-        done < <(jq -r '.plugins[] | [.name, .repo] | @tsv' "$manifest" 2>/dev/null)
-      fi
+      _install_plugins
       ;;
     claude)
       link_file "ai/skills" "$HOME/.claude/skills"
