@@ -105,23 +105,38 @@ setup() {
 # is how three casks sat in the AI topic declared as formulae.
 @test "every package is declared with the right type" {
   command -v brew >/dev/null || skip "brew not installed"
+
+  # Two `brew` calls rather than one per package: `brew info` costs a second
+  # each, these are instant and give the complete name lists.
+  local formulae casks
+  formulae=$(brew formulae 2>/dev/null)
+  casks=$(brew casks 2>/dev/null)
+  [ -n "$formulae" ] && [ -n "$casks" ] || skip "brew name lists unavailable"
+
   local file line name wrong=0
   for file in "$DOTFILES_DIR"/install/topics/* "$DOTFILES_DIR"/install/topics/optional/*; do
     [ -f "$file" ] || continue
     while IFS= read -r line; do
       case "$line" in
+        'brew "'* | 'cask "'*) ;;
+        *) continue ;;
+      esac
+      name=${line#* \"}
+      name=${name%\"}
+
+      # A tap-qualified name (owner/tap/pkg) only resolves once that tap is
+      # added, which CI does not do. Nothing to check against.
+      case "$name" in */*) continue ;; esac
+
+      case "$line" in
         'brew "'*)
-          name=${line#brew \"}
-          name=${name%\"}
-          brew info --formula "$name" >/dev/null 2>&1 || {
+          grep -qxF "$name" <<<"$formulae" || {
             echo "$(basename "$file"): brew \"$name\" is not a formula"
             wrong=1
           }
           ;;
         'cask "'*)
-          name=${line#cask \"}
-          name=${name%\"}
-          brew info --cask "$name" >/dev/null 2>&1 || {
+          grep -qxF "$name" <<<"$casks" || {
             echo "$(basename "$file"): cask \"$name\" is not a cask"
             wrong=1
           }
