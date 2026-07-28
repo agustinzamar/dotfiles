@@ -102,8 +102,10 @@ sub_install() {
       local sub="sub_$cmd"
       if declare -F "$sub" >/dev/null; then
         "$sub"
+      elif topic_path "$cmd" >/dev/null; then
+        install_topic "$cmd"
       else
-        echo "'$cmd' is not an install command." >&2
+        echo "'$cmd' is not an install command or topic." >&2
         return 1
       fi
       ;;
@@ -339,7 +341,7 @@ sub_update() {
     run brew update
     run brew upgrade
   fi
-  sub_install
+  sub_full
 }
 
 sub_backup() {
@@ -366,6 +368,8 @@ sub_test() {
   bats "$DOTFILES_DIR"/test/*.bats
 }
 
+TOP_COMMANDS=" backup clean doctor edit help migrate-custom test unlink update "
+
 COMMAND_NAME=${1:-}
 case "$COMMAND_NAME" in
   "" | -h | --help | help)
@@ -373,13 +377,8 @@ case "$COMMAND_NAME" in
     ;;
   *)
     shift
-    # `set -Eeuo pipefail` means webpro's `[ $? = 127 ]` check never runs, so
-    # look the function up instead of calling it and inspecting the status.
-    SUB_NAME="sub_${COMMAND_NAME//-/_}"
-    if declare -F "$SUB_NAME" >/dev/null; then
-      "$SUB_NAME" "$@"
-    elif topic_path "$COMMAND_NAME" >/dev/null; then
-      install_topic "$COMMAND_NAME"
+    if [[ "$TOP_COMMANDS" == *" $COMMAND_NAME "* ]]; then
+      "sub_${COMMAND_NAME//-/_}" "$@"
     else
       echo "'$COMMAND_NAME' is not a known command." >&2
       sub_help >&2
