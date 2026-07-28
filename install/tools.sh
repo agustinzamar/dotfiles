@@ -7,7 +7,10 @@ install_tools() {
   local brew_prefix
   brew_prefix=$(brew --prefix 2>/dev/null || true)
   if [[ -n "$brew_prefix" && -x "$brew_prefix/opt/fzf/install" ]]; then
-    run "$brew_prefix/opt/fzf/install" --all --no-bash --no-fish
+    # --no-update-rc: --all would otherwise append a source line to ~/.zshrc,
+    # which is a symlink into this repo, so the installer edits a tracked file
+    # on every run. system/env/40-fzf.zsh sources ~/.fzf.zsh instead.
+    run "$brew_prefix/opt/fzf/install" --all --no-update-rc --no-bash --no-fish
   fi
 
   local package key

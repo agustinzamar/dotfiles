@@ -16,6 +16,7 @@ brew "hunk"
 brew "direnv"
 brew "neovim"
 brew "gh"
+brew "watch"
 
 cask "ghostty"
 cask "font-hack-nerd-font"
