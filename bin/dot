@@ -47,11 +47,12 @@ sub_help() {
   echo "   link             Symlink every config into place"
   echo "   link-shell       Symlink the shell configs only"
   echo "   macos            Apply macOS system defaults"
+  echo "   migrate-custom   Move ~/.dotfiles-custom files to ~/.dotfiles-home/custom"
   echo "   test             Run tests"
   echo "   tools            Install tools Homebrew Bundle does not cover"
   echo "   unlink           Remove symlinks that point into this repo"
   echo "   update           Pull, upgrade packages, then re-run the install"
-  echo "   zsh              Install Oh My Zsh, its theme and plugins"
+  echo "   zsh              Install zinit plugin manager"
   local topic
   echo
   echo "Topics (installed by \`brew\`, or one at a time):"
@@ -186,6 +187,11 @@ sub_unlink() {
 sub_zsh() {
   log "Setting up Zsh"
   install_zsh
+}
+
+sub_migrate_custom() {
+  log "Migrating custom configs"
+  migrate_zsh_custom
 }
 
 sub_tools() {
