@@ -120,11 +120,14 @@ sub_install() {
 
 sub_install_apps() {
   local items=() item topic
-  local f name
-  for f in "$TOPIC_DIR"/*; do
-    [[ -f "$f" ]] || continue
-    topic=$(basename "$f")
-    while IFS=' ' read -r type rest; do
+  local dirs=("$TOPIC_DIR" "$TOPIC_DIR/optional")
+  local f name dir
+  for dir in "${dirs[@]}"; do
+    for f in "$dir"/*; do
+      [[ -f "$f" ]] || continue
+      topic=$(basename "$f")
+      [[ "$dir" == "$TOPIC_DIR/optional" ]] && topic="optional/$topic"
+      while IFS=' ' read -r type rest; do
       [[ -z "$rest" ]] && continue
       name=${rest#\"}
       name=${name%\"}

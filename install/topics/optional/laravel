@@ -1,3 +1,0 @@
-# PHP and Laravel local development
-cask "herd"
-cask "dbngin"
