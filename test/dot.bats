@@ -37,7 +37,7 @@ setup() {
   for topic in "$DOTFILES_DIR"/install/topics/*; do
     [ -f "$topic" ] || continue
     topic=$(basename "$topic")
-    [[ "$topic" == "apps" ]] && continue  # apps is an install subcommand, not a brew topic
+    [[ "$topic" == "apps" || "$topic" == "ai" ]] && continue  # install subcommands, not brew topics
     "$DOT" help | grep -q "^   $topic " || {
       echo "topic '$topic' missing from help"
       return 1
