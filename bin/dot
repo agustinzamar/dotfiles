@@ -53,11 +53,12 @@ sub_help() {
   echo "   install links        Symlink shell configs only"
   echo "   install zsh          Install zinit plugin manager"
   echo "   install brew         Install Homebrew + all topics"
-  echo "   install ai           Sync skills + plugins to all AI tools"
-  echo "   install ai claude    Skills to Claude only"
-  echo "   install ai codex     Skills + plugins to Codex only"
-  echo "   install ai opencode  Skills to OpenCode only"
-  echo "   install ai skills    Install skills from manifest + link custom skills"
+   echo "   install ai              Sync skills + plugins to all AI tools"
+   echo "   install ai claude       Skills + plugins to Claude only"
+   echo "   install ai codex        Skills + plugins to Codex only"
+   echo "   install ai opencode     Skills + plugins to OpenCode only"
+   echo "   install ai <tool> --skills   Skills only"
+   echo "   install ai <tool> --plugins  Plugins only"
   echo "   install tools        Install tools Homebrew Bundle does not cover"
   echo "   install code         Install VS Code extensions"
   echo "   install git          Set git config (skips name/email/gpg)"
@@ -205,79 +206,99 @@ sub_install_apps() {
 }
 
 sub_install_ai() {
-  local target="${1:-all}"
+  # tool → (skills.sh --agent value, custom-skill link target).
+  # `all` maps to --agent '*' and links to both Claude and agents dirs.
+  local -A AGENT=([all]='*' [claude]=claude-code [codex]=codex [opencode]=opencode)
+  local -A LINK=([all]="$HOME/.claude/skills|$HOME/.agents/skills" [claude]="$HOME/.claude/skills" [codex]="$HOME/.agents/skills" [opencode]="$HOME/.agents/skills")
+  local -A PRINT=([opencode]=1 [claude-code]=1 [codex]=1)
 
   _install_skills() {
+    local tool="$1" agent="${AGENT[$tool]}"
     local manifest="$DOTFILES_DIR/ai/skills.json"
     if [[ -f "$manifest" ]]; then
       local source skill
       while IFS=$'\t' read -r source skill; do
         [[ -z "$source" ]] && continue
         if [[ -z "$skill" || "$skill" == "null" ]]; then
-          log "Installing skill: $source"
-          run npx skills add "$source" -y
+          log "Installing skill [$tool]: $source"
+          run npx skills add "$source" --agent "$agent" -y
         else
-          log "Installing skill: $source/$skill"
-          run npx skills add "$source" --skill "$skill" -y
+          log "Installing skill [$tool]: $source/$skill"
+          run npx skills add "$source" --agent "$agent" --skill "$skill" -y
         fi
       done < <(jq -r '.skills[] | [.source, (.skill // null)] | @tsv' "$manifest" 2>/dev/null)
     fi
-    # Link any local/custom skills not on skills.sh
-    [[ -d "$DOTFILES_DIR/ai/skills" && "$(ls -A "$DOTFILES_DIR/ai/skills" 2>/dev/null)" ]] && {
-      link_file "ai/skills" "$HOME/.claude/skills"
-      link_file "ai/skills" "$HOME/.agents/skills"
-    }
+    # Link any local/custom skills not on skills.sh, scoped to this tool's dir(s).
+    [[ -d "$DOTFILES_DIR/ai/skills" && "$(ls -A "$DOTFILES_DIR/ai/skills" 2>/dev/null)" ]] || return 0
+    local IFS='|' dir
+    for dir in ${LINK[$tool]}; do
+      link_file "ai/skills" "$dir"
+    done
   }
 
   _install_plugins() {
+    local tool="$1" agent="${AGENT[$tool]}"
+    # opencode.json edits are non-interactive and safe to apply directly;
+    # claude-code and codex use interactive /plugin shells, so we just print.
     local manifest="$DOTFILES_DIR/ai/plugins.json"
-    if [[ ! -f "$manifest" ]]; then return; fi
+    [[ -f "$manifest" ]] || return 0
     local name repo
     while IFS=$'\t' read -r name repo; do
       [[ -z "$name" ]] && continue
-      log "Installing plugin: $name ($repo)"
+      log "Plugin [$tool]: $name ($repo)"
 
-      local opencode_pkg
-      opencode_pkg=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .install.opencode.package // empty' "$manifest" 2>/dev/null)
-      if [[ -n "$opencode_pkg" ]]; then
-        local cfg="$HOME/.config/opencode/opencode.json"
-        if [[ -f "$cfg" ]] && ! jq -e --arg p "$opencode_pkg" '.plugin | index($p)' "$cfg" &>/dev/null; then
-          log "  opencode.json += $opencode_pkg"
-          jq --arg p "$opencode_pkg" '.plugin += [$p]' "$cfg" > "${cfg}.tmp" && mv "${cfg}.tmp" "$cfg"
+      if [[ "$agent" == "opencode" || "$agent" == "*" ]]; then
+        local opencode_pkg
+        opencode_pkg=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .install.opencode.package // empty' "$manifest" 2>/dev/null)
+        if [[ -n "$opencode_pkg" ]]; then
+          local cfg="$HOME/.config/opencode/opencode.json"
+          if [[ -f "$cfg" ]] && ! jq -e --arg p "$opencode_pkg" '.plugin | index($p)' "$cfg" &>/dev/null; then
+            log "  opencode.json += $opencode_pkg"
+            run jq --arg p "$opencode_pkg" '.plugin += [$p]' "$cfg" > "${cfg}.tmp" && mv "${cfg}.tmp" "$cfg"
+          fi
         fi
       fi
 
-      local cc_cmd cc_install cx_cmd
-      cc_cmd=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .install["claude-code"].command // empty' "$manifest" 2>/dev/null)
-      cc_install=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .install["claude-code"].install // empty' "$manifest" 2>/dev/null)
-      cx_cmd=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .install.codex.command // empty' "$manifest" 2>/dev/null)
-      [[ -n "$cc_cmd" ]] && log "  Claude Code → $cc_cmd" && [[ -n "$cc_install" ]] && log "               $cc_install"
-      [[ -n "$cx_cmd" ]] && log "  Codex       → $cx_cmd"
+      if [[ "$agent" == "claude-code" || "$agent" == "*" ]]; then
+        local cc_cmd cc_install
+        cc_cmd=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .install["claude-code"].command // empty' "$manifest" 2>/dev/null)
+        cc_install=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .install["claude-code"].install // empty' "$manifest" 2>/dev/null)
+        [[ -n "$cc_cmd" ]] && log "  Claude Code → $cc_cmd" && [[ -n "$cc_install" ]] && log "               $cc_install"
+      fi
+
+      if [[ "$agent" == "codex" || "$agent" == "*" ]]; then
+        local cx_cmd
+        cx_cmd=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .install.codex.command // empty' "$manifest" 2>/dev/null)
+        [[ -n "$cx_cmd" ]] && log "  Codex       → $cx_cmd"
+      fi
     done < <(jq -r '.plugins[] | [.name, .repo] | @tsv' "$manifest" 2>/dev/null)
   }
 
+  # Parse the tool and any --skills/--plugins flags. With neither flag, both run.
+  local target="${1:-all}"; shift 2>/dev/null || true
+  [[ "$target" == "--"* ]] && { set -- "$target" "$@"; target=all; }
   case "$target" in
-    all)
-      _install_skills
-      _install_plugins
-      ;;
-    skills)
-      _install_skills
-      ;;
-    plugins)
-      _install_plugins
-      ;;
-    claude)
-      link_file "ai/skills" "$HOME/.claude/skills"
-      ;;
-    codex|opencode)
-      link_file "ai/skills" "$HOME/.agents/skills"
-      ;;
+    all|claude|codex|opencode) : ;;
+    --skills|--plugins) set -- "$target" "$@"; target=all ;;
     *)
-      echo "Usage: dot install ai [all|skills|plugins|claude|codex|opencode]" >&2
+      echo "Usage: dot install ai [all|claude|codex|opencode] [--skills|--plugins]" >&2
       return 1
       ;;
   esac
+
+  local do_skills=false do_plugins=false arg
+  for arg in "$@"; do
+    case "$arg" in
+      --skills)  do_skills=true ;;
+      --plugins) do_plugins=true ;;
+      *) echo "unknown flag: $arg" >&2; return 1 ;;
+    esac
+  done
+  # No flags = both, matching "dot install ai" = All.
+  $do_skills || $do_plugins || { do_skills=true; do_plugins=true; }
+
+  $do_skills  && _install_skills  "$target"
+  $do_plugins && _install_plugins "$target"
 }
 
 sub_full() {
