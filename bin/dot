@@ -46,8 +46,7 @@ sub_help() {
   echo
   echo "Install:"
   echo "   install              Bootstrap: link configs + install zinit"
-  echo "   install link         Symlink every config into place"
-  echo "   install link-shell   Symlink the shell configs only"
+  echo "   install links        Symlink shell configs only"
   echo "   install zsh          Install zinit plugin manager"
   echo "   install brew         Install Homebrew + all topics"
   echo "   install apps         Select and install topics interactively"
@@ -99,7 +98,11 @@ sub_install() {
       return 0
       ;;
     *)
-      local sub="sub_$cmd"
+      local sub
+      case "$cmd" in
+        links) sub=sub_link_shell ;;
+        *)     sub="sub_$cmd" ;;
+      esac
       if declare -F "$sub" >/dev/null; then
         "$sub"
       elif topic_path "$cmd" >/dev/null; then
