@@ -23,16 +23,19 @@ setup() {
   local command name
   while read -r command; do
     name="sub_${command//-/_}"
-    grep -q "^$name()" "$DOT" || [ -f "$DOTFILES_DIR/install/topics/$command" ] || {
-      echo "'$command' has neither $name() nor install/topics/$command"
-      return 1
-    }
+    grep -q "^$name()" "$DOT" ||
+      [ -f "$DOTFILES_DIR/install/topics/$command" ] ||
+      [ -f "$DOTFILES_DIR/install/topics/optional/$command" ] || {
+        echo "'$command' has neither $name() nor a topic file"
+        return 1
+      }
   done < <("$DOT" help | sed -n 's/^   \([a-z-]*\) .*/\1/p' | grep -v '^help$')
 }
 
 @test "every topic is listed in help and runs as a command" {
   local topic
-  for topic in "$DOTFILES_DIR"/install/topics/*; do
+  for topic in "$DOTFILES_DIR"/install/topics/* "$DOTFILES_DIR"/install/topics/optional/*; do
+    [ -f "$topic" ] || continue
     topic=$(basename "$topic")
     "$DOT" help | grep -q "^   $topic " || {
       echo "topic '$topic' missing from help"
@@ -40,7 +43,22 @@ setup() {
     }
     run "$DOT" "$topic" --dry-run
     [ "$status" -eq 0 ]
-    [[ "$output" == *"install/topics/$topic"* ]]
+    [[ "$output" == *"/topics/"*"/$topic"* || "$output" == *"/topics/$topic"* ]]
+  done
+}
+
+# The whole point of optional/: a machine opts in by name, `brew` never does.
+@test "brew installs every default topic and no optional one" {
+  local topic
+  run "$DOT" brew --dry-run
+  [ "$status" -eq 0 ]
+  for topic in "$DOTFILES_DIR"/install/topics/*; do
+    [ -f "$topic" ] || continue
+    [[ "$output" == *"topics/$(basename "$topic")"* ]]
+  done
+  for topic in "$DOTFILES_DIR"/install/topics/optional/*; do
+    [ -f "$topic" ] || continue
+    [[ "$output" != *"optional/$(basename "$topic")"* ]]
   done
 }
 

@@ -50,12 +50,17 @@ sub_help() {
   echo "   unlink           Remove symlinks that point into this repo"
   echo "   update           Pull, upgrade packages, then re-run the install"
   echo "   zsh              Install Oh My Zsh, its theme and plugins"
-  echo
-  echo "Topics (install one package group):"
   local topic
+  echo
+  echo "Topics (installed by \`brew\`, or one at a time):"
   while read -r topic; do
-    printf '   %-16s %s\n' "$topic" "$(head -1 "$DOTFILES_DIR/install/topics/$topic" | sed 's/^# *//')"
+    printf '   %-16s %s\n' "$topic" "$(head -1 "$(topic_path "$topic")" | sed 's/^# *//')"
   done < <(topics)
+  echo
+  echo "Optional topics (only when asked for by name):"
+  while read -r topic; do
+    printf '   %-16s %s\n' "$topic" "$(head -1 "$(topic_path "$topic")" | sed 's/^# *//')"
+  done < <(optional_topics)
 }
 
 sub_install() {
@@ -71,18 +76,46 @@ sub_install() {
   log "Installation complete"
 }
 
-# Every file in install/topics/ is a Brewfile and a command: `dot media`
+# Every file under install/topics/ is a Brewfile and a command: `dot media`
 # installs install/topics/media. Adding a topic is adding one file.
-topics() {
+#
+# Files directly in topics/ are installed by `dot brew`; those in
+# topics/optional/ are not, so a machine opts into them by name. Moving a topic
+# between the two is a `git mv`.
+TOPIC_DIR="$DOTFILES_DIR/install/topics"
+
+# `return 0` because a glob that ends on a non-file would otherwise leave the
+# function's status non-zero, which `set -e` treats as a failure.
+_topic_names() {
   local file
-  for file in "$DOTFILES_DIR"/install/topics/*; do
+  for file in "$1"/*; do
     [[ -f "$file" ]] && basename "$file"
   done
+  return 0
+}
+
+topics() { _topic_names "$TOPIC_DIR"; }
+optional_topics() { _topic_names "$TOPIC_DIR/optional"; }
+
+topic_path() {
+  local dir
+  for dir in "$TOPIC_DIR" "$TOPIC_DIR/optional"; do
+    [[ -f "$dir/$1" ]] && {
+      printf '%s' "$dir/$1"
+      return 0
+    }
+  done
+  return 1
 }
 
 install_topic() {
+  local path
+  path=$(topic_path "$1") || {
+    echo "no such topic: $1" >&2
+    return 1
+  }
   log "Installing $1"
-  run brew bundle --file="$DOTFILES_DIR/install/topics/$1"
+  run brew bundle --file="$path"
 }
 
 sub_brew() {
@@ -250,7 +283,7 @@ case "$COMMAND_NAME" in
     SUB_NAME="sub_${COMMAND_NAME//-/_}"
     if declare -F "$SUB_NAME" >/dev/null; then
       "$SUB_NAME" "$@"
-    elif [[ -f "$DOTFILES_DIR/install/topics/$COMMAND_NAME" ]]; then
+    elif topic_path "$COMMAND_NAME" >/dev/null; then
       install_topic "$COMMAND_NAME"
     else
       echo "'$COMMAND_NAME' is not a known command." >&2
