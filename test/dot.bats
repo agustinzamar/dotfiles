@@ -15,7 +15,7 @@ setup() {
   run "$DOT" help
   [ "$status" -eq 0 ]
   [[ "$output" == *"install"* ]]
-  [[ "$output" == *"link-shell"* ]]
+  [[ "$output" == *"links"* ]]
   [[ "$output" == *"doctor"* ]]
 }
 
@@ -32,16 +32,17 @@ setup() {
   done < <("$DOT" help | sed -n 's/^   \([a-z-]*\) .*/\1/p' | grep -v '^help$')
 }
 
-@test "every topic is listed in help and runs as a command" {
+@test "every topic is listed in help and installable" {
   local topic
-  for topic in "$DOTFILES_DIR"/install/topics/* "$DOTFILES_DIR"/install/topics/optional/*; do
+  for topic in "$DOTFILES_DIR"/install/topics/*; do
     [ -f "$topic" ] || continue
     topic=$(basename "$topic")
+    [[ "$topic" == "apps" ]] && continue  # apps is an install subcommand, not a brew topic
     "$DOT" help | grep -q "^   $topic " || {
       echo "topic '$topic' missing from help"
       return 1
     }
-    run "$DOT" "$topic" --dry-run
+    run "$DOT" install "$topic" --dry-run
     [ "$status" -eq 0 ]
     [[ "$output" == *"/topics/"*"/$topic"* || "$output" == *"/topics/$topic"* ]]
   done
@@ -69,7 +70,7 @@ setup() {
 # The macos scripts call `defaults write` directly instead of going through
 # `run`, so a dry run must stop short of sourcing them.
 @test "macos dry-run reports without sourcing" {
-  run "$DOT" macos --dry-run
+  run "$DOT" install macos --dry-run
   [ "$status" -eq 0 ]
   [[ "$output" == *"+ source system/macos/_defaults.sh"* ]]
   [[ "$output" != *"sudo"* ]]
@@ -78,7 +79,7 @@ setup() {
 # `_defaults.sh` must sort before the per-app files; that is what the leading
 # underscore is for.
 @test "macos applies the shared defaults first" {
-  run "$DOT" macos --dry-run
+  run "$DOT" install macos --dry-run
   [ "$status" -eq 0 ]
   [[ "$(grep -c 'source system/macos/' <<<"$output")" -ge 2 ]]
   [[ "$(grep -m1 'source system/macos/' <<<"$output")" == *"_defaults.sh"* ]]
@@ -159,7 +160,7 @@ setup() {
   printf '#!/bin/sh\nexit 1\n' > "$stub/brew"
   chmod +x "$stub/brew"
 
-  PATH="$stub:$PATH" run "$DOT" brew
+  PATH="$stub:$PATH" run "$DOT" install brew
   [ "$status" -eq 1 ]
   [[ "$output" == *"topics that failed:"* ]]
   # Every topic was attempted rather than the run stopping at the first.
@@ -170,9 +171,9 @@ setup() {
 # from it, install silently stops doing that work.
 @test "install runs every phase through the failure-collecting loop" {
   local phase
-  for phase in brew link zsh tools code macos duti; do
+  for phase in brew link zsh tools code macos duti git; do
     grep -q "for phase in .*\b$phase\b" "$DOT" || {
-      echo "phase '$phase' missing from the install loop"
+      echo "phase '$phase' missing from the full-install loop"
       return 1
     }
   done
@@ -186,7 +187,7 @@ setup() {
     return 1
   }
   # Still reachable on its own.
-  run "$DOT" dock --dry-run
+  run "$DOT" install dock --dry-run
   [ "$status" -eq 0 ]
   [[ "$output" == *"dock-defaults.sh"* ]]
 }
@@ -194,7 +195,7 @@ setup() {
 # The whole point of optional/: a machine opts in by name, `brew` never does.
 @test "brew installs every default topic and no optional one" {
   local topic
-  run "$DOT" brew --dry-run
+  run "$DOT" install brew --dry-run
   [ "$status" -eq 0 ]
   for topic in "$DOTFILES_DIR"/install/topics/*; do
     [ -f "$topic" ] || continue
@@ -216,9 +217,9 @@ setup() {
 
   # A temporary HOME for both: with the real one, link_file finds the links
   # already correct and prints nothing.
-  direct=$(HOME="$(mktemp -d)" "$DOT" link --dry-run 2>&1 |
+  direct=$(HOME="$(mktemp -d)" "$DOT" install link --dry-run 2>&1 |
     grep -m1 -o '/[^ ]*/config/zsh/.zshrc')
-  via_symlink=$(HOME="$(mktemp -d)" "$link/bin/dot" link --dry-run 2>&1 |
+  via_symlink=$(HOME="$(mktemp -d)" "$link/bin/dot" install link --dry-run 2>&1 |
     grep -m1 -o '/[^ ]*/config/zsh/.zshrc')
   [ -n "$direct" ]
   [ "$direct" = "$via_symlink" ]
@@ -245,7 +246,7 @@ setup() {
 }
 
 @test "dry-run link prints symlink commands" {
-  HOME="$(mktemp -d)" run "$DOT" link --dry-run
+  HOME="$(mktemp -d)" run "$DOT" install link --dry-run
   [ "$status" -eq 0 ]
   [[ "$output" == *"ln -s"* ]]
 }
@@ -253,7 +254,7 @@ setup() {
 @test "dry-run link does not touch the filesystem" {
   local home
   home="$(mktemp -d)"
-  HOME="$home" run "$DOT" link --dry-run
+  HOME="$home" run "$DOT" install link --dry-run
   [ "$status" -eq 0 ]
   # Regression test: link_file used to mkdir -p outside of run().
   [ -z "$(find "$home" -mindepth 1)" ]
@@ -262,7 +263,7 @@ setup() {
 @test "link and unlink round-trip" {
   local home
   home="$(mktemp -d)"
-  HOME="$home" "$DOT" link
+  HOME="$home" "$DOT" install link
   [ "$(readlink "$home/.zshrc")" = "$DOTFILES_DIR/config/zsh/.zshrc" ]
   HOME="$home" "$DOT" unlink
   [ ! -e "$home/.zshrc" ]
@@ -271,8 +272,8 @@ setup() {
 @test "link is idempotent" {
   local home
   home="$(mktemp -d)"
-  HOME="$home" "$DOT" link
-  HOME="$home" "$DOT" link
+  HOME="$home" "$DOT" install link
+  HOME="$home" "$DOT" install link
   # A second run finds every link already correct, so it makes no backup.
   [ ! -d "$home/.dotfiles-backup" ]
 }
@@ -282,7 +283,7 @@ setup() {
   home="$(mktemp -d)"
   mkdir -p "$home/.config/ghostty"
   echo original > "$home/.config/ghostty/config"
-  HOME="$home" "$DOT" link
+  HOME="$home" "$DOT" install link
   # Regression test: backups used to flatten to the basename, so several
   # files named `config` clobbered each other.
   [ "$(cat "$home"/.dotfiles-backup/*/.config/ghostty/config)" = "original" ]
@@ -294,7 +295,7 @@ setup() {
   home="$(mktemp -d)"
   mkdir -p "$home/.dotfiles-home/aliases"
   ln -s "$DOTFILES_DIR/system/aliases/gone.zsh" "$home/.dotfiles-home/aliases/gone.zsh"
-  HOME="$home" run "$DOT" link-shell
+  HOME="$home" run "$DOT" install links
   [ "$status" -eq 0 ]
   [ ! -L "$home/.dotfiles-home/aliases/gone.zsh" ]
 }
@@ -306,7 +307,7 @@ setup() {
   mkdir -p "$home/.dotfiles-home/functions"
   ln -s /somewhere/else/dotfiles/system/functions/old.zsh \
     "$home/.dotfiles-home/functions/old.zsh"
-  HOME="$home" run "$DOT" link-shell
+  HOME="$home" run "$DOT" install links
   [ "$status" -eq 0 ]
   [ ! -L "$home/.dotfiles-home/functions/old.zsh" ]
 }
@@ -317,7 +318,7 @@ setup() {
   mkdir -p "$home/.dotfiles-home/aliases"
   echo "alias x=y" > "$home/real.zsh"
   ln -s "$home/real.zsh" "$home/.dotfiles-home/aliases/keep.zsh"
-  HOME="$home" run "$DOT" link-shell
+  HOME="$home" run "$DOT" install links
   [ "$status" -eq 0 ]
   [ -L "$home/.dotfiles-home/aliases/keep.zsh" ]
 }
