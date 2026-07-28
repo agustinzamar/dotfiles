@@ -35,25 +35,28 @@ sub_help() {
   echo
   echo "Commands:"
   echo "   backup           Commit and push this repo"
-  echo "   brew             Install Homebrew and every topic"
   echo "   clean            Clean up caches"
-  echo "   code             Install the VS Code extensions in install/Codefile"
-  echo "   dock             Apply macOS Dock settings"
   echo "   doctor           Check that required tools and symlinks are in place"
-  echo "   duti             Set default apps for file types"
   echo "   edit             Open dotfiles in \$VISUAL"
-  echo "   full             Install everything (brew, tools, code, macos, duti)"
   echo "   help             This help message"
-  echo "   install          Bootstrap: link configs + install zinit"
-  echo "   link             Symlink every config into place"
-  echo "   link-shell       Symlink the shell configs only"
-  echo "   macos            Apply macOS system defaults"
   echo "   migrate-custom   Move ~/.dotfiles-custom files to ~/.dotfiles-home/custom"
   echo "   test             Run tests"
-  echo "   tools            Install tools Homebrew Bundle does not cover"
   echo "   unlink           Remove symlinks that point into this repo"
   echo "   update           Pull, upgrade packages, then re-run the install"
-  echo "   zsh              Install zinit plugin manager"
+  echo
+  echo "Install:"
+  echo "   install              Bootstrap: link configs + install zinit"
+  echo "   install link         Symlink every config into place"
+  echo "   install link-shell   Symlink the shell configs only"
+  echo "   install zsh          Install zinit plugin manager"
+  echo "   install brew         Install Homebrew + all topics"
+  echo "   install apps         Select and install topics interactively"
+  echo "   install tools        Install tools Homebrew Bundle does not cover"
+  echo "   install code         Install VS Code extensions"
+  echo "   install macos        Apply macOS system defaults"
+  echo "   install dock         Apply macOS Dock settings"
+  echo "   install duti         Set default apps for file types"
+  echo "   install --full       Install everything"
   local topic
   echo
   echo "Topics (installed by \`brew\`, or one at a time):"
@@ -70,17 +73,73 @@ sub_help() {
 # One broken package should not cost you the symlinks: run every phase, then
 # report. Exits non-zero so CI and `make install` still fail loudly.
 sub_install() {
-  log "Bootstrapping dotfiles"
-  local phase failures=()
-  for phase in link zsh; do
-    "sub_$phase" || failures+=("$phase")
+  local cmd="${1:-}"
+  shift 2>/dev/null || true
+
+  case "$cmd" in
+    --full | -f)
+      sub_full
+      return $?
+      ;;
+    apps)
+      sub_install_apps
+      return $?
+      ;;
+    "" | bootstrap)
+      log "Bootstrapping dotfiles"
+      local phase failures=()
+      for phase in link zsh; do
+        "sub_$phase" || failures+=("$phase")
+      done
+      if ((${#failures[@]})); then
+        log "Finished with failures: ${failures[*]}"
+        return 1
+      fi
+      log "Bootstrap complete — run \`dot install --full\` for the rest"
+      return 0
+      ;;
+    *)
+      local sub="sub_$cmd"
+      if declare -F "$sub" >/dev/null; then
+        "$sub"
+      else
+        echo "'$cmd' is not an install command." >&2
+        return 1
+      fi
+      ;;
+  esac
+}
+
+sub_install_apps() {
+  local topics=()
+  local f name
+  for f in "$TOPIC_DIR"/*; do
+    [[ -f "$f" ]] || continue
+    topics+=("$(basename "$f")")
   done
 
-  if ((${#failures[@]})); then
-    log "Finished with failures: ${failures[*]}"
-    return 1
+  if ((${#topics[@]} == 0)); then
+    echo "No topics found."
+    return 0
   fi
-  log "Bootstrap complete — run \`dot full\` for the rest"
+
+  if is_executable fzf; then
+    local selected
+    selected=$(printf '%s\n' "${topics[@]}" |
+      fzf --multi --prompt="Select topics to install > " \
+        --preview "head -3 $TOPIC_DIR/{}" \
+        --bind 'ctrl-a:select-all,ctrl-d:deselect-all')
+    [[ -z "$selected" ]] && return 0
+    while IFS= read -r name; do
+      install_topic "$name" || true
+    done <<<"$selected"
+  else
+    echo "Available topics:"
+    select name in "${topics[@]}" "done"; do
+      [[ "$name" == "done" ]] && break
+      [[ -n "$name" ]] && install_topic "$name" || true
+    done
+  fi
 }
 
 sub_full() {
