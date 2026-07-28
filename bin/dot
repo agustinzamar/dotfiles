@@ -42,8 +42,9 @@ sub_help() {
   echo "   doctor           Check that required tools and symlinks are in place"
   echo "   duti             Set default apps for file types"
   echo "   edit             Open dotfiles in \$VISUAL"
+  echo "   full             Install everything (brew, tools, code, macos, duti)"
   echo "   help             This help message"
-  echo "   install          Run the full install"
+  echo "   install          Bootstrap: link configs + install zinit"
   echo "   link             Symlink every config into place"
   echo "   link-shell       Symlink the shell configs only"
   echo "   macos            Apply macOS system defaults"
@@ -69,8 +70,21 @@ sub_help() {
 # One broken package should not cost you the symlinks: run every phase, then
 # report. Exits non-zero so CI and `make install` still fail loudly.
 sub_install() {
-  # No `dock`: sub_macos already sources dock-defaults.sh via the glob, and
-  # running it twice kills the Dock while it is still restarting.
+  log "Bootstrapping dotfiles"
+  local phase failures=()
+  for phase in link zsh; do
+    "sub_$phase" || failures+=("$phase")
+  done
+
+  if ((${#failures[@]})); then
+    log "Finished with failures: ${failures[*]}"
+    return 1
+  fi
+  log "Bootstrap complete — run \`dot full\` for the rest"
+}
+
+sub_full() {
+  log "Full install"
   local phase failures=()
   for phase in brew link zsh tools code macos duti; do
     "sub_$phase" || failures+=("$phase")
