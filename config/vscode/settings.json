@@ -27,7 +27,7 @@
     120
   ],
   "editor.insertSpaces": true,
-  "editor.fontFamily": "JetBrains Mono",
+  "editor.fontFamily": "JetBrainsMono Nerd Font",
   "editor.fontLigatures": true,
   "editor.quickSuggestions": {
     "strings": true,
@@ -96,7 +96,7 @@
   "git.confirmSync": false,
   "explorer.confirmPasteNative": false,
   "editor.accessibilitySupport": "off",
-  "terminal.integrated.fontFamily": "JetBrains Mono",
+  "terminal.integrated.fontFamily": "JetBrainsMono Nerd Font",
   "[javascriptreact]": {
     "editor.defaultFormatter": "biomejs.biome"
   },
