@@ -45,7 +45,6 @@ all_links() {
 		config/opencode/skills|$HOME/.config/opencode/skills
 		config/opencode/themes|$HOME/.config/opencode/themes
 		config/hunk/config.toml|$HOME/.config/hunk/config.toml
-		config/git/config|$HOME/.config/git/config
 		config/git/ignore|$HOME/.config/git/ignore
 	EOF
 }
