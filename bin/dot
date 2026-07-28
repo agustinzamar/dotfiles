@@ -379,7 +379,7 @@ sub_test() {
   bats "$DOTFILES_DIR"/test/*.bats
 }
 
-TOP_COMMANDS=" backup clean doctor edit help migrate-custom test unlink update "
+TOP_COMMANDS=" backup clean doctor edit help install migrate-custom test unlink update "
 
 COMMAND_NAME=${1:-}
 case "$COMMAND_NAME" in
