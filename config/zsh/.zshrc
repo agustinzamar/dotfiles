@@ -102,6 +102,10 @@ plugins=(
 # Source exports early so OMZ plugins find brewed binaries
 source "${HOME}/.dotfiles-home/.exports"
 
+# Before oh-my-zsh.sh, which is what runs compinit: a completion function added
+# to fpath afterwards is never picked up.
+fpath=("${HOME}/.dotfiles-home/completions" $fpath)
+
 source $ZSH/oh-my-zsh.sh
 
 typeset -U path PATH

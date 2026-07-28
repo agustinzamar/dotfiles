@@ -5,6 +5,15 @@ macOS dotfiles installed with Bash and Homebrew Bundle, driven by a single
 
 ## Install
 
+On a fresh machine, one line — clones to `~/.dotfiles` and installs:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/agustinzamar/dotfiles/main/remote-install.sh | bash
+```
+
+It falls back to a tarball when git is not there yet, which is the case before
+the Xcode command line tools are installed. Or clone it yourself:
+
 ```bash
 git clone git@github.com:agustinzamar/dotfiles.git ~/dotfiles
 cd ~/dotfiles
@@ -75,7 +84,8 @@ dot link --dry-run
 - `install/` — the other package lists (`Codefile`, `duti`) plus
   the per-topic install steps
 - `config/` — application configuration
-- `system/` — shell aliases, functions, exports, and `macos/`
+- `system/` — shell aliases, functions, exports, `env/`, `completions/`, `macos/`
+- `remote-install.sh` — one-line bootstrap for a fresh machine
 - `test/` — Bats tests
 
 The package lists are plain data: one entry per line, `#` comments ignored.

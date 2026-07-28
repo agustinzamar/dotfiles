@@ -47,6 +47,25 @@ setup() {
   done
 }
 
+# The completion parses `dot help`, so a change to the help format silently
+# leaves it offering nothing.
+@test "the zsh completion parses every command out of help" {
+  local from_help from_completion
+  from_help=$("$DOT" help | sed -n 's/^   \([a-z][a-z0-9-]*\)  *.*/\1/p' | sort)
+  # The same expression the completion function uses.
+  from_completion=$("$DOT" help |
+    sed -n 's/^   \([a-z][a-z0-9-]*\)  *\(.*\)$/\1:\2/p' | cut -d: -f1 | sort)
+  [ -n "$from_completion" ]
+  [ "$from_help" = "$from_completion" ]
+}
+
+@test "the completion is a zsh compdef for dot" {
+  local file="$DOTFILES_DIR/system/completions/_dot"
+  [ -f "$file" ]
+  head -1 "$file" | grep -q '^#compdef dot$'
+  zsh -n "$file"
+}
+
 # The macos scripts call `defaults write` directly instead of going through
 # `run`, so a dry run must stop short of sourcing them.
 @test "macos dry-run reports without sourcing" {

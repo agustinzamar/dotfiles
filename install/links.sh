@@ -12,10 +12,13 @@ shell_links() {
 		system/.exports|$HOME/.dotfiles-home/.exports
 	EOF
 
+  # completions/ holds zsh completion functions, which are named `_command`
+  # rather than *.zsh, so it needs its own glob.
   local file rel
   for file in "$DOTFILES_DIR"/system/aliases/*.zsh \
     "$DOTFILES_DIR"/system/functions/*.zsh \
-    "$DOTFILES_DIR"/system/env/*.zsh; do
+    "$DOTFILES_DIR"/system/env/*.zsh \
+    "$DOTFILES_DIR"/system/completions/_*; do
     [[ -e "$file" ]] || continue
     rel=${file#"$DOTFILES_DIR"/}
     printf '%s|%s\n' "$rel" "$HOME/.dotfiles-home/${rel#system/}"
@@ -68,7 +71,8 @@ prune_shell_links() {
   local link
   for link in "$HOME"/.dotfiles-home/aliases/* \
     "$HOME"/.dotfiles-home/functions/* \
-    "$HOME"/.dotfiles-home/env/*; do
+    "$HOME"/.dotfiles-home/env/* \
+    "$HOME"/.dotfiles-home/completions/*; do
     [[ -L "$link" && ! -e "$link" ]] && run rm "$link"
   done
   return 0

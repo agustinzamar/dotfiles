@@ -1,0 +1,20 @@
+#compdef dot
+# Completion for `dot`, generated from `dot help` so that adding a command or
+# a topic needs no change here.
+
+_dot() {
+  local -a subcommands
+  subcommands=(${(f)"$(_call_program dot-help dot help 2>/dev/null |
+    sed -n 's/^   \([a-z][a-z0-9-]*\)  *\(.*\)$/\1:\2/p')"})
+
+  _arguments -C \
+    '--dry-run[print what would run, touching nothing]' \
+    '1:command:->command' \
+    '*::arg:->args'
+
+  case $state in
+    command) _describe -t commands 'dot command' subcommands ;;
+  esac
+}
+
+_dot "$@"
