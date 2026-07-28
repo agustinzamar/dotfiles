@@ -47,6 +47,24 @@ setup() {
   done
 }
 
+# The macos scripts call `defaults write` directly instead of going through
+# `run`, so a dry run must stop short of sourcing them.
+@test "macos dry-run reports without sourcing" {
+  run "$DOT" macos --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"+ source system/macos/_defaults.sh"* ]]
+  [[ "$output" != *"sudo"* ]]
+}
+
+# `_defaults.sh` must sort before the per-app files; that is what the leading
+# underscore is for.
+@test "macos applies the shared defaults first" {
+  run "$DOT" macos --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$(grep -c 'source system/macos/' <<<"$output")" -ge 2 ]]
+  [[ "$(grep -m1 'source system/macos/' <<<"$output")" == *"_defaults.sh"* ]]
+}
+
 # duti reads a file with no final newline as an unterminated extra line and
 # fails with "line too long". .editorconfig asks for one; nothing enforced it.
 @test "every package file ends with a newline" {

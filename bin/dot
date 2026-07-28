@@ -198,20 +198,32 @@ sub_tools() {
   install_tools
 }
 
-sub_macos() {
+# `_defaults.sh` sorts first, which is what the underscore is for: the shared
+# system settings land before the per-app ones.
+#
+# These scripts call `defaults write` directly rather than going through `run`,
+# so --dry-run has to stop short of sourcing them or it would apply the lot.
+apply_defaults() {
   local file
-  for file in "$DOTFILES_DIR"/system/macos/defaults*.sh; do
+  for file in "$@"; do
+    [[ -f "$file" ]] || continue
     log "Applying ${file#"$DOTFILES_DIR"/}"
-    # shellcheck source=../system/macos/defaults.sh
-    . "$file"
+    if "$DRY_RUN"; then
+      echo "+ source ${file#"$DOTFILES_DIR"/}"
+    else
+      # shellcheck source=/dev/null
+      . "$file"
+    fi
   done
+}
+
+sub_macos() {
+  apply_defaults "$DOTFILES_DIR"/system/macos/*defaults.sh
   echo "Some changes may require a logout or restart to take effect."
 }
 
 sub_dock() {
-  log "Applying Dock settings"
-  # shellcheck source=../system/macos/dock.sh
-  . "$DOTFILES_DIR/system/macos/dock.sh"
+  apply_defaults "$DOTFILES_DIR/system/macos/dock-defaults.sh"
 }
 
 sub_doctor() {

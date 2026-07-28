@@ -1,4 +1,5 @@
-#!/bin/sh
+#!/usr/bin/env bash
+# Dock contents. Sourced by `dot macos` and `dot dock`.
 
 dockutil --no-restart --remove all
 # dockutil --no-restart --add "/Applications/Google Chrome.app"
