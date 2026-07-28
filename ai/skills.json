@@ -1,17 +1,22 @@
 {
   "skills": [
     { "source": "shadcn/ui", "skill": "shadcn" },
-    { "source": "vercel-labs/agent-browser", "skill": "agent-browser" },
+    { "source": "vercel-labs/agent-browser", "skill": "find-skills" },
     { "source": "vercel-labs/agent-skills", "skill": "vercel-react-best-practices" },
     { "source": "vercel-labs/agent-skills", "skill": "vercel-composition-patterns" },
-    { "source": "vercel-labs/agent-skills", "skill": "vercel-optimize" },
-    { "source": "vercel-labs/open-agents", "skill": "frontend-design" },
-    { "source": "vercel-labs/open-agents", "skill": "web-animation-design" },
+    {
+      "source": "vercel-labs/agent-browser",
+      "skill": "agent-browser"
+    },
+    { "source": "vercel-labs/agent-skills", "skill": "vercel-react-view-transitions" },
+    { "source": "vercel-labs/open-agents", "skill": "web-design-guidelines" },
+    { "source": "antropics/skills", "skill": "frontend-design" },
+    { "source": "antropics/skills", "skill": "skill-creator" },
+    { "source": "supabase/agent-skills", "skill": "supabase-postgress-best-practices" },
+    { "source": "nextlevelbuilder/ui-ux-pro-max-skill", "skill": "ui-ux-pro-max" },
     { "source": "antfu/skills", "skill": "vite" },
     { "source": "antfu/skills", "skill": "pnpm" },
     { "source": "wshobson/agents", "skill": "tailwind-design-system" },
-    { "source": "wshobson/agents", "skill": "typescript-advanced-types" },
-    { "source": "coreyhaines31/marketingskills", "skill": "copywriting" },
-    { "source": "coreyhaines31/marketingskills", "skill": "copywriting" }
+    { "source": "wshobson/agents", "skill": "typescript-advanced-types" }
   ]
 }

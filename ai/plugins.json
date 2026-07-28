@@ -1,0 +1,28 @@
+{
+  "plugins": [
+    {
+      "name": "ponytail",
+      "repo": "DietrichGebert/ponytail",
+      "homepage": "https://github.com/DietrichGebert/ponytail",
+      "install": {
+        "opencode": { "type": "opencode-plugin", "package": "@dietrichgebert/ponytail" },
+        "claude-code": { "type": "marketplace", "command": "/plugin marketplace add DietrichGebert/ponytail", "install": "/plugin install ponytail@ponytail", "interactive": true },
+        "codex": { "type": "marketplace", "command": "codex plugin marketplace add DietrichGebert/ponytail && codex plugin add ponytail@ponytail", "interactive": true },
+        "gemini": { "type": "cli", "command": "gemini extensions install https://github.com/DietrichGebert/ponytail" },
+        "pi": { "type": "cli", "command": "pi install git:github.com/DietrichGebert/ponytail" }
+      }
+    },
+    {
+      "name": "superpowers",
+      "repo": "obra/superpowers",
+      "homepage": "https://github.com/obra/superpowers",
+      "install": {
+        "opencode": { "type": "opencode-plugin", "package": "superpowers@git+https://github.com/obra/superpowers.git" },
+        "claude-code": { "type": "marketplace", "command": "/plugin install superpowers@claude-plugins-official", "interactive": true },
+        "codex": { "type": "marketplace", "command": "/plugins → search superpowers → Install", "interactive": true },
+        "gemini": { "type": "cli", "command": "gemini extensions install https://github.com/obra/superpowers" },
+        "pi": { "type": "cli", "command": "pi install git:github.com/obra/superpowers" }
+      }
+    }
+  ]
+}
