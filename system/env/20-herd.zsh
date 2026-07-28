@@ -1,4 +1,9 @@
-# Herd: NVM, the shell integration, and the per-version PHP ini directories.
+# Herd: PHP binaries, NVM, the shell integration, and the per-version ini dirs.
+
+# Ahead of /opt/homebrew/bin, so `php` is Herd's switchable one (php, php82..85)
+# rather than whatever Homebrew pulled in as a dependency.
+export PATH="$HOME/Library/Application Support/Herd/bin:$PATH"
+
 export NVM_DIR="$HOME/Library/Application Support/Herd/config/nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
