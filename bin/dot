@@ -49,6 +49,7 @@ sub_help() {
   echo "Install:"
   echo "   install              Bootstrap: link configs + install zinit"
   echo "   install --minimal   Bootstrap + brew + core + dev + git"
+  echo "   install --laravel   Minimal + herd + dbngin"
   echo "   install links        Symlink shell configs only"
   echo "   install zsh          Install zinit plugin manager"
   echo "   install brew         Install Homebrew + all topics"
@@ -102,8 +103,14 @@ sub_install() {
       log "Minimal complete — run \`dot install --full\` for everything"
       return 0
       ;;
+    --laravel | -l)
+      # minimal + herd + dbngin (herd bundles PHP, composer, etc.)
+      sub_install --minimal
+      log "Installing Laravel tools"
+      run brew install --cask herd dbngin
+      return 0
+      ;;
     apps)
-      sub_install_apps
       return $?
       ;;
     "" | bootstrap)
