@@ -53,7 +53,11 @@ sub_help() {
   echo "   install links        Symlink shell configs only"
   echo "   install zsh          Install zinit plugin manager"
   echo "   install brew         Install Homebrew + all topics"
-  echo "   install apps         Select and install topics interactively"
+  echo "   install ai           Sync skills + plugins to all AI tools"
+  echo "   install ai claude    Skills to Claude only"
+  echo "   install ai codex     Skills + plugins to Codex only"
+  echo "   install ai opencode  Skills to OpenCode only"
+  echo "   install ai skills    Skills to all tools"
   echo "   install tools        Install tools Homebrew Bundle does not cover"
   echo "   install code         Install VS Code extensions"
   echo "   install git          Set git config (skips name/email/gpg)"
@@ -109,6 +113,11 @@ sub_install() {
       log "Installing Laravel tools"
       run brew install --cask herd dbngin
       return 0
+      ;;
+    ai)
+      shift
+      sub_install_ai "$@"
+      return $?
       ;;
     apps)
       return $?
@@ -193,6 +202,50 @@ sub_install_apps() {
       [[ -n "$name" ]] && run brew install "$name" || true
     done
   fi
+}
+
+sub_install_ai() {
+  local target="${1:-all}"
+  local what="${2:-all}"
+
+  _link_ai_skill() {
+    link_file "ai/skills" "$1"
+  }
+
+  case "$target" in
+    all)
+      log "Installing AI assets"
+      _link_ai_skill "$HOME/.claude/skills"
+      _link_ai_skill "$HOME/.config/opencode/skills"
+      _link_ai_skill "$HOME/.agents/skills"
+      mkdir -p "$HOME/.agents/plugins" 2>/dev/null || true
+      log "AI assets installed"
+      ;;
+    claude)
+      _link_ai_skill "$HOME/.claude/skills"
+      ;;
+    codex)
+      _link_ai_skill "$HOME/.agents/skills"
+      mkdir -p "$HOME/.agents/plugins" 2>/dev/null || true
+      ;;
+    opencode)
+      _link_ai_skill "$HOME/.config/opencode/skills"
+      ;;
+    skills)
+      case "$what" in
+        all|claude)  _link_ai_skill "$HOME/.claude/skills" ;;
+        all|codex)   _link_ai_skill "$HOME/.agents/skills" ;;
+        all|opencode) _link_ai_skill "$HOME/.config/opencode/skills" ;;
+      esac
+      ;;
+    plugins)
+      mkdir -p "$HOME/.agents/plugins" 2>/dev/null || true
+      ;;
+    *)
+      echo "Usage: dot install ai [all|claude|codex|opencode|skills|plugins]" >&2
+      return 1
+      ;;
+  esac
 }
 
 sub_full() {
