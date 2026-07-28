@@ -119,33 +119,46 @@ sub_install() {
 }
 
 sub_install_apps() {
-  local topics=()
+  local items=() item topic
   local f name
   for f in "$TOPIC_DIR"/*; do
     [[ -f "$f" ]] || continue
-    topics+=("$(basename "$f")")
+    topic=$(basename "$f")
+    while IFS=' "' read -r _ type name _; do
+      [[ -z "$name" ]] && continue
+      items+=("$name|$type|$topic")
+    done < <(grep -E '^(brew|cask|mas) "' "$f")
   done
 
-  if ((${#topics[@]} == 0)); then
-    echo "No topics found."
+  if ((${#items[@]} == 0)); then
+    echo "No packages found."
     return 0
   fi
 
   if is_executable fzf; then
     local selected
-    selected=$(printf '%s\n' "${topics[@]}" |
-      fzf --multi --prompt="Select topics to install > " \
-        --preview "head -3 $TOPIC_DIR/{}" \
+    selected=$(printf '%s\n' "${items[@]}" |
+      fzf --multi --prompt="Select packages to install > " \
+        --with-nth=1 --delimiter='|' \
+        --preview 'echo "topic: {3} | type: {2}"' \
         --bind 'ctrl-a:select-all,ctrl-d:deselect-all')
     [[ -z "$selected" ]] && return 0
-    while IFS= read -r name; do
-      install_topic "$name" || true
+    while IFS='|' read -r pkg type _; do
+      case "$type" in
+        cask) run brew install --cask "$pkg" ;;
+        mas)  run mas install "$pkg" ;;
+        brew) run brew install "$pkg" ;;
+      esac
     done <<<"$selected"
   else
-    echo "Available topics:"
-    select name in "${topics[@]}" "done"; do
+    echo "Available packages:"
+    local names=()
+    for item in "${items[@]}"; do
+      names+=("${item%%|*}")
+    done
+    select name in "${names[@]}" "done"; do
       [[ "$name" == "done" ]] && break
-      [[ -n "$name" ]] && install_topic "$name" || true
+      [[ -n "$name" ]] && run brew install "$name" || true
     done
   fi
 }
