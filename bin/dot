@@ -159,6 +159,7 @@ sub_install_apps() {
       name=${name%\"}
       items+=("$name|$type|$topic")
     done < <(grep -E '^(brew|cask|mas) "' "$f" 2>/dev/null)
+    done
   done
 
   if ((${#items[@]} == 0)); then
