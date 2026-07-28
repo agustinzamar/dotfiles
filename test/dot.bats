@@ -281,6 +281,12 @@ setup() {
   [[ "$output" == *"Plugin [opencode]"* ]]
 }
 
+@test "AI install supports macOS system bash" {
+  run /bin/bash "$DOT" install ai claude --skills --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"--agent claude-code"* ]]
+}
+
 @test "link and unlink round-trip" {
   local home
   home="$(mktemp -d)"

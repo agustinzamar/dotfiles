@@ -205,14 +205,8 @@ sub_install_apps() {
 }
 
 sub_install_ai() {
-  # tool → (skills.sh --agent value, custom-skill link target).
-  # `all` maps to --agent '*' and links to both Claude and agents dirs.
-  local -A AGENT=([all]='*' [claude]=claude-code [codex]=codex [opencode]=opencode)
-  local -A LINK=([all]="$HOME/.claude/skills|$HOME/.agents/skills" [claude]="$HOME/.claude/skills" [codex]="$HOME/.agents/skills" [opencode]="$HOME/.agents/skills")
-
   _install_skills() {
     local tool="$1"
-    local agent="${AGENT[$tool]}"
     local manifest="$DOTFILES_DIR/ai/skills.json"
     if [[ -f "$manifest" ]]; then
       local source skill
@@ -230,14 +224,13 @@ sub_install_ai() {
     # Link any local/custom skills not on skills.sh, scoped to this tool's dir(s).
     [[ -d "$DOTFILES_DIR/ai/skills" && "$(ls -A "$DOTFILES_DIR/ai/skills" 2>/dev/null)" ]] || return 0
     local IFS='|' dir
-    for dir in ${LINK[$tool]}; do
+    for dir in $link_dirs; do
       link_file "ai/skills" "$dir"
     done
   }
 
   _install_plugins() {
     local tool="$1"
-    local agent="${AGENT[$tool]}"
     # opencode.json edits are non-interactive and safe to apply directly;
     # claude-code and codex use interactive /plugin shells, so we just print.
     local manifest="$DOTFILES_DIR/ai/plugins.json"
@@ -285,8 +278,20 @@ sub_install_ai() {
     set -- "$target" "$@"
     target=all
   }
+  local agent link_dirs
   case "$target" in
-    all | claude | codex | opencode) : ;;
+    all)
+      agent='*'
+      link_dirs="$HOME/.claude/skills|$HOME/.agents/skills"
+      ;;
+    claude)
+      agent=claude-code
+      link_dirs="$HOME/.claude/skills"
+      ;;
+    codex | opencode)
+      agent="$target"
+      link_dirs="$HOME/.agents/skills"
+      ;;
     --skills | --plugins)
       set -- "$target" "$@"
       target=all
