@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 # Git config. Sourced by bin/dot via install/tools.sh (or standalone).
 
-# Only set non-identity settings — name/email/gpg stay local per machine.
-# If you want to pin them in the repo, set them in config/git/config and
-# add yourself to the symlink list in install/links.sh.
+# Identity keys (name, email, signing) are never overridden if already set.
+# set_git_config skips them automatically — no need for manual guards.
+
+_identity_keys="^user\.(name|email|signingkey)$|^commit\.gpgsign$|^gpg\."
 
 set_git_config() {
   local key=$1 value=$2
+  if [[ "$key" =~ $_identity_keys ]] && git config --global --get "$key" &>/dev/null; then
+    return 0
+  fi
   if [[ "$(git config --global "$key" 2>/dev/null)" == "$value" ]]; then
     return 0
   fi
