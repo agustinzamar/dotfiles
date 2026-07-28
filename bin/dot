@@ -44,7 +44,6 @@ sub_help() {
   echo "   link             Symlink every config into place"
   echo "   link-shell       Symlink the shell configs only"
   echo "   macos            Apply macOS system defaults"
-  echo "   npm              Install the global packages in install/npmfile"
   echo "   test             Run tests"
   echo "   tools            Install tools Homebrew Bundle does not cover"
   echo "   unlink           Remove symlinks that point into this repo"
@@ -69,7 +68,7 @@ sub_install() {
   # No `dock`: sub_macos already sources dock-defaults.sh via the glob, and
   # running it twice kills the Dock while it is still restarting.
   local phase failures=()
-  for phase in brew link zsh tools npm code macos duti; do
+  for phase in brew link zsh tools code macos duti; do
     "sub_$phase" || failures+=("$phase")
   done
 
@@ -147,15 +146,6 @@ sub_brew() {
 # lines ignored. Keeping them as data means adding a package is a one-line diff.
 read_package_file() {
   sed -e 's/#.*//' -e 's/[[:space:]]*$//' "$1" | grep -v '^$' || true
-}
-
-sub_npm() {
-  is_executable npm || return 0
-  log "Installing global npm packages"
-  local package
-  while read -r package; do
-    npm list -g --depth=0 "$package" >/dev/null 2>&1 || run npm install -g "$package"
-  done < <(read_package_file "$DOTFILES_DIR/install/npmfile")
 }
 
 sub_code() {

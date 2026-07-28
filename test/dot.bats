@@ -70,7 +70,6 @@ setup() {
 @test "every package file ends with a newline" {
   local file bad=0
   for file in "$DOTFILES_DIR"/install/duti \
-    "$DOTFILES_DIR"/install/npmfile \
     "$DOTFILES_DIR"/install/Codefile \
     "$DOTFILES_DIR"/install/topics/* \
     "$DOTFILES_DIR"/install/topics/optional/*; do
@@ -137,7 +136,7 @@ setup() {
 # from it, install silently stops doing that work.
 @test "install runs every phase through the failure-collecting loop" {
   local phase
-  for phase in brew link zsh tools npm code macos duti; do
+  for phase in brew link zsh tools code macos duti; do
     grep -q "for phase in .*\b$phase\b" "$DOT" || {
       echo "phase '$phase' missing from the install loop"
       return 1

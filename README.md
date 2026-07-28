@@ -44,7 +44,6 @@ command with no code change.
 | `unlink` | Remove symlinks that point into this repo |
 | `zsh` | Install Oh My Zsh, its theme and plugins |
 | `tools` | Install what Homebrew Bundle does not cover |
-| `npm` | Install the global packages in `install/npmfile` |
 | `code` | Install the VS Code extensions in `install/Codefile` |
 | `duti` | Set default apps for file types |
 | `macos` | Apply macOS system defaults |
@@ -73,7 +72,7 @@ dot link --dry-run
 - `install/common.sh` — `run`, `log`, `link_file`; the only copies
 - `install/topics/` — one Brewfile per package group; each is also a command.
   `optional/` holds the ones `dot brew` skips
-- `install/` — the other package lists (`Codefile`, `npmfile`, `duti`) plus
+- `install/` — the other package lists (`Codefile`, `duti`) plus
   the per-topic install steps
 - `config/` — application configuration
 - `system/` — shell aliases, functions, exports, and `macos/`

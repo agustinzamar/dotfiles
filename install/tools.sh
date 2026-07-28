@@ -10,8 +10,6 @@ install_tools() {
     run "$brew_prefix/opt/fzf/install" --all --no-bash --no-fish
   fi
 
-  npm list -g --depth=0 opentmux >/dev/null 2>&1 || run npm install -g opentmux
-
   local package key
   for package in rendercv ytsage; do
     pipx list 2>/dev/null | grep -q "package $package" || run pipx install "$package"
