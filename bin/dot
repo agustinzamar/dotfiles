@@ -3,7 +3,10 @@
 set -Eeuo pipefail
 
 BIN_NAME=$(basename "$0")
-DOTFILES_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
+# `pwd -P`, so that invoking dot through the ~/.dotfiles symlink resolves to
+# the same path `link` wrote into the symlinks. Otherwise doctor calls every
+# link broken and unlink declines to remove them.
+DOTFILES_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 export DOTFILES_DIR
 
 # --dry-run is global: pull it out before working out which subcommand ran.

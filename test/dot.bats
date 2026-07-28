@@ -191,6 +191,24 @@ setup() {
   done
 }
 
+# ~/.dotfiles is a symlink to the repo, so invoking dot through it used to give
+# a DOTFILES_DIR that did not match the paths `link` wrote into the symlinks:
+# doctor called every link broken and unlink declined to remove them.
+@test "DOTFILES_DIR is the same however dot is invoked" {
+  local link direct via_symlink
+  link="$(mktemp -d)/dotfiles-link"
+  ln -s "$DOTFILES_DIR" "$link"
+
+  # A temporary HOME for both: with the real one, link_file finds the links
+  # already correct and prints nothing.
+  direct=$(HOME="$(mktemp -d)" "$DOT" link --dry-run 2>&1 |
+    grep -m1 -o '/[^ ]*/config/zsh/.zshrc')
+  via_symlink=$(HOME="$(mktemp -d)" "$link/bin/dot" link --dry-run 2>&1 |
+    grep -m1 -o '/[^ ]*/config/zsh/.zshrc')
+  [ -n "$direct" ]
+  [ "$direct" = "$via_symlink" ]
+}
+
 # Deleting a config without removing its line from the map leaves the target a
 # dangling symlink after `dot link`. That is how ~/.claude/skills broke.
 @test "every source in the link map exists" {
