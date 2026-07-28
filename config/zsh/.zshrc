@@ -115,35 +115,10 @@ for file in ${HOME}/.dotfiles-custom/shell/.{exports,aliases,functions,zshrc}; d
     [ -r "$file" ] && [ -f "$file" ] && source "$file"
 done
 
-# Tool-specific PATH and environment
-export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"
+# Per-tool environment, one file each, sourced in filename order. See
+# system/env/ in the dotfiles repo.
+for f in "${HOME}"/.dotfiles-home/env/*.zsh(N); do source "$f"; done
 
-# Herd injected NVM configuration
-export NVM_DIR="$HOME/Library/Application Support/Herd/config/nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-
-[[ -f "/Applications/Herd.app/Contents/Resources/config/shell/zshrc.zsh" ]] && builtin source "/Applications/Herd.app/Contents/Resources/config/shell/zshrc.zsh"
-
-# Hook inits
-if command -v direnv &> /dev/null; then
-    eval "$(direnv hook zsh)"
-fi
-
+# Last, so the prompt config wins over anything a tool init changed.
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-
-# Herd injected PHP 8.4 configuration.
-export HERD_PHP_84_INI_SCAN_DIR="/Users/agustin/Library/Application Support/Herd/config/php/84/"
-
-# Herd injected PHP 8.3 configuration.
-export HERD_PHP_83_INI_SCAN_DIR="/Users/agustin/Library/Application Support/Herd/config/php/83/"
-
-# Herd injected PHP 8.2 configuration.
-export HERD_PHP_82_INI_SCAN_DIR="/Users/agustin/Library/Application Support/Herd/config/php/82/"
-
-# Herd injected PHP 8.1 configuration.
-export HERD_PHP_81_INI_SCAN_DIR="/Users/agustin/Library/Application Support/Herd/config/php/81/"
-
-# FZF configuration
-[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh

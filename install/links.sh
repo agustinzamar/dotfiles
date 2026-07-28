@@ -13,7 +13,9 @@ shell_links() {
 	EOF
 
   local file rel
-  for file in "$DOTFILES_DIR"/system/aliases/*.zsh "$DOTFILES_DIR"/system/functions/*.zsh; do
+  for file in "$DOTFILES_DIR"/system/aliases/*.zsh \
+    "$DOTFILES_DIR"/system/functions/*.zsh \
+    "$DOTFILES_DIR"/system/env/*.zsh; do
     [[ -e "$file" ]] || continue
     rel=${file#"$DOTFILES_DIR"/}
     printf '%s|%s\n' "$rel" "$HOME/.dotfiles-home/${rel#system/}"
@@ -64,7 +66,9 @@ _walk_links() {
 # clone rather than at $DOTFILES_DIR.
 prune_shell_links() {
   local link
-  for link in "$HOME"/.dotfiles-home/aliases/* "$HOME"/.dotfiles-home/functions/*; do
+  for link in "$HOME"/.dotfiles-home/aliases/* \
+    "$HOME"/.dotfiles-home/functions/* \
+    "$HOME"/.dotfiles-home/env/*; do
     [[ -L "$link" && ! -e "$link" ]] && run rm "$link"
   done
   return 0
