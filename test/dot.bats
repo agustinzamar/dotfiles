@@ -110,9 +110,8 @@ setup() {
   # Two `brew` calls rather than one per package: `brew info` costs a second
   # each, these are instant and give the complete name lists.
   local formulae casks
-  formulae=$(brew formulae 2>/dev/null)
-  casks=$(brew casks 2>/dev/null)
-  [ -n "$formulae" ] && [ -n "$casks" ] || skip "brew name lists unavailable"
+  formulae=$(brew search --formula '' 2>/dev/null) || skip "brew formulae unavailable"
+  casks=$(brew search --cask '' 2>/dev/null) || skip "brew casks unavailable"
 
   local file line name wrong=0
   for file in "$DOTFILES_DIR"/install/topics/* "$DOTFILES_DIR"/install/topics/optional/*; do
