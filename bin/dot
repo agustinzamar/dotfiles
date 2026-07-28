@@ -254,7 +254,11 @@ sub_install_ai() {
           local cfg="$HOME/.config/opencode/opencode.json"
           if [[ -f "$cfg" ]] && ! jq -e --arg p "$opencode_pkg" '.plugin | index($p)' "$cfg" &>/dev/null; then
             log "  opencode.json += $opencode_pkg"
-            run jq --arg p "$opencode_pkg" '.plugin += [$p]' "$cfg" >"${cfg}.tmp" && mv "${cfg}.tmp" "$cfg"
+            if "$DRY_RUN"; then
+              run jq --arg p "$opencode_pkg" '.plugin += [$p]' "$cfg"
+            else
+              jq --arg p "$opencode_pkg" '.plugin += [$p]' "$cfg" > "${cfg}.tmp" && mv "${cfg}.tmp" "$cfg"
+            fi
           fi
         fi
       fi
