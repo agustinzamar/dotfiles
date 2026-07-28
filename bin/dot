@@ -48,6 +48,7 @@ sub_help() {
   echo
   echo "Install:"
   echo "   install              Bootstrap: link configs + install zinit"
+  echo "   install --minimal   Bootstrap + brew + core + dev + git"
   echo "   install links        Symlink shell configs only"
   echo "   install zsh          Install zinit plugin manager"
   echo "   install brew         Install Homebrew + all topics"
@@ -83,6 +84,24 @@ sub_install() {
       sub_full
       return $?
       ;;
+    --minimal | -m)
+      log "Minimal setup"
+      local phase failures=()
+      for phase in link zsh brew; do
+        "sub_$phase" || failures+=("$phase")
+      done
+      # Install core + dev topics only
+      for topic in core dev; do
+        install_topic "$topic" || true
+      done
+      sub_git
+      if ((${#failures[@]})); then
+        log "Finished with failures: ${failures[*]}"
+        return 1
+      fi
+      log "Minimal complete — run \`dot install --full\` for everything"
+      return 0
+      ;;
     apps)
       sub_install_apps
       return $?
@@ -97,7 +116,7 @@ sub_install() {
         log "Finished with failures: ${failures[*]}"
         return 1
       fi
-      log "Bootstrap complete — run \`dot install --full\` for the rest"
+      log "Bootstrap complete — run \`dot install --minimal\` for tools and dev packages"
       return 0
       ;;
     *)
