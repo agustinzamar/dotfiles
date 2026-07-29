@@ -62,6 +62,7 @@ com.microsoft.VSCode Codefile editor
 com.microsoft.VSCode Dockerfile editor
 com.microsoft.VSCode Makefile editor
 com.microsoft.VSCode npmfile editor
+com.google.Chrome http
 org.videolan.vlc .3gp all
 org.videolan.vlc .aac all
 org.videolan.vlc .aif all
