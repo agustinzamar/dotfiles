@@ -31,7 +31,7 @@ clipboard-write = allow
 clipboard-trim-trailing-spaces = true
 
 # Working directory
-working-directory = /Users/agustin/Documents/repos
+working-directory = ~/Documents/repos
 window-inherit-working-directory = true
 tab-inherit-working-directory = true
 

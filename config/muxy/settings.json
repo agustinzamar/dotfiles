@@ -42,7 +42,7 @@
   "muxy.notifications.sound" : "Glass",
   "muxy.notifications.toastEnabled" : true,
   "muxy.notifications.toastPosition" : "Top Center",
-  "muxy.projectPicker.defaultDirectory" : "/Users/agustin/Documents/repos",
+  "muxy.projectPicker.defaultDirectory" : "~/Documents/repos",
   "muxy.projectPicker.mode" : "custom",
   "muxy.projects.keepOpenWhenNoTabs" : true,
   "muxy.quickTerminal.blur" : 70,
