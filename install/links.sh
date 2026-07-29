@@ -36,6 +36,7 @@ all_links() {
 		config/ghostty/config|$HOME/Library/Application Support/Muxy/ghostty.conf
 		config/npm/.npmrc|$HOME/.npmrc
 		config/herd/herd.json|$HOME/Library/Application Support/Herd/config/herd.json
+		config/muxy/settings.json|$HOME/Library/Application Support/Muxy/settings.json
 		config/vscode/settings.json|$HOME/Library/Application Support/Code/User/settings.json
 		config/vscode/keybindings.json|$HOME/Library/Application Support/Code/User/keybindings.json
 		config/claude/settings.json|$HOME/.claude/settings.json|app-writable
