@@ -15,6 +15,9 @@ brew "sshpass"
 cask "visual-studio-code"
 cask "orbstack"
 
+# Git TUI
+brew "lazygit"
+
 # Linters and formatters
 brew "actionlint"
 brew "swiftformat"

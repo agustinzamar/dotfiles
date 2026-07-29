@@ -1,0 +1,27 @@
+# https://github.com/jesseduffield/lazygit
+# Found at both ~/.config/lazygit/config.yml and
+# ~/Library/Application Support/lazygit/config.yml on macOS.
+
+gui:
+  # Show author of each commit in the commits list.
+  commitAuthorInCommitsView: true
+  # No mouse in the terminal.
+  mouseEvents: false
+
+git:
+  # Branch auto-fetch can hang on repos with unreachable remotes; trigger it
+  # manually with `f` instead.
+  autoFetch: false
+  paging:
+    pager: delta --paging=never
+
+os:
+  # Spawn `$EDITOR` for editing commits; falls back to nvim.
+  editPreset: nvim
+
+customCommands:
+  # Open the selected file in the configured editor.
+  - key: "o"
+    command: "$EDITOR {{.SelectedFile.Name}}"
+    context: "files"
+    description: "Open file in $EDITOR"
