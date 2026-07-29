@@ -7,7 +7,6 @@ com.microsoft.VSCode .bats editor
 com.microsoft.VSCode .cfg editor
 com.microsoft.VSCode .cjs editor
 com.microsoft.VSCode .colors editor
-com.microsoft.VSCode .completion editor
 com.microsoft.VSCode .conf editor
 com.microsoft.VSCode .config editor
 com.microsoft.VSCode .css editor
@@ -47,7 +46,6 @@ com.microsoft.VSCode .prettierignore editor
 com.microsoft.VSCode .prettierrc editor
 com.microsoft.VSCode .prompt editor
 com.microsoft.VSCode .sh editor
-com.microsoft.VSCode .snap editor
 com.microsoft.VSCode .svelte editor
 com.microsoft.VSCode .svg editor
 com.microsoft.VSCode .toml editor
