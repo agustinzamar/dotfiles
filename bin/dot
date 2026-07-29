@@ -430,7 +430,7 @@ sub_code() {
 sub_duti() {
   is_executable duti || return 0
   log "Setting default apps for file types"
-  run duti -v "$DOTFILES_DIR/install/duti"
+  run duti -v "$DOTFILES_DIR/install/duti" 2>&1 | grep -v "error -50" || true
 }
 
 sub_git() {
