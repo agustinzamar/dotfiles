@@ -158,7 +158,6 @@
   "editor.suggest.preview": true,
   "workbench.browser.showInTitleBar": false,
   "window.restoreFullscreen": true,
-  "window.menuStyle": "custom",
   "github.copilot.chat.claudeAgent.allowAutoPermissions": true,
   "github.copilot.chat.anthropic.contextEditing.mode": "clear-both",
   "github.copilot.chat.claude48OpusPrompt.enabled": true,
@@ -166,5 +165,11 @@
   "github.copilot.chat.githubMcpServer.enabled": true,
   "claudeCode.preferredLocation": "panel",
   "workbench.secondarySideBar.showLabels": false,
-  "chat.titleBar.openInAgentsWindow.enabled": false
+  "chat.titleBar.openInAgentsWindow.enabled": false,
+  "workbench.activityBar.location": "top",
+  "workbench.editor.titleScrollbarVisibility": "visible",
+  "zenMode.hideStatusBar": false,
+  "zenMode.hideActivityBar": false,
+  "window.systemColorTheme": "dark",
+  "search.quickOpen.includeSymbols": true
 }
