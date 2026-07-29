@@ -65,6 +65,9 @@ autoload -Uz edit-command-line
 zle -N edit-command-line
 bindkey '^x^e' edit-command-line
 
+# Enable zmv for batch renaming (used with noglob aliases in aliases/filesystem.zsh)
+autoload -U zmv
+
 # History settings
 HISTFILE="${HOME}/.zsh_history"
 HISTSIZE=5000
