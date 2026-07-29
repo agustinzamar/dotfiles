@@ -51,10 +51,21 @@ zinit wait lucid light-mode for \
     zsh-users/zsh-autosuggestions \
   Aloxaf/fzf-tab
 
+# Emacs mode
 bindkey -e
-bindkey '^P' history-search-backward
-bindkey '^N' history-search-forward
 
+# History search with up/down arrows based on current input
+bindkey '\e[A' history-search-backward
+bindkey '\e[B' history-search-forward
+# Bind magic space to expand aliases and history words
+bindkey ' ' magic-space
+
+# Open buffer line in editor (vim, nvim, or code) with Ctrl-X Ctrl-E
+autoload -Uz edit-command-line
+zle -N edit-command-line
+bindkey '^x^e' edit-command-line
+
+# History settings
 HISTFILE="${HOME}/.zsh_history"
 HISTSIZE=5000
 SAVEHIST=$HISTSIZE
