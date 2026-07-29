@@ -1,4 +1,5 @@
 alias phpstorm='open -a "PhpStorm.app" "$(pwd)"'
-alias cl='command claude'
-alias oc='command opencode2'
-alias cx='command codex'
+alias cl='command claude --dangerously-skip-permissions'
+alias oc='command opencode2 --auto --standalone'
+alias codex='command codex --ask-for-approval=never'
+alias kimi='command kimi --yolo'
