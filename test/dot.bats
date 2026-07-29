@@ -352,6 +352,19 @@ EOF
   [[ "$output" == *"No OpenCode V2-compatible plugins configured"* ]]
 }
 
+@test "AI skills target selected agent for Kimi Code" {
+  run "$DOT" install ai kimi --skills --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"--agent kimi-code"* ]]
+  [[ "$output" != *"Plugin [kimi]"* ]]
+}
+
+@test "AI plugins report no Kimi Code plugins configured" {
+  run "$DOT" install ai kimi --plugins --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"No Kimi Code plugins configured"* ]]
+}
+
 @test "AI install supports macOS system bash" {
   run /bin/bash "$DOT" install ai claude --skills --dry-run
   [ "$status" -eq 0 ]

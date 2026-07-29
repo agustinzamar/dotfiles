@@ -57,6 +57,7 @@ sub_help() {
   echo "   install ai claude       Skills + plugins to Claude only"
   echo "   install ai codex        Skills + plugins to Codex only"
   echo "   install ai opencode     Skills + plugins to OpenCode only"
+  echo "   install ai kimi         Skills + plugins to Kimi Code only"
   echo "   install ai <tool> --skills   Skills only"
   echo "   install ai <tool> --plugins  Plugins only"
   echo "   install tools        Install tools Homebrew Bundle does not cover"
@@ -174,7 +175,7 @@ sub_install_ai() {
         [[ -z "$source" ]] && continue
         if [[ -z "$skill" || "$skill" == "null" ]]; then
           log "Installing skill [$tool]: $source"
-          run npx skills add "$source" --agent "$agent" -y
+          run pnpm dlx skills add "$source" --agent "$agent" -y
         else
           log "Installing skill [$tool]: $source/$skill"
           run pnpm dlx skills add "$source" --agent "$agent" --skill "$skill" -y
@@ -225,10 +226,12 @@ sub_install_ai() {
       claude-code) _install_cli_plugins claude-code claude "Claude Code" ;;
       codex) _install_cli_plugins codex codex Codex ;;
       opencode) log "No OpenCode V2-compatible plugins configured" ;;
+      kimi-code) log "No Kimi Code plugins configured" ;;
       '*')
         _install_cli_plugins claude-code claude "Claude Code" || return
         _install_cli_plugins codex codex Codex || return
         log "No OpenCode V2-compatible plugins configured"
+        log "No Kimi Code plugins configured"
         ;;
     esac
   }
@@ -244,7 +247,7 @@ sub_install_ai() {
   case "$target" in
     all)
       agent='*'
-      link_dirs="$HOME/.claude/skills|$HOME/.agents/skills"
+      link_dirs="$HOME/.claude/skills|$HOME/.kimi-code/skills|$HOME/.agents/skills"
       ;;
     claude)
       agent=claude-code
@@ -254,12 +257,16 @@ sub_install_ai() {
       agent="$target"
       link_dirs="$HOME/.agents/skills"
       ;;
+    kimi)
+      agent=kimi-code
+      link_dirs="$HOME/.kimi-code/skills|$HOME/.agents/skills"
+      ;;
     --skills | --plugins)
       set -- "$target" "$@"
       target=all
       ;;
     *)
-      echo "Usage: dot install ai [all|claude|codex|opencode] [--skills|--plugins]" >&2
+      echo "Usage: dot install ai [all|claude|codex|opencode|kimi] [--skills|--plugins]" >&2
       return 1
       ;;
   esac

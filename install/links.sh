@@ -42,6 +42,8 @@ all_links() {
 		config/opencode/opencode.json|$HOME/.config/opencode/opencode.json
 		config/opencode/AGENTS.md|$HOME/.config/opencode/AGENTS.md
 		config/opencode/themes|$HOME/.config/opencode/themes
+		config/kimi-code/tui.toml|$HOME/.kimi-code/tui.toml
+		config/kimi-code/AGENTS.md|$HOME/.kimi-code/AGENTS.md
 		config/hunk/config.toml|$HOME/.config/hunk/config.toml
 		config/git/ignore|$HOME/.config/git/ignore
 	EOF
