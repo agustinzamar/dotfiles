@@ -10,7 +10,7 @@
 
 ## Global Constraints
 
-- Modify only `/Users/agustin/dotfiles`.
+- Modify only the dotfiles repo (this clone).
 - Git remains the canonical owner of both settings files.
 - Mark only `config/claude/settings.json` and `config/opencode/opencode.json` as app-writable.
 - Do not add Claude managed settings.
