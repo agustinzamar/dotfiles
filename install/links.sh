@@ -44,6 +44,7 @@ all_links() {
 		config/opencode/themes|$HOME/.config/opencode/themes
 		config/kimi-code/tui.toml|$HOME/.kimi-code/tui.toml
 		config/hunk/config.toml|$HOME/.config/hunk/config.toml
+		config/lazygit/config.yml|$HOME/.config/lazygit/config.yml
 		config/git/ignore|$HOME/.config/git/ignore
 	EOF
 }
