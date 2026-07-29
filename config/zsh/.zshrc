@@ -65,6 +65,13 @@ autoload -Uz edit-command-line
 zle -N edit-command-line
 bindkey '^x^e' edit-command-line
 
+# Copy the current command line to the clipboard with Ctrl-X Ctrl-C
+copy-command-line() {
+  print -n -- "$BUFFER" | pbcopy
+}
+zle -N copy-command-line
+bindkey '^x^c' copy-command-line
+
 # Enable zmv for batch renaming (used with noglob aliases in aliases/filesystem.zsh)
 autoload -U zmv
 
