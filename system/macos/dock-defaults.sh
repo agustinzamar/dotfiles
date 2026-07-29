@@ -7,18 +7,25 @@
 DOCK_APPS=(
   "/Applications/WhatsApp.app"
   "/Applications/Discord.app"
-  "/Applications/Google Chrome.app"
+  "/Applications/Claude.app"
   "/Applications/OrbStack.app"
-  "/Applications/PhpStorm.app"
-  "/Applications/Visual Studio Code.app"
+  "/Applications/Google Chrome.app"
   "/Applications/Muxy.app"
   "/Applications/Ghostty.app"
+  "/Applications/Visual Studio Code.app"
+  "/Applications/PhpStorm.app"
 )
 
 dockutil --no-restart --remove all
 
 # if/fi rather than `&&`: sourced under `set -e`, a final missing app would
 # abort the whole run. Apps can be absent when a cask has yet to install.
+
+# Re-add Finder at the beginning
+if [[ -d "/System/Library/CoreServices/Finder.app" ]]; then
+  dockutil --no-restart --add "/System/Library/CoreServices/Finder.app" --position 1
+fi
+
 for dock_app in "${DOCK_APPS[@]}"; do
   if [[ -d "$dock_app" ]]; then
     dockutil --no-restart --add "$dock_app"
@@ -27,6 +34,7 @@ for dock_app in "${DOCK_APPS[@]}"; do
   fi
 done
 
+# Trash is recreated automatically by macOS when the Dock restarts.
 # `|| true`: killall exits 1 when the Dock is not running, which under the
 # caller's `set -e` would abort the run.
 killall Dock || true

@@ -12,6 +12,9 @@
       }
     }
   },
+  "permissions": [
+    { "action": "*", "resource": "*", "effect": "allow" }
+  ],
   "agents": {
     "explore": {
       "model": "opencode/deepseek-v4-flash-free"

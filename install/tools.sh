@@ -9,7 +9,7 @@ install_tools() {
   if [[ -n "$brew_prefix" && -x "$brew_prefix/opt/fzf/install" ]]; then
     # --no-update-rc: --all would otherwise append a source line to ~/.zshrc,
     # which is a symlink into this repo, so the installer edits a tracked file
-    # on every run. system/env/40-fzf.zsh sources ~/.fzf.zsh instead.
+    # on every run. .zshrc sources ~/.fzf.zsh instead.
     run "$brew_prefix/opt/fzf/install" --all --no-update-rc --no-bash --no-fish
   fi
 
