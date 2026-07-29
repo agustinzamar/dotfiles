@@ -18,3 +18,7 @@ brew "sshpass"
 cask "visual-studio-code"
 cask "phpstorm"
 cask "orbstack"
+
+# Linters and formatters
+brew "actionlint"
+brew "swiftformat"
