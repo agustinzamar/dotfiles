@@ -418,6 +418,26 @@ EOF
   [ "$(cat "$home"/.dotfiles-backup/*/.config/ghostty/config)" = "original" ]
 }
 
+@test "app-writable config adopts a regular live file before relinking" {
+  local home repo source target
+  home="$(mktemp -d)"
+  repo="$(mktemp -d)"
+  source="$repo/config/claude/settings.json"
+  target="$home/.claude/settings.json"
+  mkdir -p "$(dirname "$source")" "$(dirname "$target")"
+  printf '%s\n' '{"tracked":true}' >"$source"
+  printf '%s\n' '{"live":true}' >"$target"
+
+  DOTFILES_DIR="$repo" HOME="$home" DRY_RUN=false \
+    bash -c '. "$1"; link_file config/claude/settings.json "$HOME/.claude/settings.json" app-writable' \
+    _ "$DOTFILES_DIR/install/common.sh"
+
+  [ "$(cat "$source")" = '{"live":true}' ]
+  [ "$(readlink "$target")" = "$source" ]
+  [ "$(cat "$home"/.dotfiles-backup/*/.claude/settings.json)" = '{"live":true}' ]
+  [ "$(cat "$home"/.dotfiles-backup/*/.dotfiles-source/config/claude/settings.json)" = '{"tracked":true}' ]
+}
+
 # Renaming a shell file leaves the old symlink dangling; zsh matches it and
 # fails to source it on every prompt.
 @test "link prunes shell symlinks whose source is gone" {
