@@ -1,0 +1,7 @@
+# Launcher, clipboard, and window management
+cask "raycast"
+cask "alt-tab"
+cask "linearmouse"
+cask "finetune"
+cask "maccy"
+cask "rectangle"

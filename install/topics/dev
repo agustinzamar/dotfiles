@@ -2,7 +2,6 @@
 brew "make"
 brew "go"
 brew "node"
-brew "bun"
 brew "pnpm"
 brew "npm-check-updates"
 brew "pipx"
@@ -11,12 +10,9 @@ brew "shellcheck"
 brew "shfmt"
 brew "bats-core"
 brew "act"
-brew "mysql-client"
-brew "sqlite"
 brew "sshpass"
 
 cask "visual-studio-code"
-cask "phpstorm"
 cask "orbstack"
 
 # Linters and formatters

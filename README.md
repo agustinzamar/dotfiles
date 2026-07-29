@@ -30,13 +30,17 @@ Packages are grouped into topics under `install/topics/`. Each file is a
 Brewfile and each is also a command:
 
 ```bash
-dot media      # ffmpeg, imagemagick, vlc
-dot laravel    # herd, dbngin
+dot media                      # ffmpeg, imagemagick
+dot install desktop            # optional: raycast, rectangle, maccy, ...
+dot install --profile laravel  # herd, dbngin, phpstorm
 ```
 
 `dot brew` installs everything in `install/topics/`. Files in
-`install/topics/optional/` are skipped, so a machine opts into them by name —
-that is where `laravel` lives. Promoting or demoting a topic is a `git mv`.
+`install/topics/optional/` are skipped, so a machine opts into them by name.
+Promoting or demoting a topic is a `git mv`.
+
+Profiles under `install/profiles/` bundle several tools for one kind of work
+(a stack rather than a category) and install only via `dot install --profile`.
 
 Adding a topic means adding one file: it shows up in `dot help` and becomes a
 command with no code change.
@@ -83,6 +87,8 @@ dot link --dry-run
 - `install/common.sh` — `run`, `log`, `link_file`; the only copies
 - `install/topics/` — one Brewfile per package group; each is also a command.
   `optional/` holds the ones `dot brew` skips
+- `install/profiles/` — Brewfiles for work stacks (e.g. `laravel`), installed
+  only via `dot install --profile <name>`
 - `install/` — the other package lists (`Codefile`, `duti`) plus
   the per-topic install steps
 - `config/` — application configuration

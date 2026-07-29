@@ -25,7 +25,8 @@ setup() {
     name="sub_${command//-/_}"
     grep -q "^$name()" "$DOT" ||
       [ -f "$DOTFILES_DIR/install/topics/$command" ] ||
-      [ -f "$DOTFILES_DIR/install/topics/optional/$command" ] || {
+      [ -f "$DOTFILES_DIR/install/topics/optional/$command" ] ||
+      [ -f "$DOTFILES_DIR/install/profiles/$command" ] || {
         echo "'$command' has neither $name() nor a topic file"
         return 1
       }
@@ -360,12 +361,12 @@ EOF
 @test "tools install OpenCode V2 with package scripts enabled" {
   local stub
   stub="$(mktemp -d)"
-  printf '#!/bin/sh\nexit 0\n' >"$stub/npm"
-  chmod +x "$stub/npm"
+  printf '#!/bin/sh\nexit 0\n' >"$stub/pnpm"
+  chmod +x "$stub/pnpm"
 
   PATH="$stub:$PATH" run "$DOT" install tools --dry-run
   [ "$status" -eq 0 ]
-  [[ "$output" == *"npm install -g --ignore-scripts=false @opencode-ai/cli@next"* ]]
+  [[ "$output" == *"pnpm add -g --allow-build=@opencode-ai/cli @opencode-ai/cli@next"* ]]
 }
 
 @test "OpenCode config uses only native V2 fields" {
