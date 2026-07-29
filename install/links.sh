@@ -35,7 +35,6 @@ all_links() {
 		config/yazi/theme.toml|$HOME/.config/yazi/theme.toml
 		config/ghostty/config|$HOME/Library/Application Support/Muxy/ghostty.conf
 		config/npm/.npmrc|$HOME/.npmrc
-		config/herd/herd.json|$HOME/Library/Application Support/Herd/config/herd.json
 		config/muxy/settings.json|$HOME/Library/Application Support/Muxy/settings.json
 		config/vscode/settings.json|$HOME/Library/Application Support/Code/User/settings.json
 		config/vscode/keybindings.json|$HOME/Library/Application Support/Code/User/keybindings.json
@@ -44,7 +43,6 @@ all_links() {
 		config/opencode/AGENTS.md|$HOME/.config/opencode/AGENTS.md
 		config/opencode/themes|$HOME/.config/opencode/themes
 		config/kimi-code/tui.toml|$HOME/.kimi-code/tui.toml
-		config/kimi-code/AGENTS.md|$HOME/.kimi-code/AGENTS.md
 		config/hunk/config.toml|$HOME/.config/hunk/config.toml
 		config/git/ignore|$HOME/.config/git/ignore
 	EOF
