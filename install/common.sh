@@ -22,6 +22,23 @@ log() { printf '\n==> %s\n' "$*"; }
 
 is_executable() { type "$1" >/dev/null 2>&1; }
 
+merge_file() {
+  local live=$1 tracked=$2
+  printf '\nConfig conflict:\n  live: %s\n  merge result: %s\n' "$live" "$tracked"
+  if is_executable code; then
+    run code --wait --diff "$live" "$tracked"
+  elif is_executable nvim; then
+    run nvim -d "$live" "$tracked"
+  elif is_executable vim; then
+    run vim -d "$live" "$tracked"
+  elif is_executable opendiff; then
+    run opendiff "$live" "$tracked" -merge "$tracked"
+  else
+    echo "no merge editor found for $live and $tracked" >&2
+    return 1
+  fi
+}
+
 # Path a replaced target is moved to. The target's location under $HOME is
 # preserved so that same-named files (several apps ship a plain `config`) do
 # not overwrite each other inside a single backup directory.
@@ -50,12 +67,14 @@ link_file() {
   if [[ "$mode" == app-writable && -f "$target" && ! -L "$target" ]] &&
     ! cmp -s "$source" "$target"; then
     source_backup="$BACKUP_DIR/.dotfiles-source/$1"
+    backup=$(backup_path "$target")
     run mkdir -p "$(dirname "$source_backup")"
+    run mkdir -p "$(dirname "$backup")"
     run cp "$source" "$source_backup"
-    run cp "$target" "$source"
-  fi
-
-  if [[ -e "$target" || -L "$target" ]]; then
+    run cp "$target" "$backup"
+    merge_file "$target" "$source" || return
+    run rm "$target"
+  elif [[ -e "$target" || -L "$target" ]]; then
     backup=$(backup_path "$target")
     run mkdir -p "$(dirname "$backup")"
     run mv "$target" "$backup"

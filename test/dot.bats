@@ -418,24 +418,60 @@ EOF
   [ "$(cat "$home"/.dotfiles-backup/*/.config/ghostty/config)" = "original" ]
 }
 
-@test "app-writable config adopts a regular live file before relinking" {
-  local home repo source target
+@test "app-writable config merges a regular live file before relinking" {
+  local home repo source target stub log common
   home="$(mktemp -d)"
   repo="$(mktemp -d)"
   source="$repo/config/claude/settings.json"
   target="$home/.claude/settings.json"
+  stub="$home/bin"
+  log="$home/merge.log"
+  common="$DOTFILES_DIR/install/common.sh"
   mkdir -p "$(dirname "$source")" "$(dirname "$target")"
+  mkdir -p "$stub"
   printf '%s\n' '{"tracked":true}' >"$source"
   printf '%s\n' '{"live":true}' >"$target"
+  cat >"$stub/code" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$*" >"$MERGE_LOG"
+printf '%s\n' '{"merged":true}' >"$4"
+EOF
+  chmod +x "$stub/code"
 
-  DOTFILES_DIR="$repo" HOME="$home" DRY_RUN=false \
+  MERGE_LOG="$log" PATH="$stub:/usr/bin:/bin" \
+    DOTFILES_DIR="$repo" HOME="$home" DRY_RUN=false \
     bash -c '. "$1"; link_file config/claude/settings.json "$HOME/.claude/settings.json" app-writable' \
-    _ "$DOTFILES_DIR/install/common.sh"
+    _ "$common"
 
-  [ "$(cat "$source")" = '{"live":true}' ]
+  [ "$(cat "$log")" = "--wait --diff $target $source" ]
+  [ "$(cat "$source")" = '{"merged":true}' ]
   [ "$(readlink "$target")" = "$source" ]
   [ "$(cat "$home"/.dotfiles-backup/*/.claude/settings.json)" = '{"live":true}' ]
   [ "$(cat "$home"/.dotfiles-backup/*/.dotfiles-source/config/claude/settings.json)" = '{"tracked":true}' ]
+}
+
+@test "app-writable config keeps the live file when merging fails" {
+  local home repo source target stub common
+  home="$(mktemp -d)"
+  repo="$(mktemp -d)"
+  source="$repo/config/claude/settings.json"
+  target="$home/.claude/settings.json"
+  stub="$home/bin"
+  common="$DOTFILES_DIR/install/common.sh"
+  mkdir -p "$(dirname "$source")" "$(dirname "$target")" "$stub"
+  printf '%s\n' '{"tracked":true}' >"$source"
+  printf '%s\n' '{"live":true}' >"$target"
+  printf '#!/bin/sh\nexit 42\n' >"$stub/code"
+  chmod +x "$stub/code"
+
+  PATH="$stub:/usr/bin:/bin" DOTFILES_DIR="$repo" HOME="$home" DRY_RUN=false \
+    run bash -c '. "$1"; link_file config/claude/settings.json "$HOME/.claude/settings.json" app-writable' \
+    _ "$common"
+
+  [ "$status" -eq 42 ]
+  [ ! -L "$target" ]
+  [ "$(cat "$target")" = '{"live":true}' ]
+  [ "$(cat "$source")" = '{"tracked":true}' ]
 }
 
 # Renaming a shell file leaves the old symlink dangling; zsh matches it and
