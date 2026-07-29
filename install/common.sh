@@ -22,8 +22,6 @@ log() { printf '\n==> %s\n' "$*"; }
 
 is_executable() { type "$1" >/dev/null 2>&1; }
 
-defaults_write() { run defaults write "$1" "$2" "-$3" "$4"; }
-
 # Path a replaced target is moved to. The target's location under $HOME is
 # preserved so that same-named files (several apps ship a plain `config`) do
 # not overwrite each other inside a single backup directory.
