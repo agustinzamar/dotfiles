@@ -13,8 +13,8 @@ install_tools() {
     run "$brew_prefix/opt/fzf/install" --all --no-update-rc --no-bash --no-fish
   fi
 
-  if is_executable npm; then
-    run npm install -g --ignore-scripts=false @opencode-ai/cli@next
+  if is_executable pnpm; then
+    run pnpm add -g --allow-build=@opencode-ai/cli @opencode-ai/cli@next
   fi
 
   local package key
