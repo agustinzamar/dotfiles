@@ -1,6 +1,4 @@
 # Agents and assistants
-brew "opencode"
-
 cask "muxy-app/tap/muxy"
 cask "claude-code"
 cask "codex"

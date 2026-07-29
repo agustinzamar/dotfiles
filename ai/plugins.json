@@ -5,9 +5,14 @@
       "repo": "DietrichGebert/ponytail",
       "homepage": "https://github.com/DietrichGebert/ponytail",
       "install": {
-        "opencode": { "type": "opencode-plugin", "package": "@dietrichgebert/ponytail" },
-        "claude-code": { "type": "marketplace", "command": "/plugin marketplace add DietrichGebert/ponytail", "install": "/plugin install ponytail@ponytail", "interactive": true },
-        "codex": { "type": "marketplace", "command": "codex plugin marketplace add DietrichGebert/ponytail && codex plugin add ponytail@ponytail", "interactive": true }
+        "claude-code": {
+          "marketplace": { "name": "ponytail", "source": "DietrichGebert/ponytail" },
+          "plugin": "ponytail@ponytail"
+        },
+        "codex": {
+          "marketplace": { "name": "ponytail", "source": "DietrichGebert/ponytail" },
+          "plugin": "ponytail@ponytail"
+        }
       }
     },
     {
@@ -15,9 +20,8 @@
       "repo": "obra/superpowers",
       "homepage": "https://github.com/obra/superpowers",
       "install": {
-        "opencode": { "type": "opencode-plugin", "package": "superpowers@git+https://github.com/obra/superpowers.git" },
-        "claude-code": { "type": "marketplace", "command": "/plugin install superpowers@claude-plugins-official", "interactive": true },
-        "codex": { "type": "marketplace", "command": "/plugins → search superpowers → Install", "interactive": true }
+        "claude-code": { "plugin": "superpowers@claude-plugins-official" },
+        "codex": { "plugin": "superpowers@openai-curated" }
       }
     }
   ]
