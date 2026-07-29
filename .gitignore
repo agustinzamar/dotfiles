@@ -13,5 +13,6 @@
 *.bak
 *.bak.*
 
-# Plan docs (not configs)
+# SDD task artifacts
+.superpowers/
 docs/superpowers/
