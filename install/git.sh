@@ -21,14 +21,18 @@ set_git_config() {
 install_git() {
   log "Setting git config"
 
-  set_git_config credential.https://github.com.helper ""
-  set_git_config credential.https://github.com.helper "!$(brew --prefix 2>/dev/null)/bin/gh auth git-credential"
-  set_git_config credential.https://gist.github.com.helper ""
-  set_git_config credential.https://gist.github.com.helper "!$(brew --prefix 2>/dev/null)/bin/gh auth git-credential"
-  set_git_config core.autocrlf input
-  set_git_config push.autoSetupRemote true
-  set_git_config rebase.autoStash true
-  set_git_config fetch.prune true
-  set_git_config help.autocorrect immediate
-  set_git_config color.ui auto
+  local cfg="$DOTFILES_DIR/config/git/config"
+  if [[ -f "$cfg" ]]; then
+    local key val
+    while IFS='=' read -r key val; do
+      [[ -n "$key" ]] || continue
+      set_git_config "$key" "$val"
+    done < <(git config --file "$cfg" --list 2>/dev/null || true)
+  fi
+
+  # Credential helper path depends on brew prefix, can't be hardcoded
+  local gh_helper
+  gh_helper="!$(brew --prefix 2>/dev/null)/bin/gh auth git-credential"
+  set_git_config credential.https://github.com.helper "$gh_helper"
+  set_git_config credential.https://gist.github.com.helper "$gh_helper"
 }
