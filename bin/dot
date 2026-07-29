@@ -207,6 +207,11 @@ sub_install_apps() {
 sub_install_ai() {
   _install_skills() {
     local tool="$1"
+    local IFS='|' dir
+    for dir in $link_dirs; do
+      [[ -L "$dir" && ! -e "$dir" ]] && run rm "$dir"
+    done
+
     local manifest="$DOTFILES_DIR/ai/skills.json"
     if [[ -f "$manifest" ]]; then
       local source skill
@@ -223,52 +228,54 @@ sub_install_ai() {
     fi
     # Link any local/custom skills not on skills.sh, scoped to this tool's dir(s).
     [[ -d "$DOTFILES_DIR/ai/skills" && "$(ls -A "$DOTFILES_DIR/ai/skills" 2>/dev/null)" ]] || return 0
-    local IFS='|' dir
     for dir in $link_dirs; do
       link_file "ai/skills" "$dir"
     done
   }
 
   _install_plugins() {
-    local tool="$1"
-    # opencode.json edits are non-interactive and safe to apply directly;
-    # claude-code and codex use interactive /plugin shells, so we just print.
     local manifest="$DOTFILES_DIR/ai/plugins.json"
     [[ -f "$manifest" ]] || return 0
-    local name repo
-    while IFS=$'\t' read -r name repo; do
-      [[ -z "$name" ]] && continue
-      log "Plugin [$tool]: $name ($repo)"
 
-      if [[ "$agent" == "opencode" || "$agent" == "*" ]]; then
-        local opencode_pkg
-        opencode_pkg=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .install.opencode.package // empty' "$manifest" 2>/dev/null)
-        if [[ -n "$opencode_pkg" ]]; then
-          local cfg="$HOME/.config/opencode/opencode.json"
-          if [[ -f "$cfg" ]] && ! jq -e --arg p "$opencode_pkg" '.plugin | index($p)' "$cfg" &>/dev/null; then
-            log "  opencode.json += $opencode_pkg"
-            if "$DRY_RUN"; then
-              run jq --arg p "$opencode_pkg" '.plugin += [$p]' "$cfg"
-            else
-              jq --arg p "$opencode_pkg" '.plugin += [$p]' "$cfg" >"${cfg}.tmp" && mv "${cfg}.tmp" "$cfg"
-            fi
+    _install_cli_plugins() {
+      local tool="$1" cli="$2" label="$3"
+      if ! is_executable "$cli"; then
+        echo "$label CLI not found; skipping plugins" >&2
+        return 0
+      fi
+
+      local name repo marketplace_name marketplace_source plugin marketplaces
+      while IFS='|' read -r name repo marketplace_name marketplace_source plugin; do
+        [[ -n "$plugin" ]] || continue
+        log "Plugin [$tool]: $name ($repo)"
+        if [[ -n "$marketplace_source" ]]; then
+          if "$DRY_RUN"; then
+            run "$cli" plugin marketplace add "$marketplace_source" || return
+          else
+            marketplaces=$("$cli" plugin marketplace list --json) || return
+            jq -e --arg name "$marketplace_name" '.. | strings | select(. == $name)' \
+              <<<"$marketplaces" >/dev/null || run "$cli" plugin marketplace add "$marketplace_source" || return
           fi
         fi
-      fi
+        case "$tool" in
+          claude-code) run "$cli" plugin install --scope user "$plugin" || return ;;
+          codex) run "$cli" plugin add "$plugin" || return ;;
+        esac
+      done < <(jq -r --arg tool "$tool" '.plugins[] | select(.install[$tool].plugin) |
+        [.name, .repo, (.install[$tool].marketplace.name // ""),
+         (.install[$tool].marketplace.source // ""), .install[$tool].plugin] | join("|")' "$manifest")
+    }
 
-      if [[ "$agent" == "claude-code" || "$agent" == "*" ]]; then
-        local cc_cmd cc_install
-        cc_cmd=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .install["claude-code"].command // empty' "$manifest" 2>/dev/null)
-        cc_install=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .install["claude-code"].install // empty' "$manifest" 2>/dev/null)
-        [[ -n "$cc_cmd" ]] && log "  Claude Code → $cc_cmd" && [[ -n "$cc_install" ]] && log "               $cc_install"
-      fi
-
-      if [[ "$agent" == "codex" || "$agent" == "*" ]]; then
-        local cx_cmd
-        cx_cmd=$(jq -r --arg n "$name" '.plugins[] | select(.name == $n) | .install.codex.command // empty' "$manifest" 2>/dev/null)
-        [[ -n "$cx_cmd" ]] && log "  Codex       → $cx_cmd"
-      fi
-    done < <(jq -r '.plugins[] | [.name, .repo] | @tsv' "$manifest" 2>/dev/null)
+    case "$agent" in
+      claude-code) _install_cli_plugins claude-code claude "Claude Code" ;;
+      codex) _install_cli_plugins codex codex Codex ;;
+      opencode) log "No OpenCode V2-compatible plugins configured" ;;
+      '*')
+        _install_cli_plugins claude-code claude "Claude Code" || return
+        _install_cli_plugins codex codex Codex || return
+        log "No OpenCode V2-compatible plugins configured"
+        ;;
+    esac
   }
 
   # Parse the tool and any --skills/--plugins flags. With neither flag, both run.
@@ -320,7 +327,9 @@ sub_install_ai() {
   }
 
   $do_skills && _install_skills "$target"
-  $do_plugins && _install_plugins "$target"
+  if $do_plugins; then
+    _install_plugins "$target" || return
+  fi
   return 0
 }
 

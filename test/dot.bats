@@ -266,25 +266,113 @@ setup() {
   [[ "$output" != *"Plugin [claude]"* ]]
 }
 
-@test "AI plugins target selected tool" {
-  run "$DOT" install ai codex --plugins --dry-run
+@test "AI skills remove stale agent directory symlinks" {
+  local home
+  home="$(mktemp -d)"
+  mkdir -p "$home/.claude"
+  ln -s "$home/missing-skills" "$home/.claude/skills"
+
+  HOME="$home" run "$DOT" install ai claude --skills --dry-run
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Plugin [codex]"* ]]
-  [[ "$output" == *"Codex"* ]]
+  [[ "$output" == *"rm $home/.claude/skills"* ]]
+}
+
+@test "AI plugins target selected tool" {
+  local stub
+  stub="$(mktemp -d)"
+  printf '#!/bin/sh\nexit 99\n' >"$stub/codex"
+  chmod +x "$stub/codex"
+
+  PATH="$stub:$PATH" run "$DOT" install ai codex --plugins --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"+ codex plugin marketplace add DietrichGebert/ponytail"* ]]
+  [[ "$output" == *"+ codex plugin add ponytail@ponytail"* ]]
+  [[ "$output" == *"+ codex plugin add superpowers@openai-curated"* ]]
   [[ "$output" != *"Installing skill"* ]]
+}
+
+@test "AI plugins install through Claude Code CLI" {
+  local stub log
+  stub="$(mktemp -d)"
+  log="$stub/log"
+  cat >"$stub/claude" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$*" >>"$PLUGIN_LOG"
+[ "$1 $2 $3" = "plugin marketplace list" ] && printf '[]\n'
+exit 0
+EOF
+  chmod +x "$stub/claude"
+
+  PLUGIN_LOG="$log" PATH="$stub:$PATH" run "$DOT" install ai claude --plugins
+  [ "$status" -eq 0 ]
+  grep -q '^plugin marketplace add DietrichGebert/ponytail$' "$log"
+  grep -q '^plugin install --scope user ponytail@ponytail$' "$log"
+  grep -q '^plugin install --scope user superpowers@claude-plugins-official$' "$log"
+}
+
+@test "AI plugins install through Codex CLI" {
+  local stub log
+  stub="$(mktemp -d)"
+  log="$stub/log"
+  cat >"$stub/codex" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$*" >>"$PLUGIN_LOG"
+[ "$1 $2 $3" = "plugin marketplace list" ] && printf '[]\n'
+exit 0
+EOF
+  chmod +x "$stub/codex"
+
+  PLUGIN_LOG="$log" PATH="$stub:$PATH" run "$DOT" install ai codex --plugins
+  [ "$status" -eq 0 ]
+  grep -q '^plugin marketplace add DietrichGebert/ponytail$' "$log"
+  grep -q '^plugin add ponytail@ponytail$' "$log"
+  grep -q '^plugin add superpowers@openai-curated$' "$log"
+}
+
+@test "AI plugins warn when selected CLI is missing" {
+  local stub
+  stub="$(mktemp -d)"
+  ln -s "$(command -v jq)" "$stub/jq"
+  PATH="$stub:/usr/bin:/bin" run /bin/bash "$DOT" install ai claude --plugins
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Claude Code CLI not found; skipping plugins"* ]]
+}
+
+@test "AI plugins report no OpenCode V2 plugins" {
+  run "$DOT" install ai opencode --plugins --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"No OpenCode V2-compatible plugins configured"* ]]
 }
 
 @test "AI accepts both customization flags" {
   run "$DOT" install ai opencode --skills --plugins --dry-run
   [ "$status" -eq 0 ]
   [[ "$output" == *"--agent opencode"* ]]
-  [[ "$output" == *"Plugin [opencode]"* ]]
+  [[ "$output" == *"No OpenCode V2-compatible plugins configured"* ]]
 }
 
 @test "AI install supports macOS system bash" {
   run /bin/bash "$DOT" install ai claude --skills --dry-run
   [ "$status" -eq 0 ]
   [[ "$output" == *"--agent claude-code"* ]]
+}
+
+@test "tools install OpenCode V2 with package scripts enabled" {
+  local stub
+  stub="$(mktemp -d)"
+  printf '#!/bin/sh\nexit 0\n' >"$stub/npm"
+  chmod +x "$stub/npm"
+
+  PATH="$stub:$PATH" run "$DOT" install tools --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"npm install -g --ignore-scripts=false @opencode-ai/cli@next"* ]]
+}
+
+@test "OpenCode config uses only native V2 fields" {
+  local config="$DOTFILES_DIR/config/opencode/opencode.json"
+  jq -e '.mcp.servers and .agents.explore' "$config"
+  jq -e 'has("small_model") or has("agent") or has("plugin") or has("plugins") | not' "$config"
+  ! grep -q '^brew "opencode"$' "$DOTFILES_DIR/install/topics/ai"
 }
 
 @test "link and unlink round-trip" {

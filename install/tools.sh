@@ -13,6 +13,10 @@ install_tools() {
     run "$brew_prefix/opt/fzf/install" --all --no-update-rc --no-bash --no-fish
   fi
 
+  if is_executable npm; then
+    run npm install -g --ignore-scripts=false @opencode-ai/cli@next
+  fi
+
   local package key
   for package in rendercv ytsage; do
     pipx list 2>/dev/null | grep -q "package $package" || run pipx install "$package"
