@@ -1,0 +1,7 @@
+# Laravel/PHP development stack
+brew "mysql-client"
+brew "sqlite"
+
+cask "herd"
+cask "dbngin"
+cask "phpstorm"

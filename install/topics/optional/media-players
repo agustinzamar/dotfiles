@@ -1,0 +1,5 @@
+# Media players and streaming apps
+cask "spotify"
+cask "stremio"
+cask "vlc"
+cask "stupside/tap/castor"

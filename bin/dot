@@ -49,7 +49,7 @@ sub_help() {
   echo "Install:"
   echo "   install              Bootstrap: link configs + install zinit"
   echo "   install --minimal   Bootstrap + brew + core + dev + git"
-  echo "   install --laravel   Minimal + herd + dbngin"
+  echo "   install --profile <name>   Install a profile from install/profiles/"
   echo "   install links        Symlink shell configs only"
   echo "   install zsh          Install zinit plugin manager"
   echo "   install brew         Install Homebrew + all topics"
@@ -77,6 +77,12 @@ sub_help() {
   while read -r topic; do
     printf '   %-16s %s\n' "$topic" "$(head -1 "$(topic_path "$topic")" | sed 's/^# *//')"
   done < <(optional_topics)
+  local profile
+  echo
+  echo "Profiles (install with \`dot install --profile <name>\`):"
+  while read -r profile; do
+    printf '   %-16s %s\n' "$profile" "$(head -1 "$(profile_path "$profile")" | sed 's/^# *//')"
+  done < <(profiles)
 }
 
 # One broken package should not cost you the symlinks: run every phase, then
@@ -108,12 +114,15 @@ sub_install() {
       log "Minimal complete — run \`dot install --full\` for everything"
       return 0
       ;;
-    --laravel | -l)
-      # minimal + herd + dbngin (herd bundles PHP, composer, etc.)
-      sub_install --minimal
-      log "Installing Laravel tools"
-      run brew install --cask herd dbngin
-      return 0
+    --profile | -p)
+      local name="${1:-}"
+      if [[ -z "$name" ]]; then
+        echo "Usage: dot install --profile <name>" >&2
+        echo "available profiles: $(profiles | tr '\n' ' ')" >&2
+        return 1
+      fi
+      install_profile "$name"
+      return $?
       ;;
     ai)
       sub_install_ai "$@"
@@ -168,7 +177,7 @@ sub_install_ai() {
           run npx skills add "$source" --agent "$agent" -y
         else
           log "Installing skill [$tool]: $source/$skill"
-          run npx skills add "$source" --agent "$agent" --skill "$skill" -y
+          run pnpm dlx skills add "$source" --agent "$agent" --skill "$skill" -y
         fi
       done < <(jq -r '.skills[] | [.source, (.skill // null)] | @tsv' "$manifest" 2>/dev/null)
     fi
@@ -286,6 +295,12 @@ sub_full() {
     "sub_$phase" || failures+=("$phase")
   done
 
+  # Install every topic under install/topics/optional/
+  local topic
+  while read -r topic; do
+    install_topic "$topic" || log "Skipping optional topic: $topic"
+  done < <(optional_topics)
+
   if ((${#failures[@]})); then
     log "Finished with failures: ${failures[*]}"
     return 1
@@ -313,6 +328,30 @@ _topic_names() {
 
 topics() { _topic_names "$TOPIC_DIR"; }
 optional_topics() { _topic_names "$TOPIC_DIR/optional"; }
+
+# Profiles are Brewfiles too, but bundle several tools for one kind of work
+# (e.g. laravel = herd + dbngin + PHP tooling). Opt-in via --profile only:
+# neither `dot brew` nor `dot install --full` touches them.
+PROFILE_DIR="$DOTFILES_DIR/install/profiles"
+profiles() { _topic_names "$PROFILE_DIR"; }
+
+profile_path() {
+  [[ -f "$PROFILE_DIR/$1" ]] && {
+    printf '%s' "$PROFILE_DIR/$1"
+    return 0
+  }
+  return 1
+}
+
+install_profile() {
+  local path
+  path=$(profile_path "$1") || {
+    echo "no such profile: $1" >&2
+    return 1
+  }
+  log "Installing profile: $1"
+  run brew bundle --file="$path"
+}
 
 topic_path() {
   local dir
@@ -497,7 +536,7 @@ sub_backup() {
 sub_clean() {
   if is_executable mole; then run mole clean; fi
   run brew cleanup
-  if is_executable npm; then run npm cache clean --force; fi
+  if is_executable pnpm; then run pnpm store prune; fi
 }
 
 sub_edit() {

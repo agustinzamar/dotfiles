@@ -3,8 +3,3 @@ brew "ffmpeg"
 brew "unar"
 brew "imagemagick"
 brew "webp"
-
-cask "spotify"
-cask "stremio"
-cask "vlc"
-cask "stupside/tap/castor"
