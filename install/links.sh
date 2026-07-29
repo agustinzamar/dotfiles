@@ -38,8 +38,8 @@ all_links() {
 		config/herd/herd.json|$HOME/Library/Application Support/Herd/config/herd.json
 		config/vscode/settings.json|$HOME/Library/Application Support/Code/User/settings.json
 		config/vscode/keybindings.json|$HOME/Library/Application Support/Code/User/keybindings.json
-		config/claude/settings.json|$HOME/.claude/settings.json
-		config/opencode/opencode.json|$HOME/.config/opencode/opencode.json
+		config/claude/settings.json|$HOME/.claude/settings.json|app-writable
+		config/opencode/opencode.json|$HOME/.config/opencode/opencode.json|app-writable
 		config/opencode/AGENTS.md|$HOME/.config/opencode/AGENTS.md
 		config/opencode/themes|$HOME/.config/opencode/themes
 		config/kimi-code/tui.toml|$HOME/.kimi-code/tui.toml
@@ -51,10 +51,10 @@ all_links() {
 
 # _walk_links <map-function> <action-function>
 _walk_links() {
-  local source target
-  while IFS='|' read -r source target; do
+  local source target mode
+  while IFS='|' read -r source target mode; do
     [[ -n "$source" ]] || continue
-    "$2" "$source" "$target"
+    "$2" "$source" "$target" "$mode"
   done < <("$1")
 }
 

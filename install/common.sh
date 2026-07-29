@@ -30,9 +30,9 @@ backup_path() {
   printf '%s/%s' "$BACKUP_DIR" "${rel#/}"
 }
 
-# link_file <repo-relative-source> <absolute-target>
+# link_file <repo-relative-source> <absolute-target> [mode]
 link_file() {
-  local source="$DOTFILES_DIR/$1" target=$2 current backup
+  local source="$DOTFILES_DIR/$1" target=$2 mode=${3:-} current backup source_backup
   if [[ ! -e "$source" && ! -L "$source" ]]; then
     # Generated configs (see install/git.sh) do not exist during a dry run,
     # so only treat a missing source as fatal when actually installing.
@@ -46,6 +46,14 @@ link_file() {
 
   current=$(readlink "$target" 2>/dev/null || true)
   [[ "$current" == "$source" ]] && return 0
+
+  if [[ "$mode" == app-writable && -f "$target" && ! -L "$target" ]] &&
+    ! cmp -s "$source" "$target"; then
+    source_backup="$BACKUP_DIR/.dotfiles-source/$1"
+    run mkdir -p "$(dirname "$source_backup")"
+    run cp "$source" "$source_backup"
+    run cp "$target" "$source"
+  fi
 
   if [[ -e "$target" || -L "$target" ]]; then
     backup=$(backup_path "$target")

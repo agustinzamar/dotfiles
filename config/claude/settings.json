@@ -1,60 +1,112 @@
 {
-  "enabledPlugins": {},
-  "extraKnownMarketplaces": {},
-  "defaultModel": "opusplan",
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  },
+  "model": "opusplan",
   "hooks": {
     "Notification": [
       {
+        "matcher": "",
         "hooks": [
           {
-            "command": "'\/Applications\/Muxy.app\/Contents\/Resources\/Muxy_Muxy.bundle\/muxy-claude-hook.sh' notification # muxy-notification-hook",
-            "timeout": 10,
-            "type": "command"
+            "type": "command",
+            "command": "'/Users/agustin/Library/Application Support/Muxy/hooks/muxy-claude-hook.sh' notification # muxy-notification-hook",
+            "timeout": 10
           }
-        ],
-        "matcher": ""
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/Users/agustin/Library/Application Support/Muxy/hooks/muxy-claude-hook.sh' permission-request # muxy-notification-hook",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "PreToolUse": [
       {
+        "matcher": "",
         "hooks": [
           {
-            "command": "'\/Applications\/Muxy.app\/Contents\/Resources\/Muxy_Muxy.bundle\/muxy-claude-hook.sh' pre-tool-use # muxy-notification-hook",
-            "timeout": 10,
-            "type": "command"
+            "type": "command",
+            "command": "'/Users/agustin/Library/Application Support/Muxy/hooks/muxy-claude-hook.sh' pre-tool-use # muxy-notification-hook",
+            "timeout": 10
           }
-        ],
-        "matcher": ""
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/Users/agustin/Library/Application Support/Muxy/hooks/muxy-claude-hook.sh' session-end # muxy-notification-hook",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "Stop": [
       {
+        "matcher": "",
         "hooks": [
           {
-            "command": "'\/Applications\/Muxy.app\/Contents\/Resources\/Muxy_Muxy.bundle\/muxy-claude-hook.sh' stop # muxy-notification-hook",
-            "timeout": 10,
-            "type": "command"
+            "type": "command",
+            "command": "'/Users/agustin/Library/Application Support/Muxy/hooks/muxy-claude-hook.sh' stop # muxy-notification-hook",
+            "timeout": 10
           }
-        ],
-        "matcher": ""
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "'/Users/agustin/Library/Application Support/Muxy/hooks/muxy-claude-hook.sh' stop-failure # muxy-notification-hook",
+            "timeout": 10
+          }
+        ]
       }
     ],
     "UserPromptSubmit": [
       {
+        "matcher": "",
         "hooks": [
           {
-            "command": "'\/Applications\/Muxy.app\/Contents\/Resources\/Muxy_Muxy.bundle\/muxy-claude-hook.sh' user-prompt-submit # muxy-notification-hook",
-            "timeout": 10,
-            "type": "command"
+            "type": "command",
+            "command": "'/Users/agustin/Library/Application Support/Muxy/hooks/muxy-claude-hook.sh' user-prompt-submit # muxy-notification-hook",
+            "timeout": 10
           }
-        ],
-        "matcher": ""
+        ]
       }
     ]
   },
-  "model": "opusplan",
+  "enabledPlugins": {
+    "frontend-design@claude-plugins-official": true,
+    "superpowers@claude-plugins-official": true,
+    "code-review@claude-plugins-official": true,
+    "context7@claude-plugins-official": true,
+    "skill-creator@claude-plugins-official": true,
+    "code-simplifier@claude-plugins-official": true,
+    "typescript-lsp@claude-plugins-official": true,
+    "commit-commands@claude-plugins-official": true,
+    "pr-review-toolkit@claude-plugins-official": true,
+    "php-lsp@claude-plugins-official": true,
+    "laravel-boost@claude-plugins-official": true,
+    "github@claude-plugins-official": true
+  },
+  "extraKnownMarketplaces": {},
+  "skipDangerousModePermissionPrompt": true,
   "teammateMode": "tmux",
-  "env": {
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
-  }
+  "inputNeededNotifEnabled": false,
+  "agentPushNotifEnabled": true,
+  "defaultModel": "opusplan"
 }
