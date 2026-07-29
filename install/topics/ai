@@ -2,3 +2,4 @@
 cask "muxy-app/tap/muxy"
 cask "claude-code"
 cask "codex"
+brew "kimi-code"
