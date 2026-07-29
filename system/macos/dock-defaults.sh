@@ -21,7 +21,9 @@ dockutil --no-restart --remove all
 # if/fi rather than `&&`: sourced under `set -e`, a final missing app would
 # abort the whole run. Apps can be absent when a cask has yet to install.
 
-# Re-add Finder at the beginning
+# Ensure a single Finder entry at the beginning. dockutil may or may not remove
+# it with `--remove all`, so explicitly remove any existing entry first.
+dockutil --no-restart --remove Finder >/dev/null 2>&1 || true
 if [[ -d "/System/Library/CoreServices/Finder.app" ]]; then
   dockutil --no-restart --add "/System/Library/CoreServices/Finder.app" --position 1
 fi
