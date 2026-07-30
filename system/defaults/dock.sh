@@ -4,6 +4,11 @@
 # The Dock is rebuilt from this list, in this order. dockutil needs the full
 # path: a bare app name is not resolved.
 
+if ! command -v dockutil >/dev/null 2>&1; then
+  echo "dockutil not installed, skipping Dock setup" >&2
+  return 0
+fi
+
 DOCK_APPS=(
   "/Applications/WhatsApp.app"
   "/Applications/Discord.app"
