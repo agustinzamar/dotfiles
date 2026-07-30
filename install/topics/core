@@ -19,5 +19,4 @@ brew "gh"
 brew "watch"
 brew "lazygit"
 
-cask "ghostty"
 cask "font-jetbrains-mono-nerd-font"

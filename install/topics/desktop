@@ -1,6 +1,9 @@
 # Browser
 cask "google-chrome"
 
+# Terminal
+cask "ghostty"
+
 # Configurations
 cask "rectangle"
 cask "linearmouse"
