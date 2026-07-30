@@ -7,3 +7,4 @@ cask "dbngin"
 cask "phpstorm"
 cask "orbstack"
 cask "steipete/tap/codexbar"
+cask repobar
