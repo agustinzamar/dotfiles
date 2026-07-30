@@ -1,3 +1,6 @@
+# Lang
+export LANG=en_US.UTF-8
+
 # Homebrew
 export PATH="/opt/homebrew/bin:$PATH"
 
@@ -15,15 +18,19 @@ esac
 export PATH="$PATH:$HOME/.local/bin"
 
 # DBngin MySQL (auto-finds current version directory)
-for dir in /Users/Shared/DBngin/mysql/*/bin(N); do
+if [[ -d "/Users/Shared/DBngin/mysql" ]]; then
+  for dir in /Users/Shared/DBngin/mysql/*/bin(N); do
     export PATH="$dir:$PATH"
-done
-
-export LANG=en_US.UTF-8
+  done
+fi
 
 # Preferred editor
-if [[ -n $SSH_CONNECTION ]]; then
-  export EDITOR='vim'
-else
-  export EDITOR='nvim'
+if command -v nvim >/dev/null 2>&1; then
+  if [[ -n $SSH_CONNECTION ]]; then
+    export EDITOR='vim'
+  else
+    export EDITOR='nvim'
+  fi
 fi
+
+
