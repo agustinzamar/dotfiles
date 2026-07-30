@@ -1,7 +1,15 @@
-# Launcher, clipboard, and window management
+# Optional tools for system enhancement and productivity
 cask "raycast"
 cask "alt-tab"
-cask "linearmouse"
 cask "finetune"
 cask "maccy"
-cask "rectangle"
+cask "typewhisper"
+
+# Secondary browsers
+cask "brave-browser"
+cask "firefox"
+
+# Additional communication apps
+cask "discord"
+cask "telegram"
+cask "whatsapp"

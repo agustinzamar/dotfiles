@@ -1,0 +1,9 @@
+# Additional tools for developers
+brew "mysql-client"
+brew "sqlite"
+
+cask "herd"
+cask "dbngin"
+cask "phpstorm"
+cask "orbstack"
+cask "steipete/tap/codexbar"

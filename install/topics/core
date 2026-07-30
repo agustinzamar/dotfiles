@@ -17,7 +17,7 @@ brew "direnv"
 brew "neovim"
 brew "gh"
 brew "watch"
+brew "lazygit"
 
 cask "ghostty"
 cask "font-jetbrains-mono-nerd-font"
-cask "font-hack-nerd-font"

@@ -1,0 +1,3 @@
+# Optional tools for system maintenance
+brew "mole"
+cask "pearcleaner"
