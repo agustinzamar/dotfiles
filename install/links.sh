@@ -29,20 +29,16 @@ all_links() {
   shell_links
   cat <<-EOF
 		config/ghostty/config|$HOME/.config/ghostty/config
+		config/ghostty/config|$HOME/Library/Application Support/Muxy/ghostty.conf
 		config/tmux/tmux.conf|$HOME/.config/tmux/tmux.conf
 		config/yazi/yazi.toml|$HOME/.config/yazi/yazi.toml
 		config/yazi/keymap.toml|$HOME/.config/yazi/keymap.toml
 		config/yazi/theme.toml|$HOME/.config/yazi/theme.toml
-		config/ghostty/config|$HOME/Library/Application Support/Muxy/ghostty.conf
 		config/npm/.npmrc|$HOME/.npmrc
-		config/muxy/settings.json|$HOME/Library/Application Support/Muxy/settings.json
 		config/vscode/settings.json|$HOME/Library/Application Support/Code/User/settings.json
 		config/vscode/keybindings.json|$HOME/Library/Application Support/Code/User/keybindings.json
-		config/claude/settings.json|$HOME/.claude/settings.json|app-writable
-		config/opencode/opencode.json|$HOME/.config/opencode/opencode.json|app-writable
 		config/opencode/AGENTS.md|$HOME/.config/opencode/AGENTS.md
 		config/opencode/themes|$HOME/.config/opencode/themes
-		config/kimi-code/tui.toml|$HOME/.kimi-code/tui.toml
 		config/hunk/config.toml|$HOME/.config/hunk/config.toml
 		config/lazygit/config.yml|$HOME/.config/lazygit/config.yml
 		config/git/ignore|$HOME/.config/git/ignore
