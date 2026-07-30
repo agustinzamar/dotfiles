@@ -25,12 +25,14 @@ set -- ${args[@]+"${args[@]}"}
 . "$DOTFILES_DIR/install/common.sh"
 # shellcheck source=../install/links.sh
 . "$DOTFILES_DIR/install/links.sh"
-# shellcheck source=../install/zsh.sh
-. "$DOTFILES_DIR/install/zsh.sh"
 # shellcheck source=../install/git.sh
 . "$DOTFILES_DIR/install/git.sh"
 # shellcheck source=../install/tools.sh
 . "$DOTFILES_DIR/install/tools.sh"
+# shellcheck source=../install/claude-config.sh
+. "$DOTFILES_DIR/install/claude-config.sh"
+# shellcheck source=../install/opencode-config.sh
+. "$DOTFILES_DIR/install/opencode-config.sh"
 
 sub_help() {
   echo "Usage: $BIN_NAME <command> [--dry-run]"
@@ -41,32 +43,21 @@ sub_help() {
   echo "   doctor           Check that required tools and symlinks are in place"
   echo "   edit             Open dotfiles in \$VISUAL"
   echo "   help             This help message"
-  echo "   migrate-custom   Move ~/.dotfiles-custom files to ~/.dotfiles-home/custom"
   echo "   test             Run tests"
   echo "   unlink           Remove symlinks that point into this repo"
   echo "   update           Pull, upgrade packages, then re-run the install"
   echo
   echo "Install:"
-  echo "   install              Bootstrap: link configs + install zinit"
-  echo "   install --minimal   Bootstrap + brew + core + dev + git"
-  echo "   install --profile <name>   Install a profile from install/profiles/"
-  echo "   install links        Symlink shell configs only"
-  echo "   install zsh          Install zinit plugin manager"
-  echo "   install brew         Install Homebrew + all topics"
-  echo "   install ai              Sync skills + plugins to all AI tools"
-  echo "   install ai claude       Skills + plugins to Claude only"
-  echo "   install ai codex        Skills + plugins to Codex only"
-  echo "   install ai opencode     Skills + plugins to OpenCode only"
-  echo "   install ai kimi         Skills + plugins to Kimi Code only"
-  echo "   install ai <tool> --skills   Skills only"
-  echo "   install ai <tool> --plugins  Plugins only"
-  echo "   install tools        Install tools Homebrew Bundle does not cover"
+  echo "   install              Install core tools only (brew, zsh, fzf, ssh keys)"
   echo "   install code         Install VS Code extensions"
-  echo "   install git          Set git config (skips name/email/gpg)"
   echo "   install macos        Apply macOS system defaults"
   echo "   install dock         Apply macOS Dock settings"
   echo "   install duti         Set default apps for file types"
-  echo "   install --full       Install everything"
+  echo "   install --all        Install everything"
+  echo "   install ai              Sync skills + plugins to all AI tools"
+  echo "   install ai <tool>       Skills + plugins to <tool> only"
+  echo "   install ai <tool> --skills   Skills only"
+  echo "   install ai <tool> --plugins  Plugins only"
   local topic
   echo
   echo "Topics (installed by \`brew\`, or one at a time):"
@@ -78,12 +69,6 @@ sub_help() {
   while read -r topic; do
     printf '   %-16s %s\n' "$topic" "$(head -1 "$(topic_path "$topic")" | sed 's/^# *//')"
   done < <(optional_topics)
-  local profile
-  echo
-  echo "Profiles (install with \`dot install --profile <name>\`):"
-  while read -r profile; do
-    printf '   %-16s %s\n' "$profile" "$(head -1 "$(profile_path "$profile")" | sed 's/^# *//')"
-  done < <(profiles)
 }
 
 # One broken package should not cost you the symlinks: run every phase, then
@@ -97,34 +82,6 @@ sub_install() {
       sub_full
       return $?
       ;;
-    --minimal | -m)
-      log "Minimal setup"
-      local phase failures=()
-      for phase in link zsh brew; do
-        "sub_$phase" || failures+=("$phase")
-      done
-      # Install core + dev topics only
-      for topic in core dev; do
-        install_topic "$topic" || true
-      done
-      sub_git
-      if ((${#failures[@]})); then
-        log "Finished with failures: ${failures[*]}"
-        return 1
-      fi
-      log "Minimal complete — run \`dot install --full\` for everything"
-      return 0
-      ;;
-    --profile | -p)
-      local name="${1:-}"
-      if [[ -z "$name" ]]; then
-        echo "Usage: dot install --profile <name>" >&2
-        echo "available profiles: $(profiles | tr '\n' ' ')" >&2
-        return 1
-      fi
-      install_profile "$name"
-      return $?
-      ;;
     ai)
       sub_install_ai "$@"
       return $?
@@ -135,6 +92,8 @@ sub_install() {
       for phase in link zsh; do
         "sub_$phase" || failures+=("$phase")
       done
+      install_claude_config
+      install_opencode_config
       if ((${#failures[@]})); then
         log "Finished with failures: ${failures[*]}"
         return 1
@@ -182,7 +141,8 @@ sub_install_ai() {
         fi
       done < <(jq -r '.skills[] | [.source, (.skill // null)] | @tsv' "$manifest" 2>/dev/null)
     fi
-    # Link any local/custom skills not on skills.sh, scoped to this tool's dir(s).
+
+    # Link any local/custom skills.
     [[ -d "$DOTFILES_DIR/ai/skills" && "$(ls -A "$DOTFILES_DIR/ai/skills" 2>/dev/null)" ]] || return 0
     for dir in $link_dirs; do
       link_file "ai/skills" "$dir"
@@ -226,12 +186,10 @@ sub_install_ai() {
       claude-code) _install_cli_plugins claude-code claude "Claude Code" ;;
       codex) _install_cli_plugins codex codex Codex ;;
       opencode) log "No OpenCode V2-compatible plugins configured" ;;
-      kimi-code) log "No Kimi Code plugins configured" ;;
       '*')
         _install_cli_plugins claude-code claude "Claude Code" || return
         _install_cli_plugins codex codex Codex || return
         log "No OpenCode V2-compatible plugins configured"
-        log "No Kimi Code plugins configured"
         ;;
     esac
   }
@@ -247,7 +205,7 @@ sub_install_ai() {
   case "$target" in
     all)
       agent='*'
-      link_dirs="$HOME/.claude/skills|$HOME/.kimi-code/skills|$HOME/.agents/skills"
+      link_dirs="$HOME/.claude/skills|$HOME/.agents/skills"
       ;;
     claude)
       agent=claude-code
@@ -257,16 +215,12 @@ sub_install_ai() {
       agent="$target"
       link_dirs="$HOME/.agents/skills"
       ;;
-    kimi)
-      agent=kimi-code
-      link_dirs="$HOME/.kimi-code/skills|$HOME/.agents/skills"
-      ;;
     --skills | --plugins)
       set -- "$target" "$@"
       target=all
       ;;
     *)
-      echo "Usage: dot install ai [all|claude|codex|opencode|kimi] [--skills|--plugins]" >&2
+      echo "Usage: dot install ai [all|claude|codex|opencode] [--skills|--plugins]" >&2
       return 1
       ;;
   esac
@@ -298,7 +252,7 @@ sub_install_ai() {
 sub_full() {
   log "Full install"
   local phase failures=()
-  for phase in brew link zsh tools code macos duti git; do
+  for phase in brew link tools code macos duti git claude_config opencode_config; do
     "sub_$phase" || failures+=("$phase")
   done
 
@@ -335,30 +289,6 @@ _topic_names() {
 
 topics() { _topic_names "$TOPIC_DIR"; }
 optional_topics() { _topic_names "$TOPIC_DIR/optional"; }
-
-# Profiles are Brewfiles too, but bundle several tools for one kind of work
-# (e.g. laravel = herd + dbngin + PHP tooling). Opt-in via --profile only:
-# neither `dot brew` nor `dot install --full` touches them.
-PROFILE_DIR="$DOTFILES_DIR/install/profiles"
-profiles() { _topic_names "$PROFILE_DIR"; }
-
-profile_path() {
-  [[ -f "$PROFILE_DIR/$1" ]] && {
-    printf '%s' "$PROFILE_DIR/$1"
-    return 0
-  }
-  return 1
-}
-
-install_profile() {
-  local path
-  path=$(profile_path "$1") || {
-    echo "no such profile: $1" >&2
-    return 1
-  }
-  log "Installing profile: $1"
-  run brew bundle --file="$path"
-}
 
 topic_path() {
   local dir
@@ -430,6 +360,16 @@ sub_git() {
   install_git
 }
 
+sub_claude_config() {
+  log "Installing Claude defaults"
+  install_claude_config
+}
+
+sub_opencode_config() {
+  log "Installing Opencode defaults"
+  install_opencode_config
+}
+
 sub_link() {
   log "Linking dotfiles"
   link_all
@@ -448,16 +388,6 @@ sub_unlink() {
 sub_zsh() {
   log "Setting up Zsh"
   install_zsh
-}
-
-sub_migrate_custom() {
-  log "Migrating custom configs"
-  migrate_zsh_custom
-}
-
-sub_tools() {
-  log "Installing extra tools"
-  install_tools
 }
 
 # `_defaults.sh` sorts first, which is what the underscore is for: the shared
