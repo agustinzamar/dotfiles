@@ -247,15 +247,11 @@ sub_install_ai() {
 sub_full() {
   log "Full install"
   local phase failures=()
-  for phase in brew link code macos duti git claude_config opencode_config; do
+  for phase in brew link zsh tools code macos duti git claude_config opencode_config; do
     "sub_$phase" || failures+=("$phase")
   done
 
   local topic
-  while read -r topic; do
-    install_topic "$topic" || log "Skipping topic: $topic"
-  done < <(topics)
-
   while read -r topic; do
     install_topic "$topic" || log "Skipping optional topic: $topic"
   done < <(optional_topics)
@@ -286,6 +282,25 @@ sub_brew() {
   else
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   fi
+
+  local topic failures=()
+  while read -r topic; do
+    install_topic "$topic" || failures+=("$topic")
+  done < <(topics)
+
+  if ((${#failures[@]})); then
+    log "topics that failed: ${failures[*]}"
+    return 1
+  fi
+}
+
+sub_zsh() {
+  log "Setting up Zsh"
+}
+
+sub_tools() {
+  log "Installing tools"
+  install_tools
 }
 
 sub_code() {

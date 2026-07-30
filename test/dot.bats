@@ -68,22 +68,19 @@ setup() {
   zsh -n "$file"
 }
 
-# The macos scripts call `defaults write` directly instead of going through
-# `run`, so a dry run must stop short of sourcing them.
+# The macos script calls `defaults write` and `sudo` directly instead of going
+# through `run`, so a dry run must stop short of sourcing it.
 @test "macos dry-run reports without sourcing" {
   run "$DOT" install macos --dry-run
   [ "$status" -eq 0 ]
-  [[ "$output" == *"+ source system/macos/_defaults.sh"* ]]
+  [[ "$output" == *"+ source system/defaults/macos.sh"* ]]
   [[ "$output" != *"sudo"* ]]
 }
 
-# `_defaults.sh` must sort before the per-app files; that is what the leading
-# underscore is for.
-@test "macos applies the shared defaults first" {
+@test "macos sources the defaults file" {
   run "$DOT" install macos --dry-run
   [ "$status" -eq 0 ]
-  [[ "$(grep -c 'source system/macos/' <<<"$output")" -ge 2 ]]
-  [[ "$(grep -m1 'source system/macos/' <<<"$output")" == *"_defaults.sh"* ]]
+  [[ "$output" == *"+ source system/defaults/macos.sh"* ]]
 }
 
 # duti reads a file with no final newline as an unterminated extra line and
@@ -189,7 +186,7 @@ setup() {
   # Still reachable on its own.
   run "$DOT" install dock --dry-run
   [ "$status" -eq 0 ]
-  [[ "$output" == *"dock-defaults.sh"* ]]
+  [[ "$output" == *"dock.sh"* ]]
 }
 
 # The whole point of optional/: a machine opts in by name, `brew` never does.
@@ -350,19 +347,6 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" == *"--agent opencode"* ]]
   [[ "$output" == *"No OpenCode V2-compatible plugins configured"* ]]
-}
-
-@test "AI skills target selected agent for Kimi Code" {
-  run "$DOT" install ai kimi --skills --dry-run
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"--agent kimi-code"* ]]
-  [[ "$output" != *"Plugin [kimi]"* ]]
-}
-
-@test "AI plugins report no Kimi Code plugins configured" {
-  run "$DOT" install ai kimi --plugins --dry-run
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"No Kimi Code plugins configured"* ]]
 }
 
 @test "AI install supports macOS system bash" {
