@@ -5,9 +5,6 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
 fi
 
-# If you come from bash you might have to change your $PATH.
-# export PATH=$HOME/bin:$HOME/.local/bin:/usr/local/bin:$PATH
-
 # Source exports early so zinit plugins find brewed binaries
 source "${HOME}/.dotfiles-home/.exports"
 
@@ -21,8 +18,6 @@ source "${ZINIT_HOME}/zinit.zsh"
 
 # Completions path
 fpath=("${HOME}/.dotfiles-home/completions" $fpath)
-
-# === Plugins ===
 
 # Powerlevel10k (not turbo — needed for prompt)
 zinit ice depth=1
@@ -57,8 +52,9 @@ bindkey -e
 # History search with up/down arrows based on current input
 bindkey '\e[A' history-search-backward
 bindkey '\e[B' history-search-forward
+
 # Bind magic space to expand aliases and history words
-bindkey ' ' magic-space
+bindkey ' ' magic-space 
 
 # Open buffer line in editor (vim, nvim, or code) with Ctrl-X Ctrl-E
 autoload -Uz edit-command-line
@@ -87,6 +83,7 @@ setopt hist_find_no_dups
 setopt appendhistory
 setopt sharehistory
 
+# Completion settings
 zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
 zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
 zstyle ':completion:*' menu no
@@ -96,7 +93,7 @@ zstyle ':fzf-tab:complete:*:*' fzf-preview 'eza -la --icons --group-directories-
 
 typeset -U path PATH
 
-# === Added by dotfiles ===
+# Load aliases and functions, in filename order. See system/aliases/ and system/functions/ in the dotfiles repo.
 for f in "${HOME}"/.dotfiles-home/aliases/*.zsh(N); do source "$f"; done
 for f in "${HOME}"/.dotfiles-home/functions/*.zsh(N); do source "$f"; done
 
