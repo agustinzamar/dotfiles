@@ -3,13 +3,12 @@
 set -Eeuo pipefail
 
 BIN_NAME=$(basename "$0")
-# `pwd -P`, so that invoking dot through the ~/.dotfiles symlink resolves to
-# the same path `link` wrote into the symlinks. Otherwise doctor calls every
-# link broken and unlink declines to remove them.
+# Use pwd -P so that invoking dot through a symlink resolves to the
+# real repo root. Otherwise doctor sees broken links.
 DOTFILES_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
 export DOTFILES_DIR
 
-# --dry-run is global: pull it out before working out which subcommand ran.
+# --dry-run is global; pull it out before dispatching.
 DRY_RUN=false
 args=()
 for arg in "$@"; do
@@ -19,7 +18,7 @@ for arg in "$@"; do
   esac
 done
 export DRY_RUN
-set -- ${args[@]+"${args[@]}"}
+set -- "${args[@]}"
 
 # shellcheck source=../install/common.sh
 . "$DOTFILES_DIR/install/common.sh"
@@ -48,19 +47,16 @@ sub_help() {
   echo "   update           Pull, upgrade packages, then re-run the install"
   echo
   echo "Install:"
-  echo "   install              Install core tools only (brew, zsh, fzf, ssh keys)"
-  echo "   install git          Setup git config and credential helpers"
+  echo "   install              Install core tools (brew, zsh, fzf, ssh keys)"
+  echo "   install git          Setup git config"
   echo "   install code         Install VS Code extensions"
   echo "   install macos        Apply macOS system defaults"
   echo "   install dock         Apply macOS Dock settings"
   echo "   install duti         Set default apps for file types"
-  echo "   install --all        Install everything"
-  echo "   install ai              Sync skills + plugins to all AI tools"
-  echo "   install ai <tool>       Skills + plugins to <tool> only"
-  echo "   install ai <tool> --skills   Skills only"
-  echo "   install ai <tool> --plugins  Plugins only"
-  local topic
+  echo "   install ai [...]     Sync skills/plugins to AI tools"
+  echo "   install --full       Install everything"
   echo
+  local topic
   echo "Topics (installed by \`brew\`, or one at a time):"
   while read -r topic; do
     printf '   %-16s %s\n' "$topic" "$(head -1 "$(topic_path "$topic")" | sed 's/^# *//')"
@@ -72,14 +68,14 @@ sub_help() {
   done < <(optional_topics)
 }
 
-# One broken package should not cost you the symlinks: run every phase, then
-# report. Exits non-zero so CI and `make install` still fail loudly.
+# Run every phase, then report failures. One broken phase should not
+# prevent later ones from running.
 sub_install() {
   local cmd="${1:-}"
   shift 2>/dev/null || true
 
   case "$cmd" in
-    --full | -f)
+    --all | -a | --full | -f)
       sub_full
       return $?
       ;;
@@ -93,13 +89,14 @@ sub_install() {
       for phase in link; do
         "sub_$phase" || failures+=("$phase")
       done
+      install_tools
       install_claude_config
       install_opencode_config
       if ((${#failures[@]})); then
         log "Finished with failures: ${failures[*]}"
         return 1
       fi
-      log "Bootstrap complete — run \`dot install --minimal\` for tools and dev packages"
+      log "Bootstrap complete — run \`dot install\` again or \`dot install --full\` for everything"
       return 0
       ;;
     *)
@@ -143,7 +140,6 @@ sub_install_ai() {
       done < <(jq -r '.skills[] | [.source, (.skill // null)] | @tsv' "$manifest" 2>/dev/null)
     fi
 
-    # Link any local/custom skills.
     [[ -d "$DOTFILES_DIR/ai/skills" && "$(ls -A "$DOTFILES_DIR/ai/skills" 2>/dev/null)" ]] || return 0
     for dir in $link_dirs; do
       link_file "ai/skills" "$dir"
@@ -161,7 +157,7 @@ sub_install_ai() {
         return 0
       fi
 
-      local name repo marketplace_name marketplace_source plugin marketplaces
+      local name repo marketplace_name marketplace_source plugin
       while IFS='|' read -r name repo marketplace_name marketplace_source plugin; do
         [[ -n "$plugin" ]] || continue
         log "Plugin [$tool]: $name ($repo)"
@@ -169,6 +165,7 @@ sub_install_ai() {
           if "$DRY_RUN"; then
             run "$cli" plugin marketplace add "$marketplace_source" || return
           else
+            local marketplaces
             marketplaces=$("$cli" plugin marketplace list --json) || return
             jq -e --arg name "$marketplace_name" '.. | strings | select(. == $name)' \
               <<<"$marketplaces" >/dev/null || run "$cli" plugin marketplace add "$marketplace_source" || return
@@ -195,13 +192,17 @@ sub_install_ai() {
     esac
   }
 
-  # Parse the tool and any --skills/--plugins flags. With neither flag, both run.
+  # Parse: dot install ai [tool] [--skills|--plugins].
+  # Without a flag, both skills and plugins run. Without a tool, all.
   local target="${1:-all}"
   shift 2>/dev/null || true
+  # If the first positional looks like a flag (no tool given),
+  # treat it as target=all and push it back as a flag.
   [[ "$target" == "--"* ]] && {
     set -- "$target" "$@"
     target=all
   }
+
   local agent link_dirs
   case "$target" in
     all)
@@ -215,10 +216,6 @@ sub_install_ai() {
     codex | opencode)
       agent="$target"
       link_dirs="$HOME/.agents/skills"
-      ;;
-    --skills | --plugins)
-      set -- "$target" "$@"
-      target=all
       ;;
     *)
       echo "Usage: dot install ai [all|claude|codex|opencode] [--skills|--plugins]" >&2
@@ -237,16 +234,13 @@ sub_install_ai() {
         ;;
     esac
   done
-  # No flags = both, matching "dot install ai" = All.
   $do_skills || $do_plugins || {
     do_skills=true
     do_plugins=true
   }
 
   $do_skills && _install_skills "$target"
-  if $do_plugins; then
-    _install_plugins "$target" || return
-  fi
+  $do_plugins && _install_plugins "$target"
   return 0
 }
 
@@ -257,13 +251,11 @@ sub_full() {
     "sub_$phase" || failures+=("$phase")
   done
 
-  # Install every topic
   local topic
   while read -r topic; do
-    install_topic "$topic" || log "Skipping optional topic: $topic"
+    install_topic "$topic" || log "Skipping topic: $topic"
   done < <(topics)
 
-  # Install every optonal topic
   while read -r topic; do
     install_topic "$topic" || log "Skipping optional topic: $topic"
   done < <(optional_topics)
@@ -275,7 +267,6 @@ sub_full() {
   log "Installation complete"
 }
 
-# Install a topic by name. The topic is a Brewfile, so this runs `brew bundle`.
 install_topic() {
   local path
   path=$(topic_path "$1") || {
@@ -286,7 +277,6 @@ install_topic() {
   run brew bundle --file="$path"
 }
 
-# Install subcommand. Install Homebrew if not already installed.
 sub_brew() {
   log "Installing Homebrew"
   if is_executable brew; then
@@ -298,7 +288,6 @@ sub_brew() {
   fi
 }
 
-# Install subcommand. Install Visual Studio Code extensions.
 sub_code() {
   if is_executable code; then
     log "Installing VS Code extensions"
@@ -313,7 +302,6 @@ sub_code() {
   fi
 }
 
-# Install subcommand. Setup default apps for file types.
 sub_duti() {
   if is_executable duti; then
     log "Setting default apps for file types"
@@ -338,47 +326,38 @@ sub_opencode_config() {
   install_opencode_config
 }
 
-# Link subcommand. Create symlinks for all dotfiles in this repo.
 sub_link() {
   log "Linking dotfiles"
   link_all
 }
 
-# Link shell dotfiles. This is a separate subcommand so that `dot install` can
-# run it first, then install tools and packages.
 sub_link_shell() {
   log "Linking shell dotfiles"
   link_shell
 }
 
-# Unlink subcommand. Remove symlinks that point into this repo.
 sub_unlink() {
   log "Removing symlinks"
   unlink_all
 }
 
-# Install subcommand. Apply macOS system defaults.
 sub_macos() {
   apply_defaults "$DOTFILES_DIR/system/defaults/macos.sh"
   echo "Some changes may require a logout or restart to take effect."
 }
 
-# Install subcommand. Dock settings are applied by `defaults write` to the Dock's plist.
 sub_dock() {
   apply_defaults "$DOTFILES_DIR/system/defaults/dock.sh"
 }
 
-# Install subcommand. Apply Chrome defaults.
 sub_chrome() {
   apply_defaults "$DOTFILES_DIR/system/defaults/chrome.sh"
 }
 
-# Install subcommand. Apply Rectangle defaults.
 sub_rectangle() {
   apply_defaults "$DOTFILES_DIR/system/defaults/rectangle.sh"
 }
 
-# Top command. Check that required tools are installed and symlinks point into this repo.
 sub_doctor() {
   local failed=0 command
   check() {
@@ -395,8 +374,6 @@ sub_doctor() {
   }
 
   for command in brew git; do check "$command"; done
-  # Catches system/.exports not being linked, or the shell not having been
-  # restarted since it was.
   is_executable dot || {
     echo "not on PATH: dot (link system/.exports, then restart your shell)"
     failed=1
@@ -405,12 +382,10 @@ sub_doctor() {
   check_link config/p10k/.p10k.zsh "$HOME/.p10k.zsh"
   check_link config/ghostty/config "$HOME/.config/ghostty/config"
   check_link config/tmux/tmux.conf "$HOME/.config/tmux/tmux.conf"
-  # git config is set via install/git.sh, not symlinked — skip check
   if ((failed == 0)); then echo "dotfiles: healthy"; fi
   return "$failed"
 }
 
-# Top commnand. Pull the repo, upgrade packages, then re-run the install.
 sub_update() {
   run git -C "$DOTFILES_DIR" pull
   if is_executable topgrade; then
@@ -422,7 +397,6 @@ sub_update() {
   sub_full
 }
 
-# Top command. Backup the repo, then push it. If there are no changes, just report that.
 sub_backup() {
   if [[ -z "$(git -C "$DOTFILES_DIR" status --porcelain)" ]]; then
     echo "No changes to commit."
@@ -433,24 +407,21 @@ sub_backup() {
   run git -C "$DOTFILES_DIR" push
 }
 
-# Top Command. Clean up caches and temporary files.
 sub_clean() {
   if is_executable mole; then run mole clean; fi
   run brew cleanup
   if is_executable pnpm; then run pnpm store prune; fi
 }
 
-# Top command. Open the dotfiles repo in $VISUAL.
 sub_edit() {
   sh -c "${VISUAL:-code} $DOTFILES_DIR"
 }
 
-# Run the bats tests in test/*.bats.
 sub_test() {
   bats "$DOTFILES_DIR"/test/*.bats
 }
 
-TOP_COMMANDS=" backup clean doctor edit help install migrate-custom test unlink update "
+TOP_COMMANDS=" backup clean doctor edit help install test unlink update "
 
 COMMAND_NAME=${1:-}
 case "$COMMAND_NAME" in
