@@ -49,6 +49,7 @@ sub_help() {
   echo
   echo "Install:"
   echo "   install              Install core tools only (brew, zsh, fzf, ssh keys)"
+  echo "   install git          Setup git config and credential helpers"
   echo "   install code         Install VS Code extensions"
   echo "   install macos        Apply macOS system defaults"
   echo "   install dock         Apply macOS Dock settings"
@@ -89,7 +90,7 @@ sub_install() {
     "" | bootstrap)
       log "Bootstrapping dotfiles"
       local phase failures=()
-      for phase in link zsh; do
+      for phase in link; do
         "sub_$phase" || failures+=("$phase")
       done
       install_claude_config
@@ -252,12 +253,17 @@ sub_install_ai() {
 sub_full() {
   log "Full install"
   local phase failures=()
-  for phase in brew link tools code macos duti git claude_config opencode_config; do
+  for phase in brew link code macos duti git claude_config opencode_config; do
     "sub_$phase" || failures+=("$phase")
   done
 
-  # Install every topic under install/topics/optional/
+  # Install every topic
   local topic
+  while read -r topic; do
+    install_topic "$topic" || log "Skipping optional topic: $topic"
+  done < <(topics)
+
+  # Install every optonal topic
   while read -r topic; do
     install_topic "$topic" || log "Skipping optional topic: $topic"
   done < <(optional_topics)
@@ -269,38 +275,7 @@ sub_full() {
   log "Installation complete"
 }
 
-# Every file under install/topics/ is a Brewfile and a command: `dot media`
-# installs install/topics/media. Adding a topic is adding one file.
-#
-# Files directly in topics/ are installed by `dot brew`; those in
-# topics/optional/ are not, so a machine opts into them by name. Moving a topic
-# between the two is a `git mv`.
-TOPIC_DIR="$DOTFILES_DIR/install/topics"
-
-# `return 0` because a glob that ends on a non-file would otherwise leave the
-# function's status non-zero, which `set -e` treats as a failure.
-_topic_names() {
-  local file
-  for file in "$1"/*; do
-    [[ -f "$file" ]] && basename "$file"
-  done
-  return 0
-}
-
-topics() { _topic_names "$TOPIC_DIR"; }
-optional_topics() { _topic_names "$TOPIC_DIR/optional"; }
-
-topic_path() {
-  local dir
-  for dir in "$TOPIC_DIR" "$TOPIC_DIR/optional"; do
-    [[ -f "$dir/$1" ]] && {
-      printf '%s' "$dir/$1"
-      return 0
-    }
-  done
-  return 1
-}
-
+# Install a topic by name. The topic is a Brewfile, so this runs `brew bundle`.
 install_topic() {
   local path
   path=$(topic_path "$1") || {
@@ -311,48 +286,41 @@ install_topic() {
   run brew bundle --file="$path"
 }
 
+# Install subcommand. Install Homebrew if not already installed.
 sub_brew() {
   log "Installing Homebrew"
   if is_executable brew; then
-    :
+    echo 'Homebrew already installed, skipping'
   elif "$DRY_RUN"; then
     echo '+ install Homebrew'
   else
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   fi
+}
 
-  local topic failures=()
-  while read -r topic; do
-    install_topic "$topic" || failures+=("$topic")
-  done < <(topics)
-
-  if ((${#failures[@]})); then
-    echo "topics that failed: ${failures[*]}" >&2
-    return 1
+# Install subcommand. Install Visual Studio Code extensions.
+sub_code() {
+  if is_executable code; then
+    log "Installing VS Code extensions"
+    local installed extension
+    installed=$(code --list-extensions 2>/dev/null | tr '[:upper:]' '[:lower:]')
+    while read -r extension; do
+      grep -qxF "$(tr '[:upper:]' '[:lower:]' <<<"$extension")" <<<"$installed" ||
+        run code --install-extension "$extension"
+    done < <(read_package_file "$DOTFILES_DIR/install/Codefile")
+  else
+    echo "VS Code not installed, skipping extension setup" >&2
   fi
 }
 
-# The package files are plain lists: one name per line, `#` comments and blank
-# lines ignored. Keeping them as data means adding a package is a one-line diff.
-read_package_file() {
-  sed -e 's/#.*//' -e 's/[[:space:]]*$//' "$1" | grep -v '^$' || true
-}
-
-sub_code() {
-  is_executable code || return 0
-  log "Installing VS Code extensions"
-  local installed extension
-  installed=$(code --list-extensions 2>/dev/null | tr '[:upper:]' '[:lower:]')
-  while read -r extension; do
-    grep -qxF "$(tr '[:upper:]' '[:lower:]' <<<"$extension")" <<<"$installed" ||
-      run code --install-extension "$extension"
-  done < <(read_package_file "$DOTFILES_DIR/install/Codefile")
-}
-
+# Install subcommand. Setup default apps for file types.
 sub_duti() {
-  is_executable duti || return 0
-  log "Setting default apps for file types"
-  run duti -v "$DOTFILES_DIR/install/duti" 2>&1 | grep -v "error -50" || true
+  if is_executable duti; then
+    log "Setting default apps for file types"
+    run duti -v "$DOTFILES_DIR/install/duti" 2>&1 | grep -v "error -50" || true
+  else
+    echo "duti not installed, skipping default app setup" >&2
+  fi
 }
 
 sub_git() {
@@ -370,54 +338,47 @@ sub_opencode_config() {
   install_opencode_config
 }
 
+# Link subcommand. Create symlinks for all dotfiles in this repo.
 sub_link() {
   log "Linking dotfiles"
   link_all
 }
 
+# Link shell dotfiles. This is a separate subcommand so that `dot install` can
+# run it first, then install tools and packages.
 sub_link_shell() {
   log "Linking shell dotfiles"
   link_shell
 }
 
+# Unlink subcommand. Remove symlinks that point into this repo.
 sub_unlink() {
   log "Removing symlinks"
   unlink_all
 }
 
-sub_zsh() {
-  log "Setting up Zsh"
-  install_zsh
-}
-
-# `_defaults.sh` sorts first, which is what the underscore is for: the shared
-# system settings land before the per-app ones.
-#
-# These scripts call `defaults write` directly rather than going through `run`,
-# so --dry-run has to stop short of sourcing them or it would apply the lot.
-apply_defaults() {
-  local file
-  for file in "$@"; do
-    [[ -f "$file" ]] || continue
-    log "Applying ${file#"$DOTFILES_DIR"/}"
-    if "$DRY_RUN"; then
-      echo "+ source ${file#"$DOTFILES_DIR"/}"
-    else
-      # shellcheck source=/dev/null
-      . "$file"
-    fi
-  done
-}
-
+# Install subcommand. Apply macOS system defaults.
 sub_macos() {
-  apply_defaults "$DOTFILES_DIR"/system/macos/*defaults.sh
+  apply_defaults "$DOTFILES_DIR/system/defaults/macos.sh"
   echo "Some changes may require a logout or restart to take effect."
 }
 
+# Install subcommand. Dock settings are applied by `defaults write` to the Dock's plist.
 sub_dock() {
-  apply_defaults "$DOTFILES_DIR/system/macos/dock-defaults.sh"
+  apply_defaults "$DOTFILES_DIR/system/defaults/dock.sh"
 }
 
+# Install subcommand. Apply Chrome defaults.
+sub_chrome() {
+  apply_defaults "$DOTFILES_DIR/system/defaults/chrome.sh"
+}
+
+# Install subcommand. Apply Rectangle defaults.
+sub_rectangle() {
+  apply_defaults "$DOTFILES_DIR/system/defaults/rectangle.sh"
+}
+
+# Top command. Check that required tools are installed and symlinks point into this repo.
 sub_doctor() {
   local failed=0 command
   check() {
@@ -433,7 +394,7 @@ sub_doctor() {
     }
   }
 
-  for command in brew git zsh; do check "$command"; done
+  for command in brew git; do check "$command"; done
   # Catches system/.exports not being linked, or the shell not having been
   # restarted since it was.
   is_executable dot || {
@@ -449,6 +410,7 @@ sub_doctor() {
   return "$failed"
 }
 
+# Top commnand. Pull the repo, upgrade packages, then re-run the install.
 sub_update() {
   run git -C "$DOTFILES_DIR" pull
   if is_executable topgrade; then
@@ -460,6 +422,7 @@ sub_update() {
   sub_full
 }
 
+# Top command. Backup the repo, then push it. If there are no changes, just report that.
 sub_backup() {
   if [[ -z "$(git -C "$DOTFILES_DIR" status --porcelain)" ]]; then
     echo "No changes to commit."
@@ -470,16 +433,19 @@ sub_backup() {
   run git -C "$DOTFILES_DIR" push
 }
 
+# Top Command. Clean up caches and temporary files.
 sub_clean() {
   if is_executable mole; then run mole clean; fi
   run brew cleanup
   if is_executable pnpm; then run pnpm store prune; fi
 }
 
+# Top command. Open the dotfiles repo in $VISUAL.
 sub_edit() {
   sh -c "${VISUAL:-code} $DOTFILES_DIR"
 }
 
+# Run the bats tests in test/*.bats.
 sub_test() {
   bats "$DOTFILES_DIR"/test/*.bats
 }
