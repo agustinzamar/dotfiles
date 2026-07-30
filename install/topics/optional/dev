@@ -1,10 +1,17 @@
-# Additional tools for developers
+# Database and services
 brew "mysql-client"
 brew "sqlite"
-
 cask "herd"
 cask "dbngin"
-cask "phpstorm"
 cask "orbstack"
+
+# IDEs and Editors
+cask "phpstorm"
+
+# Fancy tools
 cask "steipete/tap/codexbar"
 cask repobar
+
+# Agents
+cask "codex"
+brew install anomalyco/tap/opencode
