@@ -7,6 +7,28 @@
 
 BACKUP_DIR="$HOME/.dotfiles-backup/$(date +%Y%m%dT%H%M%S)"
 
+# Apply a list of shell files. Each file is sourced in order,
+# so later files can override earlier ones.
+apply_defaults() {
+  local file
+  for file in "$@"; do
+    [[ -f "$file" ]] || continue
+    log "Applying ${file#"$DOTFILES_DIR"/}"
+    if "$DRY_RUN"; then
+      echo "+ source ${file#"$DOTFILES_DIR"/}"
+    else
+      # shellcheck source=/dev/null
+      . "$file"
+    fi
+  done
+}
+
+# The package files are plain lists: one name per line, `#` comments and blank
+# lines ignored. Keeping them as data means adding a package is a one-line diff.
+read_package_file() {
+  sed -e 's/#.*//' -e 's/[[:space:]]*$//' "$1" | grep -v '^$' || true
+}
+
 # Run a command, or print it when --dry-run is in effect.
 run() {
   if "$DRY_RUN"; then
@@ -78,4 +100,37 @@ unlink_file() {
   local source="$DOTFILES_DIR/$1" target=$2
   [[ "$(readlink "$target" 2>/dev/null || true)" == "$source" ]] || return 0
   run rm "$target"
+}
+
+# Every file under install/topics/ is a Brewfile and a command: `dot media`
+# installs install/topics/media. Adding a topic is adding one file.
+#
+# Files directly in topics/ are installed by `dot brew`; those in
+# topics/optional/ are not, so a machine opts into them by name. Moving a topic
+# between the two is a `git mv`.
+TOPIC_DIR="$DOTFILES_DIR/install/topics"
+
+# `return 0` because a glob that ends on a non-file would otherwise leave the
+# function's status non-zero, which `set -e` treats as a failure.
+_topic_names() {
+  local file
+  for file in "$1"/*; do
+    [[ -f "$file" ]] && basename "$file"
+  done
+  return 0
+}
+
+
+topics() { _topic_names "$TOPIC_DIR"; }
+optional_topics() { _topic_names "$TOPIC_DIR/optional"; }
+
+topic_path() {
+  local dir
+  for dir in "$TOPIC_DIR" "$TOPIC_DIR/optional"; do
+    [[ -f "$dir/$1" ]] && {
+      printf '%s' "$dir/$1"
+      return 0
+    }
+  done
+  return 1
 }
