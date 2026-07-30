@@ -1,11 +1,13 @@
 {
   "defaultModel": "OPUS1m",
   "teammateMode": "tmux",
-  "skipDangerousModePermissionPrompt": true,
+  "skipDangerousModePermissionPrompt": false,
   "inputNeededNotifEnabled": false,
   "agentPushNotifEnabled": false,
-  "env": {
-    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
+  "awaySummaryEnabled": false,
+  "remoteControlAtStartup": true,
+  "permissions": {
+    "defaultMode": "auto"
   },
   "enabledPlugins": {
     "frontend-design@claude-plugins-official": true,
@@ -19,7 +21,10 @@
     "pr-review-toolkit@claude-plugins-official": true,
     "php-lsp@claude-plugins-official": true,
     "laravel-boost@claude-plugins-official": true,
-    "github@claude-plugins-official": true
+    "github@claude-plugins-official": true,
+    "ponytail@ponytail": true,
+    "superpowers@superpowers-dev": true,
+    "caveman@caveman": true
   },
   "extraKnownMarketplaces": {
     "superpowers-dev": {
@@ -33,6 +38,15 @@
         "source": "github",
         "repo": "DietrichGebert/ponytail"
       }
+    },
+    "caveman": {
+      "source": {
+        "source": "github",
+        "repo": "JuliusBrussee/caveman"
+      }
     }
+  },
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   }
 }
