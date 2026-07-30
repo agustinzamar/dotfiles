@@ -14,16 +14,19 @@ export NVM_DIR="$HOME/Library/Application Support/Herd/config/nvm"
 [[ -f "/Applications/Herd.app/Contents/Resources/config/shell/zshrc.zsh" ]] &&
   builtin source "/Applications/Herd.app/Contents/Resources/config/shell/zshrc.zsh"
 
-# Herd's chpwd hook calls nvm use, which prepends the active Node version's bin
-# directory to PATH. That would shadow the dotfiles wrappers for npm, yarn, npx
-# and bun, so keep ~/.dotfiles/bin at the front after every directory change.
-_dotfiles-bin-to-front() {
-  local d="$HOME/.dotfiles/bin"
-  path=("$d" ${path:#$d})
-}
-autoload -U add-zsh-hook
-add-zsh-hook chpwd _dotfiles-bin-to-front
-_dotfiles-bin-to-front
+# Keep ~/.dotfiles/bin at the front after every chpwd so wrappers for npm,
+# yarn, npx and bun aren't shadowed by nvm's prepended bin. Only enable this
+# if the directory actually exists.
+if [[ -d "$HOME/.dotfiles/bin" ]]; then
+  _dotfiles-bin-to-front() {
+    local d="$HOME/.dotfiles/bin"
+    # Prepend unless already first
+    [[ ${path[1]} = "$d" ]] || path=("$d" ${path:#$d})
+  }
+  autoload -U add-zsh-hook
+  add-zsh-hook chpwd _dotfiles-bin-to-front
+  _dotfiles-bin-to-front
+fi
 
 # Hard-coded to $HOME rather than a literal path so this works on any machine.
 export HERD_PHP_85_INI_SCAN_DIR="$HOME/Library/Application Support/Herd/config/php/85/"
