@@ -1,3 +1,4 @@
+# Browser, terminal, and window management
 # Browser
 cask "google-chrome"
 

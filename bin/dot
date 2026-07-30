@@ -44,17 +44,43 @@ sub_help() {
   echo "   unlink           Remove symlinks that point into this repo"
   echo "   update           Pull, upgrade packages, then re-run the install"
   echo
-  echo "Install:"
+  echo "Install (each also works as \`dot <name>\`, no \`install\` needed):"
   echo "   install              Install core tools (xcode, brew, shell and basic tools)"
-  echo "   install git          Setup git config"
-  echo "   install code         Install VS Code extensions"
-  echo "   install macos        Apply macOS system defaults"
-  echo "   install dock         Apply macOS Dock settings"
-  echo "   install duti         Set default apps for file types"
+  echo "   brew                 Install Homebrew and every default topic"
+  echo "   link                 Symlink every config into place"
+  echo "   links                Symlink the shell configs only"
+  echo "   zsh                  Install Oh My Zsh, its theme and plugins"
+  echo "   tools                Install what Homebrew Bundle does not cover"
+  echo "   code                 Install VS Code extensions"
+  echo "   git                  Setup git config"
+  echo "   macos                Apply macOS system defaults"
+  echo "   dock                 Apply macOS Dock settings"
+  echo "   duti                 Set default apps for file types"
   echo "   install ai [...]     Sync skills/plugins to AI tools"
-  echo "   install --defaults   Setup all defaults for macos, dock and file extensions"
   echo "   install --all        Install and sync everything"
-  echo "   install <topics>     Install a list of topics"
+  echo
+  echo "Topics (each also a command, one Brewfile per group):"
+  local topic
+  while read -r topic; do
+    printf '   %-16s %s\n' "$topic" "$(head -1 "$TOPIC_DIR/$topic" | sed 's/^# *//')"
+  done < <(topics)
+  echo "   install <topic>      Install any topic, including install/topics/optional/*"
+}
+
+# Resolve an `install` subcommand or topic name to what runs it. Echoes the
+# sub_* function name, or `topic:<name>` for a Brewfile topic; fails if
+# neither exists. Shared by sub_install and the top-level dispatcher below so
+# a bare `dot brew` and `dot install brew` recognize the same set of names.
+resolve_install_target() {
+  local cmd="$1"
+  local sub="sub_$cmd"
+  if declare -F "$sub" >/dev/null; then
+    printf '%s' "$sub"
+  elif topic_path "$cmd" >/dev/null; then
+    printf 'topic:%s' "$cmd"
+  else
+    return 1
+  fi
 }
 
 # Run every phase, then report failures. One broken phase should not
@@ -86,15 +112,12 @@ sub_install() {
       return 0
       ;;
     *)
-      local sub
-      case "$cmd" in
-        links) sub=sub_link_shell ;;
-        *) sub="sub_$cmd" ;;
-      esac
-      if declare -F "$sub" >/dev/null; then
-        "$sub"
-      elif topic_path "$cmd" >/dev/null; then
-        install_topic "$cmd"
+      local target
+      if target=$(resolve_install_target "$cmd"); then
+        case "$target" in
+          topic:*) install_topic "${target#topic:}" ;;
+          *) "$target" ;;
+        esac
       else
         echo "'$cmd' is not an install command or topic." >&2
         return 1
@@ -229,7 +252,8 @@ sub_full() {
 
   local topic
   while read -r topic; do
-    install_topic "$topic" || log "Skipping optional topic: $topic"
+    run_topic_file "$topic (optional)" "$TOPIC_DIR/optional/$topic" ||
+      log "Skipping optional topic: $topic"
   done < <(optional_topics)
 
   if ((${#failures[@]})); then
@@ -239,14 +263,23 @@ sub_full() {
   log "Installation complete"
 }
 
+# Installs a topic by name. Core and optional/ can both hold a file with the
+# same name (e.g. `dev`) — a direct-by-name request installs whichever of the
+# two exist, which is how a machine "opts into" the optional half.
 install_topic() {
-  local path
-  path=$(topic_path "$1") || {
+  local core="$TOPIC_DIR/$1" optional="$TOPIC_DIR/optional/$1" found=1
+  [[ -f "$core" ]] && {
+    run_topic_file "$1" "$core"
+    found=0
+  }
+  [[ -f "$optional" ]] && {
+    run_topic_file "$1 (optional)" "$optional"
+    found=0
+  }
+  if ((found)); then
     echo "no such topic: $1" >&2
     return 1
-  }
-  log "Installing $1"
-  run brew bundle --file="$path"
+  fi
 }
 
 sub_bootstrap() {
@@ -271,7 +304,7 @@ sub_brew() {
   log "Installing Homebrew packages"
   local topic failures=()
   while read -r topic; do
-    install_topic "$topic" || failures+=("$topic")
+    run_topic_file "$topic" "$TOPIC_DIR/$topic" || failures+=("$topic")
   done < <(topics)
 
   if ((${#failures[@]})); then
@@ -357,7 +390,7 @@ sub_link() {
   link_all
 }
 
-sub_link_shell() {
+sub_links() {
   log "Linking shell dotfiles"
   link_shell
 }
@@ -458,6 +491,8 @@ case "$COMMAND_NAME" in
     shift
     if [[ "$TOP_COMMANDS" == *" $COMMAND_NAME "* ]]; then
       "sub_${COMMAND_NAME//-/_}" "$@"
+    elif resolve_install_target "$COMMAND_NAME" >/dev/null; then
+      sub_install "$COMMAND_NAME" "$@"
     else
       echo "'$COMMAND_NAME' is not a known command." >&2
       sub_help >&2

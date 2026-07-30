@@ -57,7 +57,7 @@ install_claude_config() {
         else a
         end;
       deepMerge($defaults[0]; $current[0])
-    ' > "$tmpfile" 2>/dev/null; then
+    ' >"$tmpfile" 2>/dev/null; then
     log "Claude: jq merge failed; keeping live file unchanged"
     rm -f "$tmpfile"
     return 1

@@ -1,0 +1,3 @@
+# Node global packages Homebrew Bundle doesn't cover.
+--allow-build=@opencode-ai/cli
+@opencode-ai/cli@next

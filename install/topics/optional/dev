@@ -10,8 +10,8 @@ cask "phpstorm"
 
 # Fancy tools
 cask "steipete/tap/codexbar"
-cask repobar
+cask "repobar"
 
 # Agents
 cask "codex"
-brew install anomalyco/tap/opencode
+brew "anomalyco/tap/opencode"

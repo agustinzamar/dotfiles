@@ -8,7 +8,7 @@
 
 install_opencode_config() {
 
-  if ! command opencode2 >/dev/null 2>&1; then
+  if ! command -v opencode >/dev/null 2>&1; then
     echo "opencode not installed, skipping config merge" >&2
     return 0
   fi
@@ -57,7 +57,7 @@ install_opencode_config() {
         else a
         end;
       deepMerge($defaults[0]; $current[0])
-    ' > "$tmpfile" 2>/dev/null; then
+    ' >"$tmpfile" 2>/dev/null; then
     log "Opencode: jq merge failed; keeping live file unchanged"
     rm -f "$tmpfile"
     return 1

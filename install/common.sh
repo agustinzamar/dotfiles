@@ -133,3 +133,9 @@ topic_path() {
   done
   return 1
 }
+
+# Run a single Brewfile by absolute path, logging under the given label.
+run_topic_file() {
+  log "Installing $1"
+  run brew bundle --file="$2"
+}
