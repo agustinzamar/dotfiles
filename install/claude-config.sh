@@ -7,6 +7,12 @@
 # Sourced by bin/dot -- expects $DOTFILES_DIR and $DRY_RUN.
 
 install_claude_config() {
+
+  if [[ ! -d "$HOME/.claude" ]]; then
+    log "Claude: ~/.claude does not exist; skipping config merge"
+    return 0
+  fi
+
   local defaults="$DOTFILES_DIR/config/claude/config.json"
   local target="$HOME/.claude/settings.json"
 
