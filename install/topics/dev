@@ -19,7 +19,6 @@ cask "visual-studio-code"
 brew "actionlint"
 brew "swiftformat"
 
-# Agents and assistants
+# Agents and terminal
 cask "muxy-app/tap/muxy"
 cask "claude-code"
-cask "codex"
