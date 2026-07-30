@@ -30,17 +30,14 @@ Packages are grouped into topics under `install/topics/`. Each file is a
 Brewfile and each is also a command:
 
 ```bash
-dot media                      # ffmpeg, imagemagick
-dot install desktop            # optional: raycast, rectangle, maccy, ...
-dot install --profile laravel  # herd, dbngin, phpstorm
+dot media             # ffmpeg, imagemagick
+dot install dev       # optional: herd, dbngin, phpstorm
 ```
 
 `dot brew` installs everything in `install/topics/`. Files in
-`install/topics/optional/` are skipped, so a machine opts into them by name.
+`install/topics/optional/` are skipped, so a machine opts into them by name —
+naming a topic that exists in both places (e.g. `dev`) installs both halves.
 Promoting or demoting a topic is a `git mv`.
-
-Profiles under `install/profiles/` bundle several tools for one kind of work
-(a stack rather than a category) and install only via `dot install --profile`.
 
 Adding a topic means adding one file: it shows up in `dot help` and becomes a
 command with no code change.
@@ -54,7 +51,7 @@ command with no code change.
 | `install` | Everything below, in order (`macos` covers `dock`) |
 | `brew` | Install Homebrew and every topic |
 | `link` | Symlink every config into place |
-| `link-shell` | Symlink the shell configs only |
+| `links` | Symlink the shell configs only |
 | `unlink` | Remove symlinks that point into this repo |
 | `zsh` | Install Oh My Zsh, its theme and plugins |
 | `tools` | Install what Homebrew Bundle does not cover |
@@ -86,20 +83,19 @@ dot link --dry-run
   whatever `install/topics/` holds
 - `install/common.sh` — `run`, `log`, `link_file`; the only copies
 - `install/topics/` — one Brewfile per package group; each is also a command.
-  `optional/` holds the ones `dot brew` skips
-- `install/profiles/` — Brewfiles for work stacks (e.g. `laravel`), installed
-  only via `dot install --profile <name>`
-- `install/` — the other package lists (`Codefile`, `duti`) plus
+  `optional/` holds the ones `dot brew` skips; a name present in both halves
+  installs both when invoked directly
+- `install/` — the other package lists (`Codefile`, `Othersfile`, `duti`) plus
   the per-topic install steps
 - `config/` — application configuration
-- `system/` — shell aliases, functions, exports, `env/`, `completions/`, `macos/`
+- `system/` — shell aliases, functions, exports, `env/`, `completions/`, `defaults/`
 - `remote-install.sh` — one-line bootstrap for a fresh machine
 - `test/` — Bats tests
 
 The package lists are plain data: one entry per line, `#` comments ignored.
 Adding a package is a one-line diff.
 
-`install/*.sh` and `system/macos/*.sh` are sourced by `bin/dot`, not executed
+`install/*.sh` and `system/defaults/*.sh` are sourced by `bin/dot`, not executed
 directly. They read `DOTFILES_DIR` and `DRY_RUN` from the environment.
 
 Adding a command means adding one `sub_*` function and one line in `sub_help`;

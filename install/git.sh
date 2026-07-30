@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Git config. Sourced by bin/dot via install/tools.sh (or standalone).
+# Git config. Sourced directly by bin/dot.
 
 # Identity keys (name, email, signing) are never overridden if already set.
 # set_git_config skips them automatically — no need for manual guards.

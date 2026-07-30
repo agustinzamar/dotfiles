@@ -100,6 +100,34 @@ setup() {
   [ "$bad" -eq 0 ]
 }
 
+# install/duti and install/Othersfile have each gone missing before (moved by
+# accident, or never created) while the code that reads them stayed silent
+# about it. `dot install duti`/`dot install tools` would then either error or
+# silently no-op depending on which file was gone.
+@test "duti and Othersfile package lists exist" {
+  [ -f "$DOTFILES_DIR/install/duti" ]
+  [ -f "$DOTFILES_DIR/install/Othersfile" ]
+}
+
+# `cask repobar` and `brew install foo/tap/bar` are both syntactically valid
+# Ruby, so `bash -n`/`ruby -c` pass and only `brew bundle` itself catches them
+# — which needs network/homebrew and CI never ran it against these files.
+# A structural line-shape check catches the same class of typo for free.
+@test "every topic file line is a properly quoted brew or cask entry" {
+  local file line bad=0
+  for file in "$DOTFILES_DIR"/install/topics/* "$DOTFILES_DIR"/install/topics/optional/*; do
+    [ -f "$file" ] || continue
+    while IFS= read -r line; do
+      [[ -z "$line" || "$line" == \#* ]] && continue
+      [[ "$line" =~ ^(brew|cask)\ \"[^\"]+\"$ ]] || {
+        echo "${file#"$DOTFILES_DIR"/}: malformed line: $line"
+        bad=1
+      }
+    done < "$file"
+  done
+  [ "$bad" -eq 0 ]
+}
+
 # `brew "chatgpt"` on a cask fails only once a real install reaches it, which
 # is how three casks sat in the AI topic declared as formulae.
 @test "every package is declared with the right type" {
@@ -204,6 +232,45 @@ setup() {
   done
 }
 
+# A core and an optional topic can share a name (e.g. `dev`): topic_path used
+# to return only the first match, so the optional half was unreachable by
+# name through any command, including `dot install --all`.
+@test "a topic name shared by core and optional installs both" {
+  run "$DOT" install dev --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"--file=$DOTFILES_DIR/install/topics/dev "* ]]
+  [[ "$output" == *"--file=$DOTFILES_DIR/install/topics/optional/dev "* ]]
+}
+
+@test "a bare topic command also installs both halves of a shared name" {
+  run "$DOT" dev --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"--file=$DOTFILES_DIR/install/topics/dev "* ]]
+  [[ "$output" == *"--file=$DOTFILES_DIR/install/topics/optional/dev "* ]]
+}
+
+# bin/dot brew/link/etc used to only dispatch through `dot install <name>`;
+# the README documents them as top-level commands in their own right.
+@test "install subcommands and topics work as bare top-level commands" {
+  run "$DOT" brew --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"install/topics/core"* ]]
+
+  run "$DOT" core --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"install/topics/core"* ]]
+
+  HOME="$(mktemp -d)" run "$DOT" links --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Linking shell dotfiles"* ]]
+}
+
+@test "an unknown install target exits 1" {
+  run "$DOT" install definitely-not-a-topic
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"is not an install command or topic"* ]]
+}
+
 # ~/.dotfiles is a symlink to the repo, so invoking dot through it used to give
 # a DOTFILES_DIR that did not match the paths `link` wrote into the symlinks:
 # doctor called every link broken and unlink declined to remove them.
@@ -233,6 +300,47 @@ setup() {
       missing=1
     }
   done < <(DOTFILES_DIR="$DOTFILES_DIR" bash -c '. "$0/install/links.sh"; all_links' "$DOTFILES_DIR")
+  [ "$missing" -eq 0 ]
+}
+
+# config/kimi-code/tui.toml and (for a while) config/muxy/settings.json sat
+# in the repo with no install path at all: not in links.sh, not merged by a
+# config/*.sh script. Nothing installed them on a fresh machine and nothing
+# said so. This walks every tracked config file and requires it be reachable
+# some way, so a newly-added orphan fails loudly instead of sitting silent.
+@test "every tracked config file is wired into an install path" {
+  # Consumed directly by their own install/*.sh, not through links.sh.
+  local handled="config/claude/config.json config/opencode/opencode.json config/git/config"
+  # Known gap: app-writable, pending the plan in
+  # docs/superpowers/plans/2026-07-29-git-managed-app-writable-configs.md,
+  # which only covers Claude and OpenCode so far.
+  local known_gaps="config/muxy/settings.json"
+
+  local sources
+  sources=$(DOTFILES_DIR="$DOTFILES_DIR" bash -c '. "$0/install/links.sh"; all_links' "$DOTFILES_DIR" |
+    cut -d'|' -f1)
+
+  local file rel check covered missing=0
+  while IFS= read -r file; do
+    rel=${file#"$DOTFILES_DIR"/}
+    [[ " $handled " == *" $rel "* ]] && continue
+    [[ " $known_gaps " == *" $rel "* ]] && continue
+
+    covered=1
+    check="$rel"
+    while :; do
+      grep -qxF "$check" <<<"$sources" && {
+        covered=0
+        break
+      }
+      [[ "$check" == */* ]] || break
+      check=${check%/*}
+    done
+    ((covered)) && {
+      echo "orphaned config, wired into no install path: $rel"
+      missing=1
+    }
+  done < <(git -C "$DOTFILES_DIR" ls-files 'config/*')
   [ "$missing" -eq 0 ]
 }
 
@@ -500,4 +608,67 @@ EOF
   HOME="$home" run "$DOT" install links
   [ "$status" -eq 0 ]
   [ -L "$home/.dotfiles-home/aliases/keep.zsh" ]
+}
+
+# The existence check used to be `command opencode2` — a typo missing `-v`
+# that, on a machine with the real `opencode2` binary installed, launched its
+# interactive TUI instead of testing for it. Both directions get covered:
+# absent must skip cleanly, present must actually merge.
+@test "opencode config merge skips cleanly when opencode is not on PATH" {
+  local stub
+  stub="$(mktemp -d)"
+  PATH="$stub:/usr/bin:/bin" run bash -c \
+    '. "$1"; install_opencode_config' _ "$DOTFILES_DIR/install/opencode-config.sh"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"opencode not installed, skipping config merge"* ]]
+}
+
+@test "opencode config merge writes defaults when opencode is on PATH" {
+  local stub home repo defaults target common opencode_config
+  stub="$(mktemp -d)"
+  printf '#!/bin/sh\nexit 0\n' >"$stub/opencode"
+  chmod +x "$stub/opencode"
+
+  home="$(mktemp -d)"
+  repo="$(mktemp -d)"
+  defaults="$repo/config/opencode/opencode.json"
+  target="$home/.config/opencode/opencode.json"
+  common="$DOTFILES_DIR/install/common.sh"
+  opencode_config="$DOTFILES_DIR/install/opencode-config.sh"
+  mkdir -p "$(dirname "$defaults")"
+  printf '{"tracked":true}\n' >"$defaults"
+
+  DOTFILES_DIR="$repo" HOME="$home" DRY_RUN=false PATH="$stub:$PATH" \
+    run bash -c '. "$1"; . "$2"; install_opencode_config' _ "$common" "$opencode_config"
+
+  [ "$status" -eq 0 ]
+  [ -f "$target" ]
+  [[ "$(cat "$target")" == *'"tracked":true'* ]]
+}
+
+# check_link previously had no coverage at all: a stale or foreign symlink
+# would never fail a test even though sub_doctor's whole job is to catch it.
+@test "doctor reports a symlink that doesn't point into the repo" {
+  local home
+  home="$(mktemp -d)"
+  ln -s /somewhere/else "$home/.zshrc"
+  HOME="$home" run "$DOT" doctor
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"broken: $home/.zshrc"* ]]
+}
+
+# The Makefile's SCRIPTS glob referenced system/macos/*.sh, a directory that
+# never existed (the real one is system/defaults/); `make lint`/`make check`
+# silently checked nothing under it and no test noticed.
+@test "every Makefile SCRIPTS glob pattern matches a real file" {
+  local scripts_line pattern
+  scripts_line=$(grep '^SCRIPTS :=' "$DOTFILES_DIR/Makefile")
+  scripts_line=${scripts_line#SCRIPTS := }
+  for pattern in $scripts_line; do
+    # shellcheck disable=SC2086
+    compgen -G "$DOTFILES_DIR/$pattern" >/dev/null || {
+      echo "SCRIPTS pattern matches nothing: $pattern"
+      return 1
+    }
+  done
 }
