@@ -1,6 +1,0 @@
-# Primary browser and communication
-cask "google-chrome"
-
-cask "discord"
-cask "telegram"
-cask "whatsapp"

@@ -12,12 +12,14 @@ brew "bats-core"
 brew "act"
 brew "sshpass"
 
+# Editors
 cask "visual-studio-code"
-cask "orbstack"
-
-# Git TUI
-brew "lazygit"
 
 # Linters and formatters
 brew "actionlint"
 brew "swiftformat"
+
+# Agents and assistants
+cask "muxy-app/tap/muxy"
+cask "claude-code"
+cask "codex"

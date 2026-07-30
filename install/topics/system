@@ -1,7 +1,6 @@
 # Monitoring, maintenance, and system CLI tools
 brew "bottom"
 brew "procs"
-brew "mole"
 brew "topgrade"
 brew "duti"
 brew "dust"

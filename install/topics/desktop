@@ -1,0 +1,9 @@
+# Browser
+cask "google-chrome"
+
+# Development
+cask "visual-studio-code"
+
+# Configurations
+cask "rectangle"
+cask "linearmouse"
