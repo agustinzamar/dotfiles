@@ -26,8 +26,6 @@ set -- "${args[@]}"
 . "$DOTFILES_DIR/install/links.sh"
 # shellcheck source=../install/git.sh
 . "$DOTFILES_DIR/install/git.sh"
-# shellcheck source=../install/tools.sh
-. "$DOTFILES_DIR/install/tools.sh"
 # shellcheck source=../install/claude-config.sh
 . "$DOTFILES_DIR/install/claude-config.sh"
 # shellcheck source=../install/opencode-config.sh
@@ -47,25 +45,16 @@ sub_help() {
   echo "   update           Pull, upgrade packages, then re-run the install"
   echo
   echo "Install:"
-  echo "   install              Install core tools (brew, zsh, fzf, ssh keys)"
+  echo "   install              Install core tools (xcode, brew, shell and basic tools)"
   echo "   install git          Setup git config"
   echo "   install code         Install VS Code extensions"
   echo "   install macos        Apply macOS system defaults"
   echo "   install dock         Apply macOS Dock settings"
   echo "   install duti         Set default apps for file types"
   echo "   install ai [...]     Sync skills/plugins to AI tools"
-  echo "   install --full       Install everything"
-  echo
-  local topic
-  echo "Topics (installed by \`brew\`, or one at a time):"
-  while read -r topic; do
-    printf '   %-16s %s\n' "$topic" "$(head -1 "$(topic_path "$topic")" | sed 's/^# *//')"
-  done < <(topics)
-  echo
-  echo "Optional topics (only when asked for by name):"
-  while read -r topic; do
-    printf '   %-16s %s\n' "$topic" "$(head -1 "$(topic_path "$topic")" | sed 's/^# *//')"
-  done < <(optional_topics)
+  echo "   install --defaults   Setup all defaults for macos, dock and file extensions"
+  echo "   install --all        Install and sync everything"
+  echo "   install <topics>     Install a list of topics"
 }
 
 # Run every phase, then report failures. One broken phase should not
@@ -75,7 +64,7 @@ sub_install() {
   shift 2>/dev/null || true
 
   case "$cmd" in
-    --all | -a | --full | -f)
+    --all | -a)
       sub_full
       return $?
       ;;
@@ -84,14 +73,11 @@ sub_install() {
       return $?
       ;;
     "" | bootstrap)
-      log "Bootstrapping dotfiles"
+      sub_bootstrap
       local phase failures=()
-      for phase in link; do
+      for phase in link claude_config opencode_config; do
         "sub_$phase" || failures+=("$phase")
       done
-      install_tools
-      install_claude_config
-      install_opencode_config
       if ((${#failures[@]})); then
         log "Finished with failures: ${failures[*]}"
         return 1
@@ -157,27 +143,17 @@ sub_install_ai() {
         return 0
       fi
 
-      local name repo marketplace_name marketplace_source plugin
-      while IFS='|' read -r name repo marketplace_name marketplace_source plugin; do
-        [[ -n "$plugin" ]] || continue
+      local name repo install_cmd
+      while IFS='|' read -r name repo install_cmd; do
+        [[ -n "$install_cmd" ]] || continue
         log "Plugin [$tool]: $name ($repo)"
-        if [[ -n "$marketplace_source" ]]; then
-          if "$DRY_RUN"; then
-            run "$cli" plugin marketplace add "$marketplace_source" || return
-          else
-            local marketplaces
-            marketplaces=$("$cli" plugin marketplace list --json) || return
-            jq -e --arg name "$marketplace_name" '.. | strings | select(. == $name)' \
-              <<<"$marketplaces" >/dev/null || run "$cli" plugin marketplace add "$marketplace_source" || return
-          fi
+        if "$DRY_RUN"; then
+          echo "+ $install_cmd"
+        else
+          eval "$install_cmd"
         fi
-        case "$tool" in
-          claude-code) run "$cli" plugin install --scope user "$plugin" || return ;;
-          codex) run "$cli" plugin add "$plugin" || return ;;
-        esac
-      done < <(jq -r --arg tool "$tool" '.plugins[] | select(.install[$tool].plugin) |
-        [.name, .repo, (.install[$tool].marketplace.name // ""),
-         (.install[$tool].marketplace.source // ""), .install[$tool].plugin] | join("|")' "$manifest")
+      done < <(jq -r --arg tool "$tool" '.plugins[] | select(.install[$tool]) |
+        [.name, .repo, .install[$tool]] | join("|")' "$manifest")
     }
 
     case "$agent" in
@@ -247,7 +223,7 @@ sub_install_ai() {
 sub_full() {
   log "Full install"
   local phase failures=()
-  for phase in brew link zsh tools code macos duti git claude_config opencode_config; do
+  for phase in bootstrap brew link zsh tools code macos duti git claude_config opencode_config; do
     "sub_$phase" || failures+=("$phase")
   done
 
@@ -273,7 +249,14 @@ install_topic() {
   run brew bundle --file="$path"
 }
 
-sub_brew() {
+sub_bootstrap() {
+  log "Installing Xcode"
+  if xcode-select -p >/dev/null 2>&1; then
+    echo 'Xcode already installed, skipping'
+  else
+    run xcode-select --install
+  fi
+
   log "Installing Homebrew"
   if is_executable brew; then
     echo 'Homebrew already installed, skipping'
@@ -282,7 +265,10 @@ sub_brew() {
   else
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
   fi
+}
 
+sub_brew() {
+  log "Installing Homebrew packages"
   local topic failures=()
   while read -r topic; do
     install_topic "$topic" || failures+=("$topic")
@@ -296,11 +282,28 @@ sub_brew() {
 
 sub_zsh() {
   log "Setting up Zsh"
+
+  # Handle fzf post install script
+  local brew_prefix
+  brew_prefix=$(brew --prefix 2>/dev/null || true)
+  if [[ -n "$brew_prefix" && -x "$brew_prefix/opt/fzf/install" ]]; then
+    # --no-update-rc: --all would otherwise append a source line to ~/.zshrc,
+    # which is a symlink into this repo, so the installer edits a tracked file
+    # on every run. .zshrc sources ~/.fzf.zsh instead.
+    run "$brew_prefix/opt/fzf/install" --all --no-update-rc --no-bash --no-fish
+  fi
 }
 
 sub_tools() {
-  log "Installing tools"
-  install_tools
+  log "Installing Node global packages"
+  if is_executable pnpm; then
+    local packages
+    packages=$(read_package_file "$DOTFILES_DIR/install/Othersfile" 2>/dev/null || true)
+    if [[ -n "$packages" ]]; then
+      # shellcheck disable=SC2086
+      run pnpm add -g $packages
+    fi
+  fi
 }
 
 sub_code() {
@@ -329,6 +332,14 @@ sub_duti() {
 sub_git() {
   log "Configuring git"
   install_git
+
+  # `|| continue` rather than `&&`: as a function body under `set -e`, a final
+  # falsy test would abort the whole install run.
+  for key in "$HOME"/.ssh/id_*; do
+    case "$key" in *.pub | *.revoked) continue ;; esac
+    [[ -f "$key" ]] || continue
+    run ssh-add --apple-use-keychain "$key"
+  done
 }
 
 sub_claude_config() {
