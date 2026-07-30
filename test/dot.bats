@@ -283,9 +283,9 @@ setup() {
 
   PATH="$stub:$PATH" run "$DOT" install ai codex --plugins --dry-run
   [ "$status" -eq 0 ]
-  [[ "$output" == *"+ codex plugin marketplace add DietrichGebert/ponytail"* ]]
-  [[ "$output" == *"+ codex plugin add ponytail@ponytail"* ]]
-  [[ "$output" == *"+ codex plugin add superpowers@openai-curated"* ]]
+  [[ "$output" == *"codex plugin marketplace add DietrichGebert/ponytail"* ]]
+  [[ "$output" == *"codex plugin install ponytail@ponytail"* ]]
+  [[ "$output" == *"codex plugin install superpowers@openai-curated"* ]]
   [[ "$output" != *"Installing skill"* ]]
 }
 
@@ -304,8 +304,8 @@ EOF
   PLUGIN_LOG="$log" PATH="$stub:$PATH" run "$DOT" install ai claude --plugins
   [ "$status" -eq 0 ]
   grep -q '^plugin marketplace add DietrichGebert/ponytail$' "$log"
-  grep -q '^plugin install --scope user ponytail@ponytail$' "$log"
-  grep -q '^plugin install --scope user superpowers@claude-plugins-official$' "$log"
+  grep -q '^plugin install ponytail@ponytail$' "$log"
+  grep -q '^plugin install superpowers@claude-plugins-official$' "$log"
 }
 
 @test "AI plugins install through Codex CLI" {
@@ -323,8 +323,8 @@ EOF
   PLUGIN_LOG="$log" PATH="$stub:$PATH" run "$DOT" install ai codex --plugins
   [ "$status" -eq 0 ]
   grep -q '^plugin marketplace add DietrichGebert/ponytail$' "$log"
-  grep -q '^plugin add ponytail@ponytail$' "$log"
-  grep -q '^plugin add superpowers@openai-curated$' "$log"
+  grep -q '^plugin install ponytail@ponytail$' "$log"
+  grep -q '^plugin install superpowers@openai-curated$' "$log"
 }
 
 @test "AI plugins warn when selected CLI is missing" {

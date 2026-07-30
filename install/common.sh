@@ -120,7 +120,6 @@ _topic_names() {
   return 0
 }
 
-
 topics() { _topic_names "$TOPIC_DIR"; }
 optional_topics() { _topic_names "$TOPIC_DIR/optional"; }
 
