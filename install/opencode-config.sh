@@ -7,6 +7,12 @@
 # Sourced by bin/dot -- expects $DOTFILES_DIR and $DRY_RUN.
 
 install_opencode_config() {
+
+  if ! command opencode2 >/dev/null 2>&1; then
+    echo "opencode not installed, skipping config merge" >&2
+    return 0
+  fi
+
   local defaults="$DOTFILES_DIR/config/opencode/opencode.json"
   local target="$HOME/.config/opencode/opencode.json"
 
