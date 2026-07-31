@@ -87,8 +87,8 @@ setup() {
 # fails with "line too long". .editorconfig asks for one; nothing enforced it.
 @test "every package file ends with a newline" {
   local file bad=0
-  for file in "$DOTFILES_DIR"/install/duti \
-    "$DOTFILES_DIR"/install/Codefile \
+  for file in "$DOTFILES_DIR"/install/lists/duti \
+    "$DOTFILES_DIR"/install/lists/Codefile \
     "$DOTFILES_DIR"/install/topics/* \
     "$DOTFILES_DIR"/install/topics/optional/*; do
     [ -f "$file" ] || continue
@@ -100,13 +100,11 @@ setup() {
   [ "$bad" -eq 0 ]
 }
 
-# install/duti and install/Othersfile have each gone missing before (moved by
-# accident, or never created) while the code that reads them stayed silent
-# about it. `dot install duti`/`dot install tools` would then either error or
-# silently no-op depending on which file was gone.
-@test "duti and Othersfile package lists exist" {
-  [ -f "$DOTFILES_DIR/install/duti" ]
-  [ -f "$DOTFILES_DIR/install/Othersfile" ]
+# install/lists/duti has gone missing before (moved by accident) while the
+# code that reads it stayed silent about it, so `dot install duti` just
+# errored on a real machine that had duti installed.
+@test "duti package list exists" {
+  [ -f "$DOTFILES_DIR/install/lists/duti" ]
 }
 
 # `cask repobar` and `brew install foo/tap/bar` are both syntactically valid
@@ -196,7 +194,7 @@ setup() {
 # from it, install silently stops doing that work.
 @test "install runs every phase through the failure-collecting loop" {
   local phase
-  for phase in brew link zsh tools code macos duti git; do
+  for phase in brew link zsh code macos duti git; do
     grep -q "for phase in .*\b$phase\b" "$DOT" || {
       echo "phase '$phase' missing from the full-install loop"
       return 1
@@ -461,17 +459,6 @@ EOF
   run /bin/bash "$DOT" install ai claude --skills --dry-run
   [ "$status" -eq 0 ]
   [[ "$output" == *"--agent claude-code"* ]]
-}
-
-@test "tools install OpenCode V2 with package scripts enabled" {
-  local stub
-  stub="$(mktemp -d)"
-  printf '#!/bin/sh\nexit 0\n' >"$stub/pnpm"
-  chmod +x "$stub/pnpm"
-
-  PATH="$stub:$PATH" run "$DOT" install tools --dry-run
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"pnpm add -g --allow-build=@opencode-ai/cli @opencode-ai/cli@next"* ]]
 }
 
 @test "OpenCode config uses only native V2 fields" {

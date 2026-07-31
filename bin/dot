@@ -50,7 +50,6 @@ sub_help() {
   echo "   link                 Symlink every config into place"
   echo "   links                Symlink the shell configs only"
   echo "   zsh                  Install Oh My Zsh, its theme and plugins"
-  echo "   tools                Install what Homebrew Bundle does not cover"
   echo "   code                 Install VS Code extensions"
   echo "   git                  Setup git config"
   echo "   macos                Apply macOS system defaults"
@@ -246,7 +245,7 @@ sub_install_ai() {
 sub_full() {
   log "Full install"
   local phase failures=()
-  for phase in bootstrap brew link zsh tools code macos duti git claude_config opencode_config; do
+  for phase in bootstrap brew link zsh code macos duti git claude_config opencode_config; do
     "sub_$phase" || failures+=("$phase")
   done
 
@@ -327,18 +326,6 @@ sub_zsh() {
   fi
 }
 
-sub_tools() {
-  log "Installing Node global packages"
-  if is_executable pnpm; then
-    local packages
-    packages=$(read_package_file "$DOTFILES_DIR/install/Othersfile" 2>/dev/null || true)
-    if [[ -n "$packages" ]]; then
-      # shellcheck disable=SC2086
-      run pnpm add -g $packages
-    fi
-  fi
-}
-
 sub_code() {
   if is_executable code; then
     log "Installing VS Code extensions"
@@ -347,7 +334,7 @@ sub_code() {
     while read -r extension; do
       grep -qxF "$(tr '[:upper:]' '[:lower:]' <<<"$extension")" <<<"$installed" ||
         run code --install-extension "$extension"
-    done < <(read_package_file "$DOTFILES_DIR/install/Codefile")
+    done < <(read_package_file "$DOTFILES_DIR/install/lists/Codefile")
   else
     echo "VS Code not installed, skipping extension setup" >&2
   fi
@@ -356,7 +343,7 @@ sub_code() {
 sub_duti() {
   if is_executable duti; then
     log "Setting default apps for file types"
-    run duti -v "$DOTFILES_DIR/install/duti" 2>&1 | grep -v "error -50" || true
+    run duti -v "$DOTFILES_DIR/install/lists/duti" 2>&1 | grep -v "error -50" || true
   else
     echo "duti not installed, skipping default app setup" >&2
   fi
