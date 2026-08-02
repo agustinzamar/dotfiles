@@ -9,7 +9,7 @@ cask "orbstack"
 cask "phpstorm"
 
 # Fancy tools
-cask "steipete/tap/codexbar"
+cask "openusage"
 cask "repobar"
 
 # Agents
