@@ -18,7 +18,7 @@ for arg in "$@"; do
   esac
 done
 export DRY_RUN
-set -- "${args[@]}"
+set -- ${args[@]+"${args[@]}"}
 
 # shellcheck source=../install/common.sh
 . "$DOTFILES_DIR/install/common.sh"
