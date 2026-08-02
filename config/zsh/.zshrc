@@ -97,9 +97,10 @@ typeset -U path PATH
 for f in "${HOME}"/.dotfiles-home/aliases/*.zsh(N); do source "$f"; done
 for f in "${HOME}"/.dotfiles-home/functions/*.zsh(N); do source "$f"; done
 
-# Load private custom overrides (not committed)
-[[ -f "${HOME}/.dotfiles-home/custom/.exports" ]] && source "${HOME}/.dotfiles-home/custom/.exports"
-for f in "${HOME}"/.dotfiles-home/custom/*.zsh(N); do source "$f"; done
+# Load private custom overrides (not committed, machine-specific)
+for f in "${HOME}"/.dotfiles-custom/exports/*.zsh(N); do source "$f"; done
+for f in "${HOME}"/.dotfiles-custom/aliases/*.zsh(N); do source "$f"; done
+for f in "${HOME}"/.dotfiles-custom/functions/*.zsh(N); do source "$f"; done
 
 # Per-tool environment, one file each, sourced in filename order. See
 # system/env/ in the dotfiles repo.
