@@ -42,7 +42,7 @@ sub_help() {
   echo "   help             This help message"
   echo "   test             Run tests"
   echo "   unlink           Remove symlinks that point into this repo"
-  echo "   update           Pull, upgrade packages, then re-run the install"
+  echo "   update           Pull latest dotfiles and upgrade installed packages"
   echo
   echo "Install (each also works as \`dot <name>\`, no \`install\` needed):"
   echo "   install              Install core tools (xcode, brew, shell and basic tools)"
@@ -440,7 +440,6 @@ sub_update() {
     run brew update
     run brew upgrade
   fi
-  sub_full
 }
 
 sub_backup() {
