@@ -37,7 +37,6 @@ all_links() {
 		config/npm/.npmrc|$HOME/.npmrc
 		config/vscode/settings.json|$HOME/Library/Application Support/Code/User/settings.json
 		config/vscode/keybindings.json|$HOME/Library/Application Support/Code/User/keybindings.json
-		config/opencode/AGENTS.md|$HOME/.config/opencode/AGENTS.md
 		config/opencode/themes|$HOME/.config/opencode/themes
 		config/hunk/config.toml|$HOME/.config/hunk/config.toml
 		config/lazygit/config.yml|$HOME/.config/lazygit/config.yml

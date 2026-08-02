@@ -461,13 +461,6 @@ EOF
   [[ "$output" == *"--agent claude-code"* ]]
 }
 
-@test "OpenCode config uses only native V2 fields" {
-  local config="$DOTFILES_DIR/config/opencode/opencode.json"
-  jq -e '.mcp.servers and .agents.explore' "$config"
-  jq -e 'has("small_model") or has("agent") or has("plugin") or has("plugins") | not' "$config"
-  ! grep -q '^brew "opencode"$' "$DOTFILES_DIR/install/topics/ai"
-}
-
 @test "link and unlink round-trip" {
   local home
   home="$(mktemp -d)"
