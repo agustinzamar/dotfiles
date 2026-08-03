@@ -40,6 +40,7 @@ all_links() {
 		yazi|config/yazi/yazi.toml|$HOME/.config/yazi/yazi.toml
 		yazi|config/yazi/keymap.toml|$HOME/.config/yazi/keymap.toml
 		yazi|config/yazi/theme.toml|$HOME/.config/yazi/theme.toml
+		linearmouse|config/linearmouse/linearmouse.json|$HOME/.config/linearmouse/linearmouse.json
 		npm|config/npm/.npmrc|$HOME/.npmrc
 		vscode|config/vscode/settings.json|$HOME/Library/Application Support/Code/User/settings.json
 		vscode|config/vscode/keybindings.json|$HOME/Library/Application Support/Code/User/keybindings.json
