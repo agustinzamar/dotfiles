@@ -22,4 +22,4 @@ brew "swiftformat"
 
 # Agents and terminal
 cask "muxy-app/tap/muxy"
-cask "claude-code"
+cask "claude-code@latest"
