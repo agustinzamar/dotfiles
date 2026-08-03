@@ -25,6 +25,9 @@ copy-on-select = clipboard
 cursor-style = bar
 cursor-click-to-move = true
 
+# Keybindings
+keybind = shift+escape=text:~
+
 # Clipboard
 clipboard-read = allow
 clipboard-write = allow
