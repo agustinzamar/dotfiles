@@ -14,12 +14,12 @@ export NVM_DIR="$HOME/Library/Application Support/Herd/config/nvm"
 [[ -f "/Applications/Herd.app/Contents/Resources/config/shell/zshrc.zsh" ]] &&
   builtin source "/Applications/Herd.app/Contents/Resources/config/shell/zshrc.zsh"
 
-# Keep ~/.dotfiles/bin at the front after every chpwd so wrappers for npm,
-# yarn, npx and bun aren't shadowed by nvm's prepended bin. Only enable this
-# if the directory actually exists.
-if [[ -d "$HOME/.dotfiles/bin" ]]; then
+# Keep the repo's bin at the front after every chpwd so wrappers for npm,
+# yarn, npx and bun aren't shadowed by nvm's prepended bin. ~/dotfiles is the
+# canonical clone path.
+if [[ -d "$HOME/dotfiles/bin" ]]; then
   _dotfiles-bin-to-front() {
-    local d="$HOME/.dotfiles/bin"
+    local d="$HOME/dotfiles/bin"
     # Prepend unless already first
     [[ ${path[1]} = "$d" ]] || path=("$d" ${path:#$d})
   }

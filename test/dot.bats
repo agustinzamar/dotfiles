@@ -15,7 +15,7 @@ setup() {
   run "$DOT" help
   [ "$status" -eq 0 ]
   [[ "$output" == *"install"* ]]
-  [[ "$output" == *"links"* ]]
+  [[ "$output" == *"link zsh"* ]]
   [[ "$output" == *"doctor"* ]]
 }
 
@@ -258,7 +258,7 @@ setup() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"install/topics/core"* ]]
 
-  HOME="$(mktemp -d)" run "$DOT" links --dry-run
+  HOME="$(mktemp -d)" run "$DOT" link zsh --dry-run
   [ "$status" -eq 0 ]
   [[ "$output" == *"Linking shell dotfiles"* ]]
 }
@@ -279,9 +279,9 @@ setup() {
 
   # A temporary HOME for both: with the real one, link_file finds the links
   # already correct and prints nothing.
-  direct=$(HOME="$(mktemp -d)" "$DOT" install link --dry-run 2>&1 |
+  direct=$(HOME="$(mktemp -d)" "$DOT" link --dry-run 2>&1 |
     grep -m1 -o '/[^ ]*/config/zsh/.zshrc')
-  via_symlink=$(HOME="$(mktemp -d)" "$link/bin/dot" install link --dry-run 2>&1 |
+  via_symlink=$(HOME="$(mktemp -d)" "$link/bin/dot" link --dry-run 2>&1 |
     grep -m1 -o '/[^ ]*/config/zsh/.zshrc')
   [ -n "$direct" ]
   [ "$direct" = "$via_symlink" ]
@@ -291,7 +291,7 @@ setup() {
 # dangling symlink after `dot link`. That is how ~/.claude/skills broke.
 @test "every source in the link map exists" {
   local source target missing=0
-  while IFS='|' read -r source target; do
+  while IFS='|' read -r name source target mode; do
     [ -n "$source" ] || continue
     [ -e "$DOTFILES_DIR/$source" ] || {
       echo "missing source: $source"
@@ -316,7 +316,7 @@ setup() {
 
   local sources
   sources=$(DOTFILES_DIR="$DOTFILES_DIR" bash -c '. "$0/install/links.sh"; all_links' "$DOTFILES_DIR" |
-    cut -d'|' -f1)
+    cut -d'|' -f2)
 
   local file rel check covered missing=0
   while IFS= read -r file; do
@@ -349,7 +349,7 @@ setup() {
 }
 
 @test "dry-run link prints symlink commands" {
-  HOME="$(mktemp -d)" run "$DOT" install link --dry-run
+  HOME="$(mktemp -d)" run "$DOT" link --dry-run
   [ "$status" -eq 0 ]
   [[ "$output" == *"ln -s"* ]]
 }
@@ -357,10 +357,34 @@ setup() {
 @test "dry-run link does not touch the filesystem" {
   local home
   home="$(mktemp -d)"
-  HOME="$home" run "$DOT" install link --dry-run
+  HOME="$home" run "$DOT" link --dry-run
   [ "$status" -eq 0 ]
   # Regression test: link_file used to mkdir -p outside of run().
   [ -z "$(find "$home" -mindepth 1)" ]
+}
+
+# A name can cover several targets (ghostty -> ghostty + Muxy), and must not
+# pull in unrelated configs.
+@test "link <name> links only that config" {
+  local home
+  home="$(mktemp -d)"
+  HOME="$home" run "$DOT" link ghostty --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"/config/ghostty/config"* ]]
+  [[ "$output" != *"config/zsh/.zshrc"* ]]
+}
+
+@test "an unknown link target exits 1" {
+  run "$DOT" link definitely-not-a-config
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"no such link"* ]]
+}
+
+# link is a standalone command now, so install must not swallow it silently.
+@test "install link points at the standalone command" {
+  run "$DOT" install link --dry-run
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"dot link"* ]]
 }
 
 @test "AI skills target selected agent" {
@@ -464,7 +488,7 @@ EOF
 @test "link and unlink round-trip" {
   local home
   home="$(mktemp -d)"
-  HOME="$home" "$DOT" install link
+  HOME="$home" "$DOT" link
   [ "$(readlink "$home/.zshrc")" = "$DOTFILES_DIR/config/zsh/.zshrc" ]
   HOME="$home" "$DOT" unlink
   [ ! -e "$home/.zshrc" ]
@@ -473,8 +497,8 @@ EOF
 @test "link is idempotent" {
   local home
   home="$(mktemp -d)"
-  HOME="$home" "$DOT" install link
-  HOME="$home" "$DOT" install link
+  HOME="$home" "$DOT" link
+  HOME="$home" "$DOT" link
   # A second run finds every link already correct, so it makes no backup.
   [ ! -d "$home/.dotfiles-backup" ]
 }
@@ -484,7 +508,7 @@ EOF
   home="$(mktemp -d)"
   mkdir -p "$home/.config/ghostty"
   echo original > "$home/.config/ghostty/config"
-  HOME="$home" "$DOT" install link
+  HOME="$home" "$DOT" link
   # Regression test: backups used to flatten to the basename, so several
   # files named `config` clobbered each other.
   [ "$(cat "$home"/.dotfiles-backup/*/.config/ghostty/config)" = "original" ]
@@ -562,7 +586,7 @@ EOF
   home="$(mktemp -d)"
   mkdir -p "$home/.dotfiles-home/aliases"
   ln -s "$DOTFILES_DIR/system/aliases/gone.zsh" "$home/.dotfiles-home/aliases/gone.zsh"
-  HOME="$home" run "$DOT" install links
+  HOME="$home" run "$DOT" link zsh
   [ "$status" -eq 0 ]
   [ ! -L "$home/.dotfiles-home/aliases/gone.zsh" ]
 }
@@ -574,7 +598,7 @@ EOF
   mkdir -p "$home/.dotfiles-home/functions"
   ln -s /somewhere/else/dotfiles/system/functions/old.zsh \
     "$home/.dotfiles-home/functions/old.zsh"
-  HOME="$home" run "$DOT" install links
+  HOME="$home" run "$DOT" link zsh
   [ "$status" -eq 0 ]
   [ ! -L "$home/.dotfiles-home/functions/old.zsh" ]
 }
@@ -585,7 +609,7 @@ EOF
   mkdir -p "$home/.dotfiles-home/aliases"
   echo "alias x=y" > "$home/real.zsh"
   ln -s "$home/real.zsh" "$home/.dotfiles-home/aliases/keep.zsh"
-  HOME="$home" run "$DOT" install links
+  HOME="$home" run "$DOT" link zsh
   [ "$status" -eq 0 ]
   [ -L "$home/.dotfiles-home/aliases/keep.zsh" ]
 }

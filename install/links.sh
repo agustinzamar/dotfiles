@@ -1,66 +1,74 @@
 #!/usr/bin/env bash
 # Symlink map. Sourced by bin/dot.
 #
-# The map is data: one `source|target` pair per line, where source is relative
-# to the repo root. link/unlink both walk the same list, so a path is declared
-# exactly once.
+# The map is data: one `name|source|target` triple per line, where source is
+# relative to the repo root and name is how `dot link <name>` selects a config
+# or a group. A name may appear more than once (ghostty serves two targets).
+# link/unlink walk the same map, so a path is declared exactly once.
 
 shell_links() {
   cat <<-EOF
-		config/zsh/.zshrc|$HOME/.zshrc
-		config/p10k/.p10k.zsh|$HOME/.p10k.zsh
-		system/.exports|$HOME/.dotfiles-home/.exports
+		zsh|config/zsh/.zshrc|$HOME/.zshrc
+		p10k|config/p10k/.p10k.zsh|$HOME/.p10k.zsh
+		exports|system/.exports|$HOME/.dotfiles-home/.exports
 	EOF
 
-  # completions/ holds zsh completion functions, which are named `_command`
-  # rather than *.zsh, so it needs its own glob.
-  local file rel
-  for file in "$DOTFILES_DIR"/system/aliases/*.zsh \
-    "$DOTFILES_DIR"/system/functions/*.zsh \
-    "$DOTFILES_DIR"/system/env/*.zsh \
-    "$DOTFILES_DIR"/system/completions/_*; do
+  # aliases/, functions/ and env/ hold *.zsh files; completions/ files are
+  # named `_command` rather than *.zsh, so each group needs its own glob.
+  # Globbed rather than listed so each stays one `dot link <group>` target.
+  local group file rel
+  for group in aliases functions env; do
+    for file in "$DOTFILES_DIR"/system/$group/*.zsh; do
+      [[ -e "$file" ]] || continue
+      rel=${file#"$DOTFILES_DIR"/}
+      printf '%s|%s|%s\n' "$group" "$rel" "$HOME/.dotfiles-home/${rel#system/}"
+    done
+  done
+  for file in "$DOTFILES_DIR"/system/completions/_*; do
     [[ -e "$file" ]] || continue
     rel=${file#"$DOTFILES_DIR"/}
-    printf '%s|%s\n' "$rel" "$HOME/.dotfiles-home/${rel#system/}"
+    printf '%s|%s|%s\n' completions "$rel" "$HOME/.dotfiles-home/${rel#system/}"
   done
 }
 
 all_links() {
   shell_links
   cat <<-EOF
-		config/ghostty/config|$HOME/.config/ghostty/config
-		config/ghostty/config|$HOME/Library/Application Support/Muxy/ghostty.conf
-		config/tmux/tmux.conf|$HOME/.config/tmux/tmux.conf
-		config/yazi/yazi.toml|$HOME/.config/yazi/yazi.toml
-		config/yazi/keymap.toml|$HOME/.config/yazi/keymap.toml
-		config/yazi/theme.toml|$HOME/.config/yazi/theme.toml
-		config/npm/.npmrc|$HOME/.npmrc
-		config/vscode/settings.json|$HOME/Library/Application Support/Code/User/settings.json
-		config/vscode/keybindings.json|$HOME/Library/Application Support/Code/User/keybindings.json
-		config/opencode/themes|$HOME/.config/opencode/themes
-		config/hunk/config.toml|$HOME/.config/hunk/config.toml
-		config/lazygit/config.yml|$HOME/.config/lazygit/config.yml
-		config/git/ignore|$HOME/.config/git/ignore
+		ghostty|config/ghostty/config|$HOME/.config/ghostty/config
+		ghostty|config/ghostty/config|$HOME/Library/Application Support/Muxy/ghostty.conf
+		tmux|config/tmux/tmux.conf|$HOME/.config/tmux/tmux.conf
+		yazi|config/yazi/yazi.toml|$HOME/.config/yazi/yazi.toml
+		yazi|config/yazi/keymap.toml|$HOME/.config/yazi/keymap.toml
+		yazi|config/yazi/theme.toml|$HOME/.config/yazi/theme.toml
+		npm|config/npm/.npmrc|$HOME/.npmrc
+		vscode|config/vscode/settings.json|$HOME/Library/Application Support/Code/User/settings.json
+		vscode|config/vscode/keybindings.json|$HOME/Library/Application Support/Code/User/keybindings.json
+		opencode|config/opencode/themes|$HOME/.config/opencode/themes
+		hunk|config/hunk/config.toml|$HOME/.config/hunk/config.toml
+		lazygit|config/lazygit/config.yml|$HOME/.config/lazygit/config.yml
+		git|config/git/ignore|$HOME/.config/git/ignore
 	EOF
 }
 
-# _walk_links <map-function> <action-function>
-_walk_links() {
-  local source target mode
-  while IFS='|' read -r source target mode; do
-    [[ -n "$source" ]] || continue
-    "$2" "$source" "$target" "$mode"
-  done < <("$1")
+# Every name `dot link <name>` accepts, space-separated.
+link_names() {
+  all_links | cut -d'|' -f1 | sort -u | paste -sd ' ' -
 }
 
-# The shell files are globbed, not listed, so renaming one leaves the old
-# symlink behind pointing at a source that no longer exists. Zsh still matches
-# it and fails to source it on every prompt, so sweep those after linking.
-#
-# Any dangling link here is ours: link_file creates every entry under
-# .dotfiles-home and nothing else writes there. Matching on the target path
-# would miss the stale ones, which point through ~/.dotfiles or at a previous
-# clone rather than at $DOTFILES_DIR.
+# _walk_links <map-function> <action-function> [name-filter]
+_walk_links() {
+  local map="$1" action="$2" filter="${3:-}" name source target mode
+  while IFS='|' read -r name source target mode; do
+    [[ -n "$source" ]] || continue
+    [[ -z "$filter" || "$name" == "$filter" ]] || continue
+    "$action" "$source" "$target" "$mode"
+  done < <("$map")
+}
+
+# Everything under .dotfiles-home is ours; renaming a shell file leaves a stale
+# link behind that zsh matches and fails to source on every pass, so sweep it
+# after linking. Matching on $DOTFILES_DIR would miss links that point through
+# ~/.dotfiles or at a previous clone.
 prune_shell_links() {
   local link
   for link in "$HOME"/.dotfiles-home/aliases/* \
@@ -79,6 +87,19 @@ link_shell() {
 
 link_all() {
   _walk_links all_links link_file
+  prune_shell_links
+}
+
+# Link every target sharing a name (`ghostty` -> two rows). Unknown names fail
+# loudly instead of silently doing nothing.
+link_named() {
+  local name="$1"
+  if ! all_links | cut -d'|' -f1 | grep -qx "$name"; then
+    echo "no such link: $name — try: $(link_names)" >&2
+    return 1
+  fi
+  log "Linking $name"
+  _walk_links all_links link_file "$name"
   prune_shell_links
 }
 
