@@ -19,6 +19,8 @@ setup() {
   [[ "$output" == *"doctor"* ]]
 }
 
+# Uses the same expression as the completion function (system/completions/_dot)
+# so help continuation lines, which indent without a command name, are skipped.
 @test "every command in help is dispatchable" {
   local command name
   while read -r command; do
@@ -30,23 +32,34 @@ setup() {
         echo "'$command' has neither $name() nor a topic file"
         return 1
       }
-  done < <("$DOT" help | sed -n 's/^   \([a-z-]*\) .*/\1/p' | grep -v '^help$')
+  done < <("$DOT" help | sed -n 's/^   \([a-z][a-z0-9-]*\)  *.*$/\1/p' | grep -v '^help$')
 }
 
-@test "every topic is listed in help and installable" {
-  local topic
-  for topic in "$DOTFILES_DIR"/install/topics/*; do
-    [ -f "$topic" ] || continue
-    topic=$(basename "$topic")
-    [[ "$topic" == "apps" || "$topic" == "ai" ]] && continue  # install subcommands, not brew topics
-    "$DOT" help | grep -q "^   $topic " || {
-      echo "topic '$topic' missing from help"
-      return 1
+# Topics are no longer listed as standalone commands in help: a single
+# `install <topic>` line names them all. That line must name every topic,
+# and each of them must still install.
+@test "install <topic> help line mentions every topic and each topic installs" {
+  local topics help_line topic
+  topics=$(DOTFILES_DIR="$DOTFILES_DIR" bash -c '. "$0/install/common.sh"; topics' "$DOTFILES_DIR")
+  help_line=$("$DOT" help | grep '^   install <topic>')
+  [[ -n "$help_line" ]]
+  echo "$topics" | while read -r topic; do
+    grep -qF "$topic" <<<"$help_line" || {
+      echo "topic '$topic' missing from the install <topic> help line"
+      exit 1
     }
     run "$DOT" install "$topic" --dry-run
-    [ "$status" -eq 0 ]
-    [[ "$output" == *"/topics/"*"/$topic"* || "$output" == *"/topics/$topic"* ]]
+    { [ "$status" -eq 0 ] && [[ "$output" == *"--file=$DOTFILES_DIR/install/topics/$topic "* ]]; } || {
+      echo "install $topic failed: status=$status output=$output"
+      exit 1
+    }
   done
+}
+
+@test "help no longer advertises install ai" {
+  run "$DOT" help
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"install ai"* ]]
 }
 
 # The completion parses `dot help`, so a change to the help format silently
@@ -215,7 +228,8 @@ setup() {
   [[ "$output" == *"dock.sh"* ]]
 }
 
-# The whole point of optional/: a machine opts in by name, `brew` never does.
+# The whole point of optional/: a machine opts in with --include-optional,
+# `brew` and `install --all` never do by default.
 @test "brew installs every default topic and no optional one" {
   local topic
   run "$DOT" install brew --dry-run
@@ -230,20 +244,62 @@ setup() {
   done
 }
 
+@test "install --all skips optional topics unless --include-optional" {
+  run "$DOT" install --all --dry-run
+  [ "$status" -eq 0 ]
+  for topic in "$DOTFILES_DIR"/install/topics/optional/*; do
+    [ -f "$topic" ] || continue
+    [[ "$output" != *"optional/$(basename "$topic")"* ]]
+  done
+
+  run "$DOT" install --all --dry-run --include-optional
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"--file=$DOTFILES_DIR/install/topics/optional/dev "* ]]
+}
+
+@test "--include-optional with a non-topic install target exits 1" {
+  run "$DOT" install brew --include-optional --dry-run
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"--include-optional only applies"* ]]
+}
+
+@test "--include-optional with no target exits 1" {
+  run "$DOT" install --include-optional
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"--include-optional only applies"* ]]
+}
+
 # A core and an optional topic can share a name (e.g. `dev`): topic_path used
 # to return only the first match, so the optional half was unreachable by
 # name through any command, including `dot install --all`.
-@test "a topic name shared by core and optional installs both" {
+@test "a topic name shared by core and optional installs core only by default" {
   run "$DOT" install dev --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"--file=$DOTFILES_DIR/install/topics/dev "* ]]
+  [[ "$output" != *"--file=$DOTFILES_DIR/install/topics/optional/dev "* ]]
+}
+
+@test "install <topic> --include-optional installs both halves" {
+  run "$DOT" install dev --include-optional --dry-run
   [ "$status" -eq 0 ]
   [[ "$output" == *"--file=$DOTFILES_DIR/install/topics/dev "* ]]
   [[ "$output" == *"--file=$DOTFILES_DIR/install/topics/optional/dev "* ]]
 }
 
-@test "a bare topic command also installs both halves of a shared name" {
+@test "the --include-optional flag also works after the target" {
+  run "$DOT" install dev --dry-run --include-optional
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"--file=$DOTFILES_DIR/install/topics/optional/dev "* ]]
+}
+
+@test "a bare topic command installs core only unless --include-optional" {
   run "$DOT" dev --dry-run
   [ "$status" -eq 0 ]
   [[ "$output" == *"--file=$DOTFILES_DIR/install/topics/dev "* ]]
+  [[ "$output" != *"--file=$DOTFILES_DIR/install/topics/optional/dev "* ]]
+
+  run "$DOT" dev --dry-run --include-optional
+  [ "$status" -eq 0 ]
   [[ "$output" == *"--file=$DOTFILES_DIR/install/topics/optional/dev "* ]]
 }
 
