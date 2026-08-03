@@ -3,14 +3,13 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/agustinzamar/dotfiles/main/remote-install.sh | bash
 #
-# Clones this repo to ~/.dotfiles and runs the installer. Everything else
-# (system/.exports, install/links.sh) refers to ~/.dotfiles, so that is the
-# path to land on.
+# Clones this repo to ~/dotfiles and runs the installer. system/.exports puts
+# the CLI on PATH from ~/dotfiles.
 
 set -Eeuo pipefail
 
 REPO_URL="https://github.com/agustinzamar/dotfiles"
-TARGET="${DOTFILES_DIR:-$HOME/.dotfiles}"
+TARGET="${DOTFILES_DIR:-$HOME/dotfiles}"
 
 is_executable() { type "$1" >/dev/null 2>&1; }
 

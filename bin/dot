@@ -44,11 +44,14 @@ sub_help() {
   echo "   unlink           Remove symlinks that point into this repo"
   echo "   update           Pull latest dotfiles and upgrade installed packages"
   echo
+  echo "Config links:"
+  echo "   link             Symlink every config into place"
+  echo "   link zsh         Symlink shell configs only (.zshrc, p10k, exports, shell groups)"
+  echo "   link <name>      Symlink one config: $(link_names)"
+  echo
   echo "Install (each also works as \`dot <name>\`, no \`install\` needed):"
   echo "   install              Install core tools (xcode, brew, shell and basic tools)"
   echo "   brew                 Install Homebrew and every default topic"
-  echo "   link                 Symlink every config into place"
-  echo "   links                Symlink the shell configs only"
   echo "   zsh                  Install Oh My Zsh, its theme and plugins"
   echo "   code                 Install VS Code extensions"
   echo "   git                  Setup git config"
@@ -96,6 +99,10 @@ sub_install() {
     ai)
       sub_install_ai "$@"
       return $?
+      ;;
+    link | links)
+      echo "'install $cmd' is gone — use \`dot $cmd\` directly (see \`dot link help\`)" >&2
+      return 1
       ;;
     "" | bootstrap)
       sub_bootstrap
@@ -373,13 +380,27 @@ sub_opencode_config() {
 }
 
 sub_link() {
-  log "Linking dotfiles"
-  link_all
-}
-
-sub_links() {
-  log "Linking shell dotfiles"
-  link_shell
+  local target="${1:-}"
+  shift 2>/dev/null || true
+  case "$target" in
+    "" | all)
+      log "Linking dotfiles"
+      link_all
+      ;;
+    zsh | shell)
+      log "Linking shell dotfiles"
+      link_shell
+      ;;
+    help)
+      echo "Usage: $BIN_NAME link [target]"
+      echo "   (no target)  Symlink every config into place"
+      echo "   zsh          Symlink the shell configs only"
+      echo "   <name>       Symlink one config: $(link_names)"
+      ;;
+    *)
+      link_named "$target"
+      ;;
+  esac
 }
 
 sub_unlink() {
@@ -421,7 +442,7 @@ sub_doctor() {
 
   for command in brew git; do check "$command"; done
   is_executable dot || {
-    echo "not on PATH: dot (link system/.exports, then restart your shell)"
+    echo "not on PATH: dot (run \`dot link\` then restart your shell; the repo must live at ~/dotfiles)"
     failed=1
   }
   check_link config/zsh/.zshrc "$HOME/.zshrc"
@@ -466,7 +487,7 @@ sub_test() {
   bats "$DOTFILES_DIR"/test/*.bats
 }
 
-TOP_COMMANDS=" backup clean doctor edit help install test unlink update "
+TOP_COMMANDS=" backup clean doctor edit help install link test unlink update "
 
 COMMAND_NAME=${1:-}
 case "$COMMAND_NAME" in

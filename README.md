@@ -5,7 +5,7 @@ macOS dotfiles installed with Bash and Homebrew Bundle, driven by a single
 
 ## Install
 
-On a fresh machine, one line — clones to `~/.dotfiles` and installs:
+On a fresh machine, one line — clones to `~/dotfiles` and installs:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/agustinzamar/dotfiles/main/remote-install.sh | bash
@@ -15,14 +15,14 @@ It falls back to a tarball when git is not there yet, which is the case before
 the Xcode command line tools are installed. Or clone it yourself:
 
 ```bash
-git clone git@github.com:agustinzamar/dotfiles.git ~/.dotfiles
-cd ~/.dotfiles
+git clone git@github.com:agustinzamar/dotfiles.git ~/dotfiles
+cd ~/dotfiles
 bin/dot install
 ```
 
-Clone to `~/.dotfiles`, or symlink it there: `system/.exports` puts
-`~/.dotfiles/bin` on your `PATH`, so that is the path `dot` is found under once
-the shell configs are linked and the shell has been restarted.
+`system/.exports` puts `~/dotfiles/bin` on your `PATH`, so `dot` is available
+once the shell configs are linked and the shell has been restarted. A bare
+`make` runs the full install.
 
 ## Topics
 
@@ -51,7 +51,8 @@ command with no code change.
 | `install` | Everything below, in order (`macos` covers `dock`) |
 | `brew` | Install Homebrew and every topic |
 | `link` | Symlink every config into place |
-| `links` | Symlink the shell configs only |
+| `link zsh` | Symlink the shell configs only |
+| `link <name>` | Symlink one config (`ghostty`, `tmux`, `yazi`, …) |
 | `unlink` | Remove symlinks that point into this repo |
 | `zsh` | Install Oh My Zsh, its theme and plugins |
 | `code` | Install the VS Code extensions in `install/lists/Codefile` |
@@ -74,7 +75,8 @@ dot link --dry-run
 ```
 
 `make` targets (`install`, `link`, `unlink`, `update`, `doctor`, `backup`,
-`test`, `check`, `lint`) are thin aliases for the same commands.
+`test`, `check`, `lint`) are thin aliases for the same commands. A bare `make`
+is the default target (`install`) and is the one-shot first init.
 
 ## Layout
 
