@@ -45,6 +45,8 @@ all_links() {
 		vscode|config/vscode/settings.json|$HOME/Library/Application Support/Code/User/settings.json
 		vscode|config/vscode/keybindings.json|$HOME/Library/Application Support/Code/User/keybindings.json
 		opencode|config/opencode/themes|$HOME/.config/opencode/themes
+		opencode|ai/AGENTS.md|$HOME/.config/opencode/AGENTS.md
+		claude|ai/AGENTS.md|$HOME/.claude/CLAUDE.md
 		hunk|config/hunk/config.toml|$HOME/.config/hunk/config.toml
 		lazygit|config/lazygit/config.yml|$HOME/.config/lazygit/config.yml
 		git|config/git/ignore|$HOME/.config/git/ignore
