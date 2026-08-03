@@ -34,3 +34,73 @@ Auto-Clarity: drop caveman for security warnings, irreversible actions, user con
 
 Boundaries: code/commits/PRs written normal.
 <!-- caveman-end -->
+
+<!-- laravel-boost-begin -->
+## Laravel Boost Enforcement
+
+On every new session in a Laravel project, run the following checks and suggestions:
+
+### 1. Detect Laravel project
+
+This is a Laravel project if any of these are true:
+- `artisan` file exists at project root
+- `composer.json` contains `laravel/framework` in `require` or `require-dev`
+
+### 2. Check if Laravel Boost is installed
+
+Boost is considered installed if any of these are true:
+- `laravel/boost` appears in `composer.json` under `require-dev`
+- `config/boost.php` file exists
+- `vendor/laravel/boost` directory exists
+- `Laravel\Boost\BoostServiceProvider` is registered in `composer.json` under `extra.laravel.providers`
+
+### 3. If Boost is NOT installed
+
+- Suggest installing `laravel/boost` in dev mode:
+  ```bash
+  composer require laravel/boost --dev
+  ```
+- Then run the installer in non-interactive mode (Boost uses defaults when input is piped or `--no-interaction` is passed):
+  ```bash
+  php artisan boost:install --no-interaction
+  ```
+- After installation, verify the Boost features are configured and add the composer `post-update-cmd` script for automatic updates (see step 5).
+
+### 4. If Boost IS installed but last update was more than a week ago
+
+- Check last update time via:
+  ```bash
+  git log -1 --format="%ct" -- .ai/
+  ```
+  Or check the modification time of files in `.ai/agents/` or `config/boost.php`.
+- If the last update timestamp is older than 7 days, suggest:
+  ```bash
+  php artisan boost:update --discover
+  ```
+  > Note: `boost:update` discovers new content by default. Passing `--no-discover` disables discovery. Since discovery is the default, `--discover` can be omitted if desired, but include it as specified.
+
+### 5. Ensure automatic updates via composer scripts
+
+Ensure `composer.json` contains a `post-update-cmd` script that runs `boost:update`:
+
+```json
+{
+  "scripts": {
+    "post-update-cmd": [
+      "@php artisan boost:update --ansi"
+    ]
+  }
+}
+```
+
+- If the script entry is missing, add it.
+- If the script entry exists but does not include `@php artisan boost:update --ansi`, update it to include this line.
+- If running `boost:update --ansi` interactively prompts, use `--no-interaction` flag instead.
+
+### Summary flow for the agent
+
+1. On session start in a Laravel project, check if Boost is installed.
+2. If not installed → suggest installation and offer to run the two install commands.
+3. If installed but stale (>7 days) → suggest `php artisan boost:update --discover`.
+4. Always ensure the `post-update-cmd` composer script includes `@php artisan boost:update --ansi`.
+<!-- laravel-boost-end -->
