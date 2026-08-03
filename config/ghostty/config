@@ -27,6 +27,8 @@ cursor-click-to-move = true
 
 # Keybindings
 keybind = shift+escape=text:~
+keybind = cmd+shift+left=text:\x1b[1;4H
+keybind = cmd+shift+right=text:\x1b[1;4F
 
 # Clipboard
 clipboard-read = allow

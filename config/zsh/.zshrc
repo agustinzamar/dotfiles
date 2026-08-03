@@ -44,7 +44,8 @@ zinit wait lucid light-mode for \
     zdharma-continuum/fast-syntax-highlighting \
   atload"_zsh_autosuggest_start" \
     zsh-users/zsh-autosuggestions \
-  Aloxaf/fzf-tab
+  Aloxaf/fzf-tab \
+  jirutka/zsh-shift-select
 
 # Emacs mode
 bindkey -e
@@ -109,3 +110,14 @@ for f in "${HOME}"/.dotfiles-home/env/*.zsh(N); do source "$f"; done
 # Last, so the prompt config wins over anything a tool init changed.
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+# Herd injected PHP 8.4 configuration.
+export HERD_PHP_84_INI_SCAN_DIR="/Users/agustin/Library/Application Support/Herd/config/php/84/"
+
+
+# Herd injected PHP 8.5 configuration.
+export HERD_PHP_85_INI_SCAN_DIR="/Users/agustin/Library/Application Support/Herd/config/php/85/"
+
+
+# Herd injected PHP 8.3 configuration.
+export HERD_PHP_83_INI_SCAN_DIR="/Users/agustin/Library/Application Support/Herd/config/php/83/"
