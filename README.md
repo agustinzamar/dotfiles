@@ -30,17 +30,17 @@ Packages are grouped into topics under `install/topics/`. Each file is a
 Brewfile and each is also a command:
 
 ```bash
-dot media             # ffmpeg, imagemagick
-dot install dev       # optional: herd, dbngin, phpstorm
+dot dev                            # installs install/topics/dev
+dot install dev --include-optional # also installs install/topics/optional/dev
 ```
 
 `dot brew` installs everything in `install/topics/`. Files in
-`install/topics/optional/` are skipped, so a machine opts into them by name —
-naming a topic that exists in both places (e.g. `dev`) installs both halves.
+`install/topics/optional/` are opt-in: only `dot install <topic>
+--include-optional` and `dot install --all --include-optional` install them.
 Promoting or demoting a topic is a `git mv`.
 
-Adding a topic means adding one file: it shows up in `dot help` and becomes a
-command with no code change.
+Adding a topic means adding one file: it becomes a command with no code
+change, and `dot help` names it on the `install <topic>` line.
 
 ## Usage
 
@@ -82,8 +82,8 @@ dot link --dry-run
   whatever `install/topics/` holds
 - `install/common.sh` — `run`, `log`, `link_file`; the only copies
 - `install/topics/` — one Brewfile per package group; each is also a command.
-  `optional/` holds the ones `dot brew` skips; a name present in both halves
-  installs both when invoked directly
+  `optional/` holds the ones `dot brew` skips; their half installs only with
+  `--include-optional`
 - `install/lists/` — the non-Brewfile package lists (`Codefile`, `duti`)
 - `install/*.sh` — the per-topic install steps
 - `config/` — application configuration
