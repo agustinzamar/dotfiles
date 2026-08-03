@@ -1,0 +1,41 @@
+{
+  "$schema": "https://schema.linearmouse.app/0.11.3",
+  "schemes": [
+    {
+      "if": {
+        "device": {
+          "category": "mouse",
+          "productName": "MX Master 3",
+          "productID": "0xb023",
+          "vendorID": "0x46d"
+        }
+      },
+      "buttons": {
+        "universalBackForward": true,
+        "gesture": {
+          "enabled": true,
+          "trigger": {
+            "button": {
+              "kind": "logitechControl",
+              "controlID": 195
+            }
+          },
+          "actions": {
+            "down": "appExpose",
+            "left": "missionControl.spaceLeft",
+            "right": "missionControl.spaceRight",
+            "up": "missionControl"
+          }
+        }
+      },
+      "logitech": {
+        "highResolutionWheel": true
+      },
+      "scrolling": {
+        "reverse": {
+          "vertical": true
+        }
+      }
+    }
+  ]
+}
