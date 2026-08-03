@@ -1,5 +1,5 @@
 # Monitoring, maintenance, and system CLI tools
-brew "bottom"
+brew "btop"
 brew "procs"
 brew "topgrade"
 brew "duti"
