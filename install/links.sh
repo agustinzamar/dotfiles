@@ -18,7 +18,7 @@ shell_links() {
   # Globbed rather than listed so each stays one `dot link <group>` target.
   local group file rel
   for group in aliases functions env; do
-    for file in "$DOTFILES_DIR"/system/$group/*.zsh; do
+    for file in "$DOTFILES_DIR"/system/"$group"/*.zsh; do
       [[ -e "$file" ]] || continue
       rel=${file#"$DOTFILES_DIR"/}
       printf '%s|%s|%s\n' "$group" "$rel" "$HOME/.dotfiles-home/${rel#system/}"
