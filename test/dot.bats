@@ -31,7 +31,7 @@ setup() {
         echo "'$command' has neither $name() nor a topic file"
         return 1
       }
-  done < <("$DOT" help | sed -n 's/^   \([a-z][a-z0-9-]*\)  *.*$/\1/p' | grep -v '^help$')
+  done < <("$DOT" help | sed -n 's/^   \([a-z][a-z0-9-]*\)   *.*$/\1/p' | grep -v '^help$')
 }
 
 # Topics are no longer listed as standalone commands in help: a single
@@ -62,15 +62,25 @@ setup() {
 }
 
 # The completion parses `dot help`, so a change to the help format silently
-# leaves it offering nothing.
+# leaves it offering nothing. The 3-space minimum in the sed regex skips
+# sub-arg lines (`link zsh`, `install <topic>`, `install --all`) which have
+# only one space between the command word and its argument; without it the
+# completion menu would show `link` and `install` three times each.
 @test "the zsh completion parses every command out of help" {
   local from_help from_completion
-  from_help=$("$DOT" help | sed -n 's/^   \([a-z][a-z0-9-]*\)  *.*/\1/p' | sort)
+  from_help=$("$DOT" help | sed -n 's/^   \([a-z][a-z0-9-]*\)   *.*/\1/p' | sort -u)
   # The same expression the completion function uses.
   from_completion=$("$DOT" help |
-    sed -n 's/^   \([a-z][a-z0-9-]*\)  *\(.*\)$/\1:\2/p' | cut -d: -f1 | sort)
+    sed -n 's/^   \([a-z][a-z0-9-]*\)   *\(.*\)$/\1:\2/p' | cut -d: -f1 | sort -u)
   [ -n "$from_completion" ]
   [ "$from_help" = "$from_completion" ]
+  # No command should appear more than once; that has happened when the
+  # regex picked up sub-arg lines (`link zsh`, `install <topic>`).
+  local counts duplicate
+  counts=$("$DOT" help |
+    sed -n 's/^   \([a-z][a-z0-9-]*\)   *\(.*\)$/\1/p' | sort | uniq -d)
+  duplicate=$counts
+  [ -z "$duplicate" ]
 }
 
 @test "the completion is a zsh compdef for dot" {
