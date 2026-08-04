@@ -8,6 +8,12 @@ fi
 # Source exports early so zinit plugins find brewed binaries
 source "${HOME}/.dotfiles-home/.exports"
 
+# Set nvim as default editor for opencode and other tools
+export EDITOR="nvim"
+export VISUAL="nvim"
+
+export LS_COLORS="di=38;5;67:ow=48;5;60:ex=38;5;132:ln=38;5;144:*.tar=38;5;180:*.zip=38;5;180:*.jpg=38;5;175:*.png=38;5;175:*.mp3=38;5;175:*.wav=38;5;175:*.txt=38;5;223:*.sh=38;5;132"
+
 # === Zinit (plugin manager) — auto-installs if missing ===
 ZINIT_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit.git"
 if [[ ! -d "$ZINIT_HOME/.git" ]]; then
@@ -23,8 +29,8 @@ fpath=("${HOME}/.dotfiles-home/completions" $fpath)
 zinit ice depth=1
 zinit light romkatv/powerlevel10k
 
-# Oh My Zsh plugins (turbo)
-zinit wait lucid for \
+# Oh My Zsh plugins (turbo, light mode)
+zinit wait lucid light-mode for \
   OMZP::git \
   OMZP::gh \
   OMZP::docker \
@@ -36,7 +42,11 @@ zinit wait lucid for \
   OMZP::extract \
   OMZP::zoxide \
   OMZP::fzf \
-  OMZP::command-not-found
+  OMZP::command-not-found \
+  OMZP::per-directory-history \
+  OMZP::history-substring-search \
+  OMZP::history \
+  OMZP::sudo
 
 # Custom plugins (turbo, light mode)
 zinit wait lucid light-mode for \
@@ -84,8 +94,12 @@ setopt hist_find_no_dups
 setopt appendhistory
 setopt sharehistory
 
-# Completion settings
-zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'
+# Completion settings — case-insensitive prefix matching.
+# Kept conservative: only case folding, no partial/substring matchers.
+# ohmyzsh's 'r:|=*' / 'l:|=* r:|=*' enable substring matching but cause false
+# positives (e.g. "ments" matched "Documents", "rel" produced "reload oad").
+# Add them back only if you want fuzzy substring completion.
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={a-zA-Z}'
 zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
 zstyle ':completion:*' menu no
 
@@ -114,10 +128,8 @@ for f in "${HOME}"/.dotfiles-home/env/*.zsh(N); do source "$f"; done
 # Herd injected PHP 8.4 configuration.
 export HERD_PHP_84_INI_SCAN_DIR="/Users/agustin/Library/Application Support/Herd/config/php/84/"
 
-
 # Herd injected PHP 8.5 configuration.
 export HERD_PHP_85_INI_SCAN_DIR="/Users/agustin/Library/Application Support/Herd/config/php/85/"
-
 
 # Herd injected PHP 8.3 configuration.
 export HERD_PHP_83_INI_SCAN_DIR="/Users/agustin/Library/Application Support/Herd/config/php/83/"

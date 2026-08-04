@@ -27,9 +27,37 @@
   [[ $ZSH_VERSION == (5.<1->*|<6->.*) ]] || return
 
   # Left prompt segments.
-  typeset -g POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(prompt_char dir vcs)
+  typeset -g POWERLEVEL9K_LEFT_PROMPT_ELEMENTS=(
+    # =========================[ Line #1 ]=========================
+    os_icon                   # OS icon
+    # user                      # user
+    context                   # user@host
+    dir                       # current directory
+    vcs                       # git status
+    # =========================[ Line #2 ]=========================
+    newline                   # \n
+    prompt_char               # prompt symbol
+  )
   # Right prompt segments.
-  typeset -g POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=()
+  typeset -g POWERLEVEL9K_RIGHT_PROMPT_ELEMENTS=(
+    # =========================[ Line #1 ]=========================
+    command_execution_time    # previous command duration
+    python_version            # Python version
+    ruby_version              # Ruby version
+    rust_version              # Rust version
+    go_version                # Go version
+    node_version              # Node.js version
+    php_version               # PHP version
+    laravel_version           # Laravel version
+    # =========================[ Line #2 ]=========================
+    newline                   # \n
+    direnv
+    per_directory_history
+    background_jobs
+  )
+
+  # Don't show context unless running with privileges or in SSH.
+  typeset -g POWERLEVEL9K_CONTEXT_{DEFAULT,SUDO}_{CONTENT,VISUAL_IDENTIFIER}_EXPANSION=
 
   # Basic style options that define the overall prompt look.
   typeset -g POWERLEVEL9K_BACKGROUND=                            # transparent background
@@ -38,39 +66,134 @@
   typeset -g POWERLEVEL9K_{LEFT,RIGHT}_SEGMENT_SEPARATOR=        # no end-of-line symbol
   typeset -g POWERLEVEL9K_VISUAL_IDENTIFIER_EXPANSION=           # no segment icons
 
-  # Green prompt symbol if the last command succeeded.
-  typeset -g POWERLEVEL9K_PROMPT_CHAR_OK_{VIINS,VICMD,VIVIS}_FOREGROUND=green
-  # Red prompt symbol if the last command failed.
-  typeset -g POWERLEVEL9K_PROMPT_CHAR_ERROR_{VIINS,VICMD,VIVIS}_FOREGROUND=red
-  # Prompt symbol: bold arrow.
+  # Basic directory shortening strategy.
+  typeset -g POWERLEVEL9K_SHORTEN_STRATEGY=truncate_from_right
+  typeset -g POWERLEVEL9K_DIR_MAX_LENGTH=1
+  typeset -g POWERLEVEL9K_SHORTEN_DIR_LENGTH=5
+  typeset -g POWERLEVEL9K_SHORTEN_DELIMITER=''
+
+  # Prompt symbol: bold arrow, green on success / red on failure.
+  typeset -g POWERLEVEL9K_PROMPT_CHAR_OK_{VIINS,VICMD,VIVIS}_FOREGROUND=2
+  typeset -g POWERLEVEL9K_PROMPT_CHAR_ERROR_{VIINS,VICMD,VIVIS}_FOREGROUND=1
   typeset -g POWERLEVEL9K_PROMPT_CHAR_CONTENT_EXPANSION='%B➜ '
 
-  # Cyan current directory.
-  typeset -g POWERLEVEL9K_DIR_FOREGROUND=cyan
-  # Show only the last segment of the current directory.
-  typeset -g POWERLEVEL9K_SHORTEN_STRATEGY=truncate_to_last
-  # Bold directory.
-  typeset -g POWERLEVEL9K_DIR_CONTENT_EXPANSION='%B$P9K_CONTENT'
+  # OS icon: Apple logo, bright blue.
+  typeset -g POWERLEVEL9K_OS_ICON_FOREGROUND=12
+  typeset -g POWERLEVEL9K_OS_ICON_CONTENT_EXPANSION=$'\ue635'
+
+  # Current directory: blue, bold, truncated to the repo root.
+  typeset -g POWERLEVEL9K_DIR_FOREGROUND=4
+  # typeset -g POWERLEVEL9K_DIR_TRUNCATE_BEFORE_MARKER=last
+  typeset -g POWERLEVEL9K_DIR_CONTENT_EXPANSION='%B${P9K_CONTENT}%b${SSH_CONNECTION:+ %3F\udb81\udfc0%f}'
+
+  # Git segment: magenta branch icon.
+  typeset -g POWERLEVEL9K_VCS_FOREGROUND=6
+  typeset -g POWERLEVEL9K_VCS_VISUAL_IDENTIFIER_EXPANSION=$'\uf113'
+
+  # Node segment: Only display Node inside projects containing package.json.
+  typeset -g POWERLEVEL9K_NODE_VERSION_FOREGROUND='#b7cc85'
+  typeset -g POWERLEVEL9K_NODE_VERSION_PROJECT_ONLY=true
+  typeset -g POWERLEVEL9K_NODE_VERSION_VISUAL_IDENTIFIER_EXPANSION=$'\ued0d'
+  typeset -g POWERLEVEL9K_NODE_VERSION_ICON_BEFORE_CONTENT=true
+
+  # PHP segment: Only display PHP inside projects containing composer.json.
+  typeset -g POWERLEVEL9K_PHP_VERSION_FOREGROUND='#a074c4'
+  typeset -g POWERLEVEL9K_PHP_VERSION_PROJECT_ONLY=true
+  typeset -g POWERLEVEL9K_PHP_VERSION_VISUAL_IDENTIFIER_EXPANSION=$'\ue608'
+  typeset -g POWERLEVEL9K_PHP_VERSION_ICON_BEFORE_CONTENT=true
+
+  # Laravel segment: Only display PHP inside projects containing composer.json.
+  typeset -g POWERLEVEL9K_LARAVEL_VERSION_FOREGROUND='#f05340'
+  typeset -g POWERLEVEL9K_LARAVEL_VERSION_PROJECT_ONLY=true
+  typeset -g POWERLEVEL9K_LARAVEL_VERSION_VISUAL_IDENTIFIER_EXPANSION=$'\ue73f'
+  typeset -g POWERLEVEL9K_LARAVEL_VERSION_ICON_BEFORE_CONTENT=true
+
+  # Per-directory history segment: Only display per-directory history inside projects containing .git.
+  typeset -g POWERLEVEL9K_PER_DIRECTORY_HISTORY_FOREGROUND='#808080'
+  typeset -g POWERLEVEL9K_PER_DIRECTORY_HISTORY_LOCAL_CONTENT_EXPANSION=''
+  typeset -g POWERLEVEL9K_PER_DIRECTORY_HISTORY_GLOBAL_CONTENT_EXPANSION=''
 
   # Git status formatter.
   function my_git_formatter() {
     emulate -L zsh
+
     if [[ -n $P9K_CONTENT ]]; then
-      # If P9K_CONTENT is not empty, it's either "loading" or from vcs_info (not from
-      # gitstatus plugin). VCS_STATUS_* parameters are not available in this case.
+      # Loading state or vcs_info fallback.
       typeset -g my_git_format=$P9K_CONTENT
-    else
-      # Use VCS_STATUS_* parameters to assemble Git status. See reference:
-      # https://github.com/romkatv/gitstatus/blob/master/gitstatus.plugin.zsh.
-      typeset -g my_git_format="${1+%B%4F}git:(${1+%1F}"
-      my_git_format+=${${VCS_STATUS_LOCAL_BRANCH:-${VCS_STATUS_COMMIT[1,8]}}//\%/%%}
-      my_git_format+="${1+%4F})"
-      if (( VCS_STATUS_NUM_CONFLICTED || VCS_STATUS_NUM_STAGED ||
-            VCS_STATUS_NUM_UNSTAGED   || VCS_STATUS_NUM_UNTRACKED )); then
-        my_git_format+=" ${1+%3F}✗"
-      fi
+      return
     fi
+
+    # Nerd Font icons.
+    local icon_staged='+'
+    local icon_modified='-'
+    local icon_untracked='?'
+    local icon_ahead='⇡'
+    local icon_behind='⇣'
+    local icon_stash='*'
+
+    # Colors for fresh status.
+    local meta='%244F'
+    local staged='%70F'
+    local modified='%178F'
+    local untracked='%244F'
+    local divergence='%141F'
+    local stash='%214F'
+
+    local res=''
+
+    # Branch, tag or detached HEAD.
+    if [[ -n $VCS_STATUS_LOCAL_BRANCH ]]; then
+      local branch=${(V)VCS_STATUS_LOCAL_BRANCH}
+      branch=${branch//\%/%%}
+      branch=${branch##*/}
+      res+="${branch_color}${branch}"
+    elif [[ -n $VCS_STATUS_TAG ]]; then
+      local tag=${(V)VCS_STATUS_TAG}
+      tag=${tag//\%/%%}
+      res+="${branch_color}${icon_tag} ${tag}"
+    else
+      res+="${meta}${icon_commit} ${VCS_STATUS_COMMIT[1,8]}"
+    fi
+
+    # Detect a linked worktree without spawning another `git` process.
+    #
+    # A linked worktree's .git file points into:
+    #   <main-repository>/.git/worktrees/<worktree>
+    # local git_file="$VCS_STATUS_WORKDIR/.git"
+
+    # if [[ -f $git_file ]]; then
+    #   local gitdir
+    #   gitdir=$(<"$git_file")
+    #   gitdir=${gitdir#gitdir: }
+
+    #   if [[ $gitdir == *'.git/worktrees/'* ]]; then
+    #     res+=" ${worktree_color}${icon_worktree}"
+    #   fi
+    # fi
+
+    # Remote divergence.
+    (( VCS_STATUS_COMMITS_BEHIND )) &&
+      res+=" ${divergence}${icon_behind}${VCS_STATUS_COMMITS_BEHIND}"
+
+    (( VCS_STATUS_COMMITS_AHEAD )) &&
+      res+=" ${divergence}${icon_ahead}${VCS_STATUS_COMMITS_AHEAD}"
+
+    # Local file status.
+    (( VCS_STATUS_NUM_STAGED )) &&
+      res+=" ${staged}${icon_staged}${VCS_STATUS_NUM_STAGED}"
+
+    (( VCS_STATUS_NUM_UNSTAGED )) &&
+      res+=" ${modified}${icon_modified}${VCS_STATUS_NUM_UNSTAGED}"
+
+    (( VCS_STATUS_NUM_UNTRACKED )) &&
+      res+=" ${untracked}${icon_untracked}${VCS_STATUS_NUM_UNTRACKED}"
+
+    (( VCS_STATUS_STASHES )) &&
+      res+=" ${stash}${icon_stash}${VCS_STATUS_STASHES}"
+
+    typeset -g my_git_format=$res
   }
+
   functions -M my_git_formatter 2>/dev/null
 
   # Disable the default Git status formatting.
@@ -80,6 +203,14 @@
   typeset -g POWERLEVEL9K_VCS_LOADING_CONTENT_EXPANSION='${$((my_git_formatter()))+${my_git_format}}'
   # Grey Git status when loading.
   typeset -g POWERLEVEL9K_VCS_LOADING_FOREGROUND=246
+
+  # Disable async loading indicator to make directories that aren't Git repositories
+  # indistinguishable from large Git repositories without known state.
+  typeset -g POWERLEVEL9K_VCS_LOADING_TEXT=
+
+  # Don't wait for Git status even for a millisecond, so that prompt always updates
+  # asynchronously when Git state changes.
+  typeset -g POWERLEVEL9K_VCS_MAX_SYNC_LATENCY_SECONDS=0
 
   # Instant prompt mode.
   #
