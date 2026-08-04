@@ -2,7 +2,7 @@
 
 setup() {
   DOTFILES_DIR="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
-  MUXY="$DOTFILES_DIR/bin/muxy"
+  MUXY="$DOTFILES_DIR/install/muxy.sh"
 }
 
 _muxy_common_setup() {
