@@ -43,7 +43,7 @@ zinit wait lucid light-mode for \
   OMZP::zoxide \
   OMZP::fzf \
   OMZP::command-not-found \
-  OMZP::per-directory-history \
+  OMZP::per-directory-history/per-directory-history.zsh \
   OMZP::history-substring-search \
   OMZP::history \
   OMZP::sudo
