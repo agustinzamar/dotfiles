@@ -1,50 +1,23 @@
 #!/usr/bin/env bash
-# shellcheck source-path=SCRIPTDIR
-# Merge config/claude/config.json (defaults) into ~/.claude/settings.json
+# Merge config/opencode/opencode.json (defaults) into ~/.config/opencode/opencode.json
 # (app-managed).  Deep-merges top-level keys: for each key in defaults, if
 # missing from the live file or a nested object, individual sub-keys are added
 # without overwriting existing values.
-set -Eeuo pipefail
+#
+# Sourced by bin/dot -- expects $DOTFILES_DIR and $DRY_RUN.
 
-BIN_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-export DOTFILES_DIR=${DOTFILES_DIR:-$(cd -- "$BIN_DIR/.." && pwd -P)}
+install_opencode_config() {
 
-# --dry-run is global, mirroring bin/dot.
-DRY_RUN=false
-args=()
-for arg in "$@"; do
-  case "$arg" in
-    --dry-run) DRY_RUN=true ;;
-    *) args+=("$arg") ;;
-  esac
-done
-export DRY_RUN
-set -- ${args[@]+"${args[@]}"}
-
-# shellcheck source=../install/common.sh
-. "$DOTFILES_DIR/install/common.sh"
-
-claude_help() {
-  cat <<EOF
-Usage: $(basename "$0") <command> [--dry-run]
-
-Commands:
-   install  Merge config/claude/config.json defaults into ~/.claude/settings.json
-   help     Show this help message
-EOF
-}
-
-install_claude_config() {
-  if [[ ! -d "$HOME/.claude" ]]; then
-    log "Claude: ~/.claude does not exist; skipping config merge"
+  if ! command -v opencode >/dev/null 2>&1; then
+    echo "opencode not installed, skipping config merge" >&2
     return 0
   fi
 
-  local defaults="$DOTFILES_DIR/config/claude/config.json"
-  local target="$HOME/.claude/settings.json"
+  local defaults="$DOTFILES_DIR/config/opencode/opencode.json"
+  local target="$HOME/.config/opencode/opencode.json"
 
   [[ -f "$defaults" ]] || {
-    log "No claude config defaults at $defaults; skipping"
+    log "No opencode config defaults at $defaults; skipping"
     return 0
   }
 
@@ -62,7 +35,7 @@ install_claude_config() {
 
   # If the live file doesn't exist yet, just write defaults.
   if [[ ! -f "$target" ]]; then
-    log "Claude: writing default config from config.json"
+    log "Opencode: writing default config from opencode.json"
     run cp "$defaults" "$target"
     return 0
   fi
@@ -85,7 +58,7 @@ install_claude_config() {
         end;
       deepMerge($defaults[0]; $current[0])
     ' >"$tmpfile" 2>/dev/null; then
-    log "Claude: jq merge failed; keeping live file unchanged"
+    log "Opencode: jq merge failed; keeping live file unchanged"
     rm -f "$tmpfile"
     return 1
   fi
@@ -96,23 +69,6 @@ install_claude_config() {
     return 0
   fi
 
-  log "Claude: merging default keys from config.json into settings.json"
+  log "Opencode: merging default keys from opencode.json into settings.json"
   run mv "$tmpfile" "$target"
 }
-
-COMMAND_NAME=${1:-}
-shift 2>/dev/null || true
-case "$COMMAND_NAME" in
-  "" | -h | --help | help)
-    claude_help
-    ;;
-  install)
-    log "Installing Claude defaults"
-    install_claude_config
-    ;;
-  *)
-    echo "claude: unknown command '$COMMAND_NAME'" >&2
-    claude_help >&2
-    exit 1
-    ;;
-esac
