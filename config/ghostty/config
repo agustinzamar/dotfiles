@@ -1,45 +1,130 @@
-# Aesthetics
+# ┌──────────────────────────────────────────────────────────────────────────────┐
+# │                            Custom Ghostty config                             │
+# │                  Optimized for Zsh and Catppuccin Mocha theme                │
+# └──────────────────────────────────────────────────────────────────────────────┘
+
+# ┌──────────────────────────────────────────────────────────────────────────────┐
+# │                                  WINDOWS                                     │
+# └──────────────────────────────────────────────────────────────────────────────┘
+
+# --- Basic ---
+window-save-state = always
+macos-titlebar-style = native
+fullscreen = true
+background-opacity = 0.95
+background-blur-radius = 20
+
+# --- Windows ---
+window-decoration = true
+window-padding-color = extend
+window-step-resize = false
+window-padding-balance = true
+window-height = 100
+window-width = 100
 window-theme = system
-theme = dark:"Catppuccin Frappe",light:"Catppuccin Frappe"
 window-colorspace = display-p3
 
-# Font
+# --- Splits ---
+unfocused-split-opacity = 0.5
+
+# ┌──────────────────────────────────────────────────────────────────────────────┐
+# │                            INPUT / KEYBINDINGS                               │
+# └──────────────────────────────────────────────────────────────────────────────┘
+
+# --- macOS Alt key fix ---
+macos-option-as-alt = left
+keybind = alt+left=unbind
+keybind = alt+right=unbind
+
+# --- Split Management ---
+keybind = alt+v=new_split:right
+keybind = alt+d=new_split:down
+
+# --- Split Navigation ---
+keybind = alt+k=goto_split:up
+keybind = alt+j=goto_split:down
+keybind = alt+h=goto_split:left
+keybind = alt+l=goto_split:right
+
+# --- Split Resize ---
+keybind = ctrl+shift+j=resize_split:up,10
+keybind = ctrl+shift+k=resize_split:down,10
+keybind = ctrl+shift+h=resize_split:left,10
+keybind = ctrl+shift+l=resize_split:right,10
+
+# --- Miscellaneous ---
+keybind = cmd+k=clear_screen
+keybind = shift+enter=text:\x1b\r
+
+# --- Text Navigation ---
+keybind = cmd+shift+left=text:\x1b[1;4H
+keybind = cmd+shift+right=text:\x1b[1;4F
+
+# ┌──────────────────────────────────────────────────────────────────────────────┐
+# │                                  THEME                                       │
+# └──────────────────────────────────────────────────────────────────────────────┘
+
+# --- Theme ---
+theme = "Catppuccin Mocha"
+
+# --- Font ---
 font-family = "JetBrainsMono Nerd Font"
 font-size = 18
 font-thicken = true
 font-thicken-strength = 100
+
+# --- Miscellaneous ---
 adjust-cell-height = 3
-bold-is-bright = true
+# bold-is-bright = true
 
-# Use a TERM value widely supported on remote hosts
-term = xterm-256color
+# --- Base Colors ---
+# background = 06080f
+foreground = #f3f6f9
+cursor-color = #e0c15a
+selection-background = #263356
+selection-foreground = #f3f6f9
 
-# Tabs & Panes
-unfocused-split-opacity = 0.5
-macos-titlebar-style = native
-window-save-state = always
-fullscreen = true
+# --- Normal Colors ---
+palette = 0=#06080f
+palette = 1=#cb7c94
+palette = 2=#b7cc85
+palette = 3=#ffe066
+palette = 4=#7fb4ca
+palette = 5=#ff8dd7
+palette = 6=#7aa89f
+palette = 7=#f3f6f9
 
-# Cursor
+# --- Bright Colors ---
+palette = 8=#8a8fa3
+palette = 9=#de8fa8
+palette = 10=#d1e8a9
+palette = 11=#fff7b1
+palette = 12=#a3d4d5
+palette = 13=#ffaeea
+palette = 14=#7fb4ca
+palette = 15=#f3f6f9
+
+# ┌──────────────────────────────────────────────────────────────────────────────┐
+# │                                  SYSTEM                                      │
+# └──────────────────────────────────────────────────────────────────────────────┘
+
+# --- Updates ---
+auto-update = download
+auto-update-channel = stable
+
+# --- Cursor ---
 copy-on-select = clipboard
 cursor-style = bar
 cursor-click-to-move = true
 
-# Keybindings
-keybind = shift+escape=text:~
-keybind = cmd+shift+left=text:\x1b[1;4H
-keybind = cmd+shift+right=text:\x1b[1;4F
-
-# Clipboard
+# --- Clipboard ---
 clipboard-read = allow
 clipboard-write = allow
 clipboard-trim-trailing-spaces = true
 
-# Working directory
-working-directory = ~/Documents/repos
+# --- Working directory ---
 window-inherit-working-directory = true
 tab-inherit-working-directory = true
 
-# Updates
-auto-update = download
-auto-update-channel = stable
+# --- SSH ---
+term = xterm-256color
