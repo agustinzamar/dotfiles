@@ -1,5 +1,11 @@
-# Encoding, images, and playback
+# --- Encoding, images, and playback ---
 brew "ffmpeg"
 brew "unar"
 brew "imagemagick"
 brew "webp"
+
+# --- Media players ---
+cask "spotify"
+cask "stremio"
+cask "vlc"
+cask "stupside/tap/castor"

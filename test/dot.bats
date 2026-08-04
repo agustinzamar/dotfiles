@@ -26,9 +26,8 @@ setup() {
   while read -r command; do
     name="sub_${command//-/_}"
     grep -q "^$name()" "$DOT" ||
-      [ -f "$DOTFILES_DIR/install/topics/$command" ] ||
-      [ -f "$DOTFILES_DIR/install/topics/optional/$command" ] ||
-      [ -f "$DOTFILES_DIR/install/profiles/$command" ] || {
+    [ -f "$DOTFILES_DIR/install/topics/$command" ] ||
+    [ -f "$DOTFILES_DIR/install/profiles/$command" ] || {
         echo "'$command' has neither $name() nor a topic file"
         return 1
       }
@@ -49,7 +48,7 @@ setup() {
       exit 1
     }
     run "$DOT" install "$topic" --dry-run
-    { [ "$status" -eq 0 ] && [[ "$output" == *"--file=$DOTFILES_DIR/install/topics/$topic "* ]]; } || {
+    { [ "$status" -eq 0 ] && { grep -q "^sub_${topic}()" "$DOT" || [[ "$output" == *"--file=$DOTFILES_DIR/install/topics/$topic "* ]]; }; } || {
       echo "install $topic failed: status=$status output=$output"
       exit 1
     }
@@ -102,8 +101,7 @@ setup() {
   local file bad=0
   for file in "$DOTFILES_DIR"/install/topics/duti \
     "$DOTFILES_DIR"/install/topics/code \
-    "$DOTFILES_DIR"/install/topics/* \
-    "$DOTFILES_DIR"/install/topics/optional/*; do
+    "$DOTFILES_DIR"/install/topics/*; do
     [ -f "$file" ] || continue
     [ -z "$(tail -c 1 "$file")" ] || {
       echo "no final newline: ${file#"$DOTFILES_DIR"/}"
@@ -126,8 +124,10 @@ setup() {
 # A structural line-shape check catches the same class of typo for free.
 @test "every topic file line is a properly quoted brew or cask entry" {
   local file line bad=0
-  for file in "$DOTFILES_DIR"/install/topics/* "$DOTFILES_DIR"/install/topics/optional/*; do
+  for file in "$DOTFILES_DIR"/install/topics/*; do
     [ -f "$file" ] || continue
+    # code and duti are plain lists consumed by sub_code/sub_duti, not Brewfiles.
+    grep -q "^sub_$(basename "$file")()" "$DOT" && continue
     while IFS= read -r line; do
       [[ -z "$line" || "$line" == \#* ]] && continue
       [[ "$line" =~ ^(brew|cask)\ \"[^\"]+\"$ ]] || {
@@ -151,7 +151,7 @@ setup() {
   casks=$(brew search --cask '' 2>/dev/null) || skip "brew casks unavailable"
 
   local file line name wrong=0
-  for file in "$DOTFILES_DIR"/install/topics/* "$DOTFILES_DIR"/install/topics/optional/*; do
+  for file in "$DOTFILES_DIR"/install/topics/*; do
     [ -f "$file" ] || continue
     while IFS= read -r line; do
       case "$line" in
@@ -200,7 +200,7 @@ setup() {
   [ "$status" -eq 1 ]
   [[ "$output" == *"topics that failed:"* ]]
   # Every topic was attempted rather than the run stopping at the first.
-  [[ "$output" == *"ai"* && "$output" == *"system"* ]]
+  [[ "$output" == *"ai"* && "$output" == *"media"* ]]
 }
 
 # The phase list drives the loop that collects failures; if a phase is dropped
@@ -226,81 +226,6 @@ setup() {
   run "$DOT" install dock --dry-run
   [ "$status" -eq 0 ]
   [[ "$output" == *"dock.sh"* ]]
-}
-
-# The whole point of optional/: a machine opts in with --include-optional,
-# `brew` and `install --all` never do by default.
-@test "brew installs every default topic and no optional one" {
-  local topic
-  run "$DOT" install brew --dry-run
-  [ "$status" -eq 0 ]
-  for topic in "$DOTFILES_DIR"/install/topics/*; do
-    [ -f "$topic" ] || continue
-    [[ "$output" == *"topics/$(basename "$topic")"* ]]
-  done
-  for topic in "$DOTFILES_DIR"/install/topics/optional/*; do
-    [ -f "$topic" ] || continue
-    [[ "$output" != *"optional/$(basename "$topic")"* ]]
-  done
-}
-
-@test "install --all skips optional topics unless --include-optional" {
-  run "$DOT" install --all --dry-run
-  [ "$status" -eq 0 ]
-  for topic in "$DOTFILES_DIR"/install/topics/optional/*; do
-    [ -f "$topic" ] || continue
-    [[ "$output" != *"optional/$(basename "$topic")"* ]]
-  done
-
-  run "$DOT" install --all --dry-run --include-optional
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"--file=$DOTFILES_DIR/install/topics/optional/dev "* ]]
-}
-
-@test "--include-optional with a non-topic install target exits 1" {
-  run "$DOT" install brew --include-optional --dry-run
-  [ "$status" -eq 1 ]
-  [[ "$output" == *"--include-optional only applies"* ]]
-}
-
-@test "--include-optional with no target exits 1" {
-  run "$DOT" install --include-optional
-  [ "$status" -eq 1 ]
-  [[ "$output" == *"--include-optional only applies"* ]]
-}
-
-# A core and an optional topic can share a name (e.g. `dev`): topic_path used
-# to return only the first match, so the optional half was unreachable by
-# name through any command, including `dot install --all`.
-@test "a topic name shared by core and optional installs core only by default" {
-  run "$DOT" install dev --dry-run
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"--file=$DOTFILES_DIR/install/topics/dev "* ]]
-  [[ "$output" != *"--file=$DOTFILES_DIR/install/topics/optional/dev "* ]]
-}
-
-@test "install <topic> --include-optional installs both halves" {
-  run "$DOT" install dev --include-optional --dry-run
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"--file=$DOTFILES_DIR/install/topics/dev "* ]]
-  [[ "$output" == *"--file=$DOTFILES_DIR/install/topics/optional/dev "* ]]
-}
-
-@test "the --include-optional flag also works after the target" {
-  run "$DOT" install dev --dry-run --include-optional
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"--file=$DOTFILES_DIR/install/topics/optional/dev "* ]]
-}
-
-@test "a bare topic command installs core only unless --include-optional" {
-  run "$DOT" dev --dry-run
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"--file=$DOTFILES_DIR/install/topics/dev "* ]]
-  [[ "$output" != *"--file=$DOTFILES_DIR/install/topics/optional/dev "* ]]
-
-  run "$DOT" dev --dry-run --include-optional
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"--file=$DOTFILES_DIR/install/topics/optional/dev "* ]]
 }
 
 # bin/dot brew/link/etc used to only dispatch through `dot install <name>`;
@@ -368,7 +293,7 @@ setup() {
   # Known gap: app-writable, pending the plan in
   # docs/superpowers/plans/2026-07-29-git-managed-app-writable-configs.md,
   # which only covers Claude and OpenCode so far.
-  local known_gaps="config/muxy/settings.json"
+  local known_gaps=""
 
   local sources
   sources=$(DOTFILES_DIR="$DOTFILES_DIR" bash -c '. "$0/install/links.sh"; all_links' "$DOTFILES_DIR" |

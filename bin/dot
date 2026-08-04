@@ -58,9 +58,8 @@ sub_help() {
   echo "   macos                Apply macOS system defaults"
   echo "   dock                 Apply macOS Dock settings"
   echo "   duti                 Set default apps for file types"
-  echo "   install <topic>      Install a topic: $(topic_names)"
-  echo "                        (--include-optional also installs its optional half)"
-  echo "   install --all        Install everything; --include-optional adds the optional topics"
+   echo "   install <topic>      Install a topic: $(topic_names)"
+   echo "   install --all        Install everything"
 }
 
 # Resolve an `install` subcommand or topic name to what runs it. Echoes the
@@ -82,29 +81,15 @@ resolve_install_target() {
 # Run every phase, then report failures. One broken phase should not
 # prevent later ones from running.
 sub_install() {
-  # --include-optional is a global install flag, accepted before or after the
-  # target. It gates the optional/ half of a topic and of `install --all`.
-  local include_optional=false args=() arg
-  for arg in "$@"; do
-    case "$arg" in
-      --include-optional) include_optional=true ;;
-      *) args+=("$arg") ;;
-    esac
-  done
-  set -- ${args[@]+"${args[@]}"}
-
   local cmd="${1:-}"
   shift 2>/dev/null || true
 
   case "$cmd" in
     --all | -a)
-      sub_full "$include_optional"
+      sub_full
       return $?
       ;;
     ai)
-      if [[ "$include_optional" == true ]]; then
-        install_flags_error "install ai"
-      fi
       sub_install_ai "$@"
       return $?
       ;;
@@ -113,9 +98,6 @@ sub_install() {
       return 1
       ;;
     "" | bootstrap)
-      if [[ "$include_optional" == true ]]; then
-        install_flags_error "install"
-      fi
       sub_bootstrap
       local phase failures=()
       for phase in link claude_config opencode_config; do
@@ -132,13 +114,8 @@ sub_install() {
       local target
       if target=$(resolve_install_target "$cmd"); then
         case "$target" in
-          topic:*) install_topic "${target#topic:}" "$include_optional" ;;
-          *)
-            if [[ "$include_optional" == true ]]; then
-              install_flags_error "install $cmd"
-            fi
-            "$target"
-            ;;
+          topic:*) install_topic "${target#topic:}" ;;
+          *) "$target" ;;
         esac
       else
         echo "'$cmd' is not an install command or topic." >&2
@@ -146,11 +123,6 @@ sub_install() {
       fi
       ;;
   esac
-}
-
-install_flags_error() {
-  echo "--include-optional only applies to \`$1 <topic>\` and \`install --all\`" >&2
-  return 1
 }
 
 sub_install_ai() {
@@ -271,22 +243,11 @@ sub_install_ai() {
 }
 
 sub_full() {
-  local include_optional="${1:-false}"
   log "Full install"
   local phase failures=()
   for phase in bootstrap brew link zsh code macos duti git claude_config opencode_config; do
     "sub_$phase" || failures+=("$phase")
   done
-
-  # Optional topics are opt-in, so `--all` skips them unless --include-optional
-  # was passed too.
-  if [[ "$include_optional" == true ]]; then
-    local topic
-    while read -r topic; do
-      run_topic_file "$topic (optional)" "$TOPIC_DIR/optional/$topic" ||
-        log "Skipping optional topic: $topic"
-    done < <(optional_topics)
-  fi
 
   if ((${#failures[@]})); then
     log "Finished with failures: ${failures[*]}"
@@ -295,25 +256,16 @@ sub_full() {
   log "Installation complete"
 }
 
-# Installs a topic by name. The core half (topics/<name>) always installs; the
-# optional half (topics/optional/<name>) only when --include-optional is given.
-# A topic that only exists as an optional half still installs by name: naming
-# it is already the opt-in.
+# Installs a topic by name from install/topics/<name>.
 install_topic() {
-  local name="$1" include_optional="${2:-false}"
-  local core="$TOPIC_DIR/$name" optional="$TOPIC_DIR/optional/$name" found=1
-  [[ -f "$core" ]] && {
+  local name="$1"
+  local core="$TOPIC_DIR/$name"
+  if [[ -f "$core" ]]; then
     run_topic_file "$name" "$core"
-    found=0
-  }
-  if [[ -f "$optional" && ("$include_optional" == true || ! -f "$core") ]]; then
-    run_topic_file "$name (optional)" "$optional"
-    found=0
+    return 0
   fi
-  if ((found)); then
-    echo "no such topic: $name" >&2
-    return 1
-  fi
+  echo "no such topic: $name" >&2
+  return 1
 }
 
 sub_bootstrap() {

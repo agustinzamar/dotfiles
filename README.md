@@ -31,13 +31,10 @@ Brewfile and each is also a command:
 
 ```bash
 dot dev                            # installs install/topics/dev
-dot install dev --include-optional # also installs install/topics/optional/dev
 ```
 
-`dot brew` installs everything in `install/topics/`. Files in
-`install/topics/optional/` are opt-in: only `dot install <topic>
---include-optional` and `dot install --all --include-optional` install them.
-Promoting or demoting a topic is a `git mv`.
+`dot brew` installs every topic in `install/topics/`. Each topic is also a
+command with no additional code. Promoting or demoting a topic is a `git mv`.
 
 Adding a topic means adding one file: it becomes a command with no code
 change, and `dot help` names it on the `install <topic>` line.
@@ -84,8 +81,6 @@ is the default target (`install`) and is the one-shot first init.
   whatever `install/topics/` holds
 - `install/common.sh` — `run`, `log`, `link_file`; the only copies
 - `install/topics/` — one Brewfile per package group; each is also a command.
-  `optional/` holds the ones `dot brew` skips; their half installs only with
-  `--include-optional`
 - `install/lists/` — the non-Brewfile package lists (`Codefile`, `duti`)
 - `install/*.sh` — the per-topic install steps
 - `config/` — application configuration
