@@ -1,7 +1,3 @@
-git-prune-local() {
-  git fetch -p && git branch -vv | grep ': gone]' | awk '{print $1}' | xargs git branch -D
-}
-
 ghopen() {
   local url=$(git config --get remote.origin.url | sed -E 's/git@github.com:(.*)\.git/https:\/\/github.com\/\1/')
   open "$url"
