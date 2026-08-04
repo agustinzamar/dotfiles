@@ -1,23 +1,48 @@
-# Shell, files, and everyday CLI
-brew "tmux"
+# --- Filesystem and navigation ---
 brew "zoxide"
 brew "fzf"
-brew "bat"
 brew "eza"
 brew "fd"
 brew "yazi"
-brew "dockutil"
 brew "ripgrep"
+brew "grip"
+brew "watch"
+brew "direnv"
+
+# --- System monitoring and utilities ---
+brew "btop"
+brew "procs"
+brew "topgrade"
+brew "duti"
+brew "dust"
+brew "dockutil"
+brew "mole"
+cask "pearcleaner"
+
+# --- Multiplexers and terminals ---
+brew "tmux"
+brew "zellij"
+brew "herdr"
+brew "kitty"
+brew "alacritty"
+brew "wezterm"
+brew "ghostty"
+
+# --- File extensions and MIME types ---
+brew "bat"
 brew "jq"
 brew "jless"
 brew "yq"
-brew "grip"
+
+# --- Editors --- 
+brew "neovim"
+
+# --- Git and GitHub ---
+brew "git"
+brew "lazygit"
+brew "gh"
 brew "git-delta"
 brew "hunk"
-brew "direnv"
-brew "neovim"
-brew "gh"
-brew "watch"
-brew "lazygit"
 
+# --- Fonts ---
 cask "font-jetbrains-mono-nerd-font"

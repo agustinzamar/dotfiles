@@ -1,10 +1,19 @@
-# Browser, terminal, and window management
 # Browser
 cask "google-chrome"
+cask "firefox"
+cask "brave-browser"
 
-# Terminal
-cask "ghostty"
+# Communication
+cask "discord"
+cask "telegram"
+cask "whatsapp"
+cask "slack"
 
-# Configurations
+# Quality of life
+cask "raycast"
+cask "alt-tab"
+cask "finetune"
+cask "maccy"
+cask "typewhisper"
 cask "rectangle"
 cask "linearmouse"

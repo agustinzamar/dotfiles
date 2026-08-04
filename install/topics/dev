@@ -1,4 +1,4 @@
-# Languages, runtimes, editors, and the tooling `dot test` needs
+# --- Languages, runtimes and tooling ---
 brew "make"
 brew "go"
 brew "node"
@@ -10,16 +10,36 @@ brew "rust"
 brew "shellcheck"
 brew "shfmt"
 brew "bats-core"
+
+# --- CLI tools ---
 brew "act"
 brew "sshpass"
 
-# Editors
+# --- IDEs and Editors ---
 cask "visual-studio-code"
+cask "phpstorm"
 
-# Linters and formatters
+# --- Linters and formatters ---
 brew "actionlint"
 brew "swiftformat"
 
-# Agents and terminal
+# --- Agents and terminal ---
+brew "anomalyco/tap/opencode"
+
 cask "muxy-app/tap/muxy"
 cask "claude-code@latest"
+cask "codex"
+
+# --- Database and services ---
+brew "mysql-client"
+brew "postgresql"
+brew "redis"
+brew "sqlite"
+
+# --- Services ---
+cask "herd"
+cask "orbstack"
+
+# --- Fancy tools ---
+cask "openusage"
+cask "repobar"

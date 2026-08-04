@@ -104,11 +104,6 @@ unlink_file() {
 
 # Every file under install/topics/ is a Brewfile and a command: `dot media`
 # installs install/topics/media. Adding a topic is adding one file.
-#
-# Files directly in topics/ are installed by `dot brew`; those in
-# topics/optional/ are opt-in — `dot install <topic> --include-optional` or
-# `dot install --all --include-optional`. Moving a topic between the two is
-# a `git mv`.
 TOPIC_DIR="$DOTFILES_DIR/install/topics"
 
 # `return 0` because a glob that ends on a non-file would otherwise leave the
@@ -122,25 +117,19 @@ _topic_names() {
 }
 
 topics() { _topic_names "$TOPIC_DIR"; }
-optional_topics() { _topic_names "$TOPIC_DIR/optional"; }
 
-# Every topic name a user can install by name, core and optional, comma-joined.
+# Every topic name a user can install by name, comma-joined.
 topic_names() {
-  {
-    topics
-    optional_topics
-  } | sort -u | paste -sd, - | sed 's/,/, /g'
+  topics | paste -sd, - | sed 's/,/, /g'
   return 0
 }
 
 topic_path() {
-  local dir
-  for dir in "$TOPIC_DIR" "$TOPIC_DIR/optional"; do
-    [[ -f "$dir/$1" ]] && {
-      printf '%s' "$dir/$1"
-      return 0
-    }
-  done
+  local dir="$TOPIC_DIR/$1"
+  [[ -f "$dir" ]] && {
+    printf '%s' "$dir"
+    return 0
+  }
   return 1
 }
 

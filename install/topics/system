@@ -1,6 +1,0 @@
-# Monitoring, maintenance, and system CLI tools
-brew "btop"
-brew "procs"
-brew "topgrade"
-brew "duti"
-brew "dust"
