@@ -1,5 +1,5 @@
 {
-  "terminal.integrated.fontSize": 14,
+  "terminal.integrated.fontSize": 18,
   "terminal.integrated.tabs.enabled": true,
   "terminal.integrated.profiles.windows": {
     "Git Bash": {
@@ -20,7 +20,7 @@
     "javascript": "javascriptreact"
   },
   "editor.cursorBlinking": "phase",
-  "editor.fontSize": 14,
+  "editor.fontSize": 18,
   "editor.lineHeight": 22,
   "editor.detectIndentation": false,
   "editor.rulers": [
@@ -142,7 +142,7 @@
   "settingsSync.ignoredSettings": [
     "-window.zoomLevel"
   ],
-  "chat.editor.fontSize": 14,
+  "chat.editor.fontSize": 18,
   "chat.fontSize": 14,
   "terminal.integrated.fontLigatures.enabled": true,
   "git.allowForcePush": true,
@@ -175,5 +175,6 @@
   "diffEditor.codeLens": true,
   "diffEditor.experimental.useTrueInlineView": true,
   "diffEditor.hideUnchangedRegions.enabled": true,
-  "diffEditor.renderSideBySide": false
+  "diffEditor.renderSideBySide": false,
+  "markdown.preview.fontSize": 20
 }
