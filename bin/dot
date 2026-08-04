@@ -369,7 +369,7 @@ sub_code() {
     while read -r extension; do
       grep -qxF "$(tr '[:upper:]' '[:lower:]' <<<"$extension")" <<<"$installed" ||
         run code --install-extension "$extension"
-    done < <(read_package_file "$DOTFILES_DIR/install/lists/Codefile")
+    done < <(read_package_file "$DOTFILES_DIR/install/topics/code")
   else
     echo "VS Code not installed, skipping extension setup" >&2
   fi
@@ -378,7 +378,7 @@ sub_code() {
 sub_duti() {
   if is_executable duti; then
     log "Setting default apps for file types"
-    run duti -v "$DOTFILES_DIR/install/lists/duti" 2>&1 | grep -v "error -50" || true
+    run duti -v "$DOTFILES_DIR/install/topics/duti" 2>&1 | grep -v "error -50" || true
   else
     echo "duti not installed, skipping default app setup" >&2
   fi

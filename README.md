@@ -55,7 +55,7 @@ change, and `dot help` names it on the `install <topic>` line.
 | `link <name>` | Symlink one config (`ghostty`, `tmux`, `yazi`, …) |
 | `unlink` | Remove symlinks that point into this repo |
 | `zsh` | Install Oh My Zsh, its theme and plugins |
-| `code` | Install the VS Code extensions in `install/lists/Codefile` |
+| `code` | Install the VS Code extensions in `install/topics/code` |
 | `duti` | Set default apps for file types |
 | `macos` | Apply macOS system defaults |
 | `dock` | Apply Dock settings |
