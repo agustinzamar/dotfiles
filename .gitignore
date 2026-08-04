@@ -2,6 +2,10 @@
 # every extension preference. Keep them in iCloud instead.
 *.rayconfig
 
+# Muxy live settings: contains sensitive data (device tokens, approved devices)
+# that the `muxy config export` CLI strips. Export into the repo via `bin/muxy`.
+config/muxy/settings.json
+
 # OS
 .DS_Store
 
