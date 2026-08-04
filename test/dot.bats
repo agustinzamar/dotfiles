@@ -100,8 +100,8 @@ setup() {
 # fails with "line too long". .editorconfig asks for one; nothing enforced it.
 @test "every package file ends with a newline" {
   local file bad=0
-  for file in "$DOTFILES_DIR"/install/lists/duti \
-    "$DOTFILES_DIR"/install/lists/Codefile \
+  for file in "$DOTFILES_DIR"/install/topics/duti \
+    "$DOTFILES_DIR"/install/topics/code \
     "$DOTFILES_DIR"/install/topics/* \
     "$DOTFILES_DIR"/install/topics/optional/*; do
     [ -f "$file" ] || continue
@@ -113,11 +113,11 @@ setup() {
   [ "$bad" -eq 0 ]
 }
 
-# install/lists/duti has gone missing before (moved by accident) while the
+# install/topics/duti has gone missing before (moved by accident) while the
 # code that reads it stayed silent about it, so `dot install duti` just
 # errored on a real machine that had duti installed.
 @test "duti package list exists" {
-  [ -f "$DOTFILES_DIR/install/lists/duti" ]
+  [ -f "$DOTFILES_DIR/install/topics/duti" ]
 }
 
 # `cask repobar` and `brew install foo/tap/bar` are both syntactically valid
