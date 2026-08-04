@@ -29,6 +29,7 @@ brew "wezterm"
 brew "ghostty"
 
 # --- File extensions and MIME types ---
+brew "7zip"
 brew "bat"
 brew "jq"
 brew "jless"
