@@ -67,9 +67,9 @@
   typeset -g POWERLEVEL9K_VISUAL_IDENTIFIER_EXPANSION=           # no segment icons
 
   # Basic directory shortening strategy.
-  typeset -g POWERLEVEL9K_SHORTEN_STRATEGY=truncate_from_right
-  typeset -g POWERLEVEL9K_DIR_MAX_LENGTH=1
-  typeset -g POWERLEVEL9K_SHORTEN_DIR_LENGTH=5
+  typeset -g POWERLEVEL9K_SHORTEN_STRATEGY=truncate_to_last
+  # typeset -g POWERLEVEL9K_DIR_MAX_LENGTH=1
+  # typeset -g POWERLEVEL9K_SHORTEN_DIR_LENGTH=5
   typeset -g POWERLEVEL9K_SHORTEN_DELIMITER=''
 
   # Prompt symbol: bold arrow, green on success / red on failure.
