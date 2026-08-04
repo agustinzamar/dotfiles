@@ -678,7 +678,7 @@ EOF
   local stub
   stub="$(mktemp -d)"
   PATH="$stub:/usr/bin:/bin" run bash -c \
-    '. "$1"; install_opencode_config' _ "$DOTFILES_DIR/install/opencode-config.sh"
+    '. "$1"; install_opencode_config' _ "$DOTFILES_DIR/install/configs/opencode-config.sh"
   [ "$status" -eq 0 ]
   [[ "$output" == *"opencode not installed, skipping config merge"* ]]
 }
@@ -694,7 +694,7 @@ EOF
   defaults="$repo/config/opencode/opencode.json"
   target="$home/.config/opencode/opencode.json"
   common="$DOTFILES_DIR/install/common.sh"
-  opencode_config="$DOTFILES_DIR/install/opencode-config.sh"
+  opencode_config="$DOTFILES_DIR/install/configs/opencode-config.sh"
   mkdir -p "$(dirname "$defaults")"
   printf '{"tracked":true}\n' >"$defaults"
 

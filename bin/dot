@@ -26,10 +26,10 @@ set -- ${args[@]+"${args[@]}"}
 . "$DOTFILES_DIR/install/links.sh"
 # shellcheck source=../install/git.sh
 . "$DOTFILES_DIR/install/git.sh"
-# shellcheck source=../install/claude-config.sh
-. "$DOTFILES_DIR/install/claude-config.sh"
-# shellcheck source=../install/opencode-config.sh
-. "$DOTFILES_DIR/install/opencode-config.sh"
+# shellcheck source=../install/configs/claude-config.sh
+. "$DOTFILES_DIR/install/configs/claude-config.sh"
+# shellcheck source=../install/configs/opencode-config.sh
+. "$DOTFILES_DIR/install/configs/opencode-config.sh"
 
 sub_help() {
   echo "Usage: $BIN_NAME <command> [--dry-run]"
