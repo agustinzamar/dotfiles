@@ -36,11 +36,8 @@ all_links() {
   cat <<-EOF
 		ghostty|config/ghostty/config|$HOME/.config/ghostty/config
 		ghostty|config/ghostty/config|$HOME/Library/Application Support/Muxy/ghostty.conf
-		ghostty|config/ghostty/theme/catppuccin-mocha.conf|$HOME/.config/ghostty/themes/catppuccin-mocha.conf
-		herdr|config/herdr/herder.toml|$HOME/.config/herdr/config.toml
-		ghostty|config/ghostty/theme/catppuccin-mocha.conf|$HOME/.config/ghostty/themes/catppuccin-mocha.conf
+		ghostty|config/ghostty/theme/catppuccin-frappe.conf|$HOME/.config/ghostty/themes/catppuccin-frappe.conf
 		herdr|config/herdr/herder.toml|$HOME/.config/herdr/config.toml|app-writable
-		ghostty|config/ghostty/theme/catppuccin-mocha.conf|$HOME/.config/ghostty/themes/catppuccin-mocha.conf
 		tmux|config/tmux/tmux.conf|$HOME/.config/tmux/tmux.conf
 		yazi|config/yazi/yazi.toml|$HOME/.config/yazi/yazi.toml
 		yazi|config/yazi/keymap.toml|$HOME/.config/yazi/keymap.toml
