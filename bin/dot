@@ -26,10 +26,10 @@ set -- ${args[@]+"${args[@]}"}
 . "$DOTFILES_DIR/install/links.sh"
 # shellcheck source=../install/git.sh
 . "$DOTFILES_DIR/install/git.sh"
-# shellcheck source=../install/configs/claude-config.sh
-. "$DOTFILES_DIR/install/configs/claude-config.sh"
-# shellcheck source=../install/configs/opencode-config.sh
-. "$DOTFILES_DIR/install/configs/opencode-config.sh"
+# shellcheck source=../install/claude.sh
+. "$DOTFILES_DIR/install/claude.sh"
+# shellcheck source=../install/opencode.sh
+. "$DOTFILES_DIR/install/opencode.sh"
 
 sub_help() {
   echo "Usage: $BIN_NAME <command> [--dry-run]"
@@ -58,8 +58,8 @@ sub_help() {
   echo "   macos                Apply macOS system defaults"
   echo "   dock                 Apply macOS Dock settings"
   echo "   duti                 Set default apps for file types"
-   echo "   install <topic>      Install a topic: $(topic_names)"
-   echo "   install --all        Install everything"
+  echo "   install <topic>      Install a topic: $(topic_names)"
+  echo "   install --all        Install everything"
 }
 
 # Resolve an `install` subcommand or topic name to what runs it. Echoes the

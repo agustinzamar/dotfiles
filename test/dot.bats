@@ -603,7 +603,8 @@ EOF
   local stub
   stub="$(mktemp -d)"
   PATH="$stub:/usr/bin:/bin" run bash -c \
-    '. "$1"; install_opencode_config' _ "$DOTFILES_DIR/install/configs/opencode-config.sh"
+    '. "$1"; install_opencode_config' _ "$DOTFILES_DIR/install/opencode.sh"
+
   [ "$status" -eq 0 ]
   [[ "$output" == *"opencode not installed, skipping config merge"* ]]
 }
@@ -619,13 +620,12 @@ EOF
   defaults="$repo/config/opencode/opencode.json"
   target="$home/.config/opencode/opencode.json"
   common="$DOTFILES_DIR/install/common.sh"
-  opencode_config="$DOTFILES_DIR/install/configs/opencode-config.sh"
+  opencode_config="$DOTFILES_DIR/install/opencode.sh"
   mkdir -p "$(dirname "$defaults")"
   printf '{"tracked":true}\n' >"$defaults"
 
   DOTFILES_DIR="$repo" HOME="$home" DRY_RUN=false PATH="$stub:$PATH" \
     run bash -c '. "$1"; . "$2"; install_opencode_config' _ "$common" "$opencode_config"
-
   [ "$status" -eq 0 ]
   [ -f "$target" ]
   [[ "$(cat "$target")" == *'"tracked":true'* ]]
