@@ -49,12 +49,15 @@ zinit wait lucid light-mode for \
   OMZP::sudo
 
 # Custom plugins (turbo, light mode)
+# fzf-tab must load after compinit but BEFORE widget-wrapping plugins
+# (fast-syntax-highlighting, zsh-autosuggestions), otherwise autosuggestions
+# wraps fzf-tab's widget and Tab both accepts the suggestion AND completes.
 zinit wait lucid light-mode for \
   atinit"zicompinit; zinit cdreplay -q" \
-    zdharma-continuum/fast-syntax-highlighting \
+    Aloxaf/fzf-tab \
+  zdharma-continuum/fast-syntax-highlighting \
   atload"_zsh_autosuggest_start" \
     zsh-users/zsh-autosuggestions \
-  Aloxaf/fzf-tab \
   jirutka/zsh-shift-select
 
 # Emacs mode
@@ -105,6 +108,13 @@ zstyle ':completion:*' menu no
 
 # fzf-tab: preview directories with eza
 zstyle ':fzf-tab:complete:*:*' fzf-preview 'eza -la --icons --group-directories-first --color --no-permissions --no-filesize --no-user $realpath'
+
+# fzf default opts: smart-case matching (case-insensitive unless the query
+# contains uppercase), consistent across Ctrl-T / Ctrl-R / **<TAB> / fzf-tab.
+export FZF_DEFAULT_OPTS='--ansi --layout=reverse --info=inline --smart-case'
+export FZF_CTRL_R_OPTS='--sort'
+export FZF_CTRL_T_OPTS='--preview "bat --color=always --line-range=:100 {} 2>/dev/null || eza -la --icons {}"'
+export FZF_ALT_C_OPTS='--preview "eza -la --icons --color=always --group-directories-first {}"'
 
 typeset -U path PATH
 
