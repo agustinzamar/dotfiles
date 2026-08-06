@@ -12,7 +12,6 @@ cask "slack"
 # Quality of life
 cask "raycast"
 cask "finetune"
-cask "maccy"
 cask "typewhisper"
 cask "rectangle"
 cask "aerospace"
