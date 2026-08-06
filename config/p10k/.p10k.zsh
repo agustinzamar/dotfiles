@@ -127,6 +127,7 @@
     local icon_staged='+'
     local icon_modified='-'
     local icon_untracked='?'
+    local icon_conflicted='!'
     local icon_ahead='⇡'
     local icon_behind='⇣'
     local icon_stash='*'
@@ -136,6 +137,7 @@
     local staged='%70F'
     local modified='%178F'
     local untracked='%244F'
+    local conflicted='%1F'
     local divergence='%141F'
     local stash='%214F'
 
@@ -179,6 +181,9 @@
       res+=" ${divergence}${icon_ahead}${VCS_STATUS_COMMITS_AHEAD}"
 
     # Local file status.
+    (( VCS_STATUS_NUM_CONFLICTED )) &&
+      res+=" ${conflicted}${icon_conflicted}${VCS_STATUS_NUM_CONFLICTED}"
+
     (( VCS_STATUS_NUM_STAGED )) &&
       res+=" ${staged}${icon_staged}${VCS_STATUS_NUM_STAGED}"
 
