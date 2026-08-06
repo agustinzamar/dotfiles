@@ -428,8 +428,8 @@ sub_doctor() {
   check_link config/zsh/.zshrc "$HOME/.zshrc"
   check_link config/p10k/.p10k.zsh "$HOME/.p10k.zsh"
   check_link config/ghostty/config "$HOME/.config/ghostty/config"
-   check_link config/tmux/tmux.conf "$HOME/.config/tmux/tmux.conf"
-   check_link config/aerospace/aerospace.toml "$HOME/.aerospace.toml"
+  check_link config/tmux/tmux.conf "$HOME/.config/tmux/tmux.conf"
+  check_link config/aerospace/aerospace.toml "$HOME/.aerospace.toml"
   if ((failed == 0)); then echo "dotfiles: healthy"; fi
   return "$failed"
 }
