@@ -1,5 +1,6 @@
 # --- Encoding, images, and playback ---
 brew "ffmpeg"
+brew "ffmpegthumbnailer"
 brew "unar"
 brew "imagemagick"
 brew "webp"

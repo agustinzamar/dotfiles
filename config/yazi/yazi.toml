@@ -10,6 +10,14 @@ sort_dir_first = true
 tab_size = 2
 max_width = 600
 max_height = 900
+image_filter = "lanczos3"
+image_quality = 90
+
+[plugin]
+prepend_previewers = [
+  { mime = "video/*", run = "video" },
+  { mime = "application/pdf", run = "pdf" },
+]
 
 [opener]
 edit = [{ run = 'code "$1"', block = true }]
