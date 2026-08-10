@@ -10,7 +10,6 @@
   "explorer.confirmDelete": false,
   "explorer.confirmDragAndDrop": false,
   "workbench.iconTheme": "material-icon-theme",
-  "workbench.colorTheme": "Atom One Dark",
   "workbench.startupEditor": "none",
   "emmet.showSuggestionsAsSnippets": true,
   "emmet.showAbbreviationSuggestions": true,
@@ -138,7 +137,6 @@
   "files.autoSave": "afterDelay",
   "git.autofetch": true,
   "git.enableCommitSigning": true,
-  "window.zoomLevel": 1,
   "window.zoomPerWindow": false,
   "settingsSync.ignoredSettings": [
     "-window.zoomLevel"
@@ -177,5 +175,21 @@
   "diffEditor.experimental.useTrueInlineView": true,
   "diffEditor.hideUnchangedRegions.enabled": true,
   "diffEditor.renderSideBySide": false,
-  "markdown.preview.fontSize": 20
+  "typescript.tsserver.nodePath": "node",
+  "typescript.updateImportsOnPaste.enabled": false,
+  "javascript.updateImportsOnPaste.enabled": false,
+  "typescript.tsserver.maxTsServerMemory": 24576,
+  "workbench.colorTheme": "Catppuccin Mocha",
+  "[glimmer-js]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.foldingStrategy": "indentation"
+  },
+  "[glimmer-ts]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "editor.foldingStrategy": "indentation"
+  },
+  "prettier.documentSelectors": [
+    "**/*.gts",
+    "**/*.gjs"
+  ]
 }
