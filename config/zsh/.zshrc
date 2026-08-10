@@ -6,7 +6,7 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
 fi
 
 # Source exports early so zinit plugins find brewed binaries
-source "${HOME}/.dotfiles-home/.exports"
+source "${HOME}/dotfiles/system/.exports"
 
 # Set nvim as default editor for opencode and other tools
 export EDITOR="nvim"
@@ -23,7 +23,7 @@ fi
 source "${ZINIT_HOME}/zinit.zsh"
 
 # Completions path
-fpath=("${HOME}/.dotfiles-home/completions" $fpath)
+fpath=("${HOME}/dotfiles/system/completions" $fpath)
 
 # Powerlevel10k (not turbo — needed for prompt)
 zinit ice depth=1
@@ -118,8 +118,8 @@ export FZF_ALT_C_OPTS='--preview "eza -la --icons --color=always --group-directo
 typeset -U path PATH
 
 # Load aliases and functions, in filename order. See system/aliases/ and system/functions/ in the dotfiles repo.
-for f in "${HOME}"/.dotfiles-home/aliases/*.zsh(N); do source "$f"; done
-for f in "${HOME}"/.dotfiles-home/functions/*.zsh(N); do source "$f"; done
+for f in "${HOME}"/dotfiles/system/aliases/*.zsh(N); do source "$f"; done
+for f in "${HOME}"/dotfiles/system/functions/*.zsh(N); do source "$f"; done
 
 # Load private custom overrides (not committed, machine-specific)
 for f in "${HOME}"/.dotfiles-custom/exports/*.zsh(N); do source "$f"; done
@@ -128,20 +128,11 @@ for f in "${HOME}"/.dotfiles-custom/functions/*.zsh(N); do source "$f"; done
 
 # Per-tool environment, one file each, sourced in filename order. See
 # system/env/ in the dotfiles repo.
-for f in "${HOME}"/.dotfiles-home/env/*.zsh(N); do source "$f"; done
+for f in "${HOME}"/dotfiles/system/env/*.zsh(N); do source "$f"; done
 
 # Last, so the prompt config wins over anything a tool init changed.
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
-
-# Herd injected PHP 8.4 configuration.
-export HERD_PHP_84_INI_SCAN_DIR="/Users/agustin/Library/Application Support/Herd/config/php/84/"
-
-# Herd injected PHP 8.5 configuration.
-export HERD_PHP_85_INI_SCAN_DIR="/Users/agustin/Library/Application Support/Herd/config/php/85/"
-
-# Herd injected PHP 8.3 configuration.
-export HERD_PHP_83_INI_SCAN_DIR="/Users/agustin/Library/Application Support/Herd/config/php/83/"
 
 # Yazi: force Kitty Graphics Protocol for image previews in Ghostty
 export YAZI_IMAGE_PROTOCOL=kitty

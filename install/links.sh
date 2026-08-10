@@ -7,28 +7,10 @@
 # link/unlink walk the same map, so a path is declared exactly once.
 
 shell_links() {
-  cat <<-EOF
+	cat <<-EOF
 		zsh|config/zsh/.zshrc|$HOME/.zshrc
 		p10k|config/p10k/.p10k.zsh|$HOME/.p10k.zsh
-		exports|system/.exports|$HOME/.dotfiles-home/.exports
 	EOF
-
-  # aliases/, functions/ and env/ hold *.zsh files; completions/ files are
-  # named `_command` rather than *.zsh, so each group needs its own glob.
-  # Globbed rather than listed so each stays one `dot link <group>` target.
-  local group file rel
-  for group in aliases functions env; do
-    for file in "$DOTFILES_DIR"/system/"$group"/*.zsh; do
-      [[ -e "$file" ]] || continue
-      rel=${file#"$DOTFILES_DIR"/}
-      printf '%s|%s|%s\n' "$group" "$rel" "$HOME/.dotfiles-home/${rel#system/}"
-    done
-  done
-  for file in "$DOTFILES_DIR"/system/completions/_*; do
-    [[ -e "$file" ]] || continue
-    rel=${file#"$DOTFILES_DIR"/}
-    printf '%s|%s|%s\n' completions "$rel" "$HOME/.dotfiles-home/${rel#system/}"
-  done
 }
 
 all_links() {
@@ -71,29 +53,12 @@ _walk_links() {
   done < <("$map")
 }
 
-# Everything under .dotfiles-home is ours; renaming a shell file leaves a stale
-# link behind that zsh matches and fails to source on every pass, so sweep it
-# after linking. Matching on $DOTFILES_DIR would miss links that point through
-# ~/.dotfiles or at a previous clone.
-prune_shell_links() {
-  local link
-  for link in "$HOME"/.dotfiles-home/aliases/* \
-    "$HOME"/.dotfiles-home/functions/* \
-    "$HOME"/.dotfiles-home/env/* \
-    "$HOME"/.dotfiles-home/completions/*; do
-    [[ -L "$link" && ! -e "$link" ]] && run rm "$link"
-  done
-  return 0
-}
-
 link_shell() {
   _walk_links shell_links link_file
-  prune_shell_links
 }
 
 link_all() {
   _walk_links all_links link_file
-  prune_shell_links
 }
 
 # Link every target sharing a name (`ghostty` -> two rows). Unknown names fail
@@ -106,7 +71,6 @@ link_named() {
   fi
   log "Linking $name"
   _walk_links all_links link_file "$name"
-  prune_shell_links
 }
 
 unlink_all() { _walk_links all_links unlink_file; }
