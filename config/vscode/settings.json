@@ -131,6 +131,7 @@
     "https://opencode.ai": true,
     "https://raw.githubusercontent.com/devcontainers/spec/": true,
     "https://raw.githubusercontent.com/microsoft/vscode/": true,
+    "https://schema.linearmouse.app": true,
     "https://schemastore.azurewebsites.net/": true,
     "https://www.schemastore.org/": true
   },
