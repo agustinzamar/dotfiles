@@ -44,7 +44,6 @@ zinit wait lucid light-mode for \
   OMZP::fzf \
   OMZP::command-not-found \
   OMZP::per-directory-history/per-directory-history.zsh \
-  OMZP::history-substring-search \
   OMZP::history \
   OMZP::sudo
 
@@ -58,17 +57,20 @@ zinit wait lucid light-mode for \
   zdharma-continuum/fast-syntax-highlighting \
   atload"_zsh_autosuggest_start" \
     zsh-users/zsh-autosuggestions \
+  atload"bindkey '\e[A' history-substring-search-up; bindkey '\e[B' history-substring-search-down" \
+    OMZP::history-substring-search/history-substring-search.zsh \
   jirutka/zsh-shift-select
 
 # Emacs mode
 bindkey -e
 
-# History search with up/down arrows based on current input
+# History search with up/down arrows based on current input.
+# Fallback only: history-substring-search rebinds these in its atload above.
 bindkey '\e[A' history-search-backward
 bindkey '\e[B' history-search-forward
 
 # Bind magic space to expand aliases and history words
-bindkey ' ' magic-space 
+bindkey ' ' magic-space
 
 # Open buffer line in editor (vim, nvim, or code) with Ctrl-X Ctrl-E
 autoload -Uz edit-command-line
@@ -97,12 +99,9 @@ setopt hist_find_no_dups
 setopt appendhistory
 setopt sharehistory
 
-# Completion settings — case-insensitive prefix matching.
-# Kept conservative: only case folding, no partial/substring matchers.
-# ohmyzsh's 'r:|=*' / 'l:|=* r:|=*' enable substring matching but cause false
-# positives (e.g. "ments" matched "Documents", "rel" produced "reload oad").
-# Add them back only if you want fuzzy substring completion.
-zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={a-zA-Z}'
+# Completion settings
+# Case/hyphen-insensitive, then substring anywhere ("back" -> "auditboard-backend")
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z-_}={A-Za-z_-}' 'r:|=*' 'l:|=* r:|=*'
 zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
 zstyle ':completion:*' menu no
 
