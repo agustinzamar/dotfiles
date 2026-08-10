@@ -31,6 +31,7 @@ cask "claude-code@latest"
 cask "codex"
 
 # --- Database and services ---
+brew "mysql"
 brew "mysql-client"
 brew "postgresql"
 brew "redis"
