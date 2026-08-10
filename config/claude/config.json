@@ -1,5 +1,5 @@
 {
-  "defaultModel": "opus[1m]",
+  "defaultModel": "sonnet",
   "teammateMode": "tmux",
   "skipDangerousModePermissionPrompt": false,
   "inputNeededNotifEnabled": false,
