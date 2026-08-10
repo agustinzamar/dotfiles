@@ -42,4 +42,3 @@ cask "orbstack"
 
 # --- Fancy tools ---
 cask "openusage"
-cask "repobar"

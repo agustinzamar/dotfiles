@@ -21,11 +21,7 @@ cask "pearcleaner"
 
 # --- Multiplexers and terminals ---
 brew "tmux"
-brew "zellij"
 brew "herdr"
-brew "kitty"
-brew "alacritty"
-brew "wezterm"
 brew "ghostty"
 
 # --- File extensions and MIME types ---
@@ -34,6 +30,7 @@ brew "bat"
 brew "jq"
 brew "jless"
 brew "yq"
+brew "unar"
 
 # --- Editors --- 
 brew "neovim"
