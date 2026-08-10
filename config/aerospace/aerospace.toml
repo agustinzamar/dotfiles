@@ -60,21 +60,26 @@ on-mode-changed = []
 
 # Automatically assign apps to workspaces on open
 on-window-detected = [
-    # B - Browser (Chrome)
-    { if = 'test %{app-bundle-id} = com.google.Chrome', run = 'move-node-to-workspace B' },
+    # B - Browser (Chrome). Also switch focus to the workspace.
+    { if = 'test %{app-bundle-id} = com.google.Chrome', run = 'move-node-to-workspace B; workspace B' },
 
     # O - Other browsers (Brave, Firefox, Safari)
-    { if = 'test %{app-bundle-id} = com.brave.Browser || test %{app-bundle-id} = org.mozilla.firefox || test %{app-bundle-id} = com.apple.Safari', run = 'move-node-to-workspace O' },
+    { if = 'test %{app-bundle-id} = com.brave.Browser || test %{app-bundle-id} = org.mozilla.firefox || test %{app-bundle-id} = com.apple.Safari', run = 'move-node-to-workspace O; workspace O' },
 
     # W - WhatsApp
-    { if = 'test %{app-bundle-id} = net.whatsapp.WhatsApp', run = 'move-node-to-workspace W' },
+    { if = 'test %{app-bundle-id} = net.whatsapp.WhatsApp', run = 'move-node-to-workspace W; workspace W' },
 
     # C - Code editors (VS Code, PHPStorm)
-    { if = 'test %{app-bundle-id} = com.microsoft.VSCode || test %{app-bundle-id} = com.jetbrains.PhpStorm', run = 'move-node-to-workspace C' },
+    { if = 'test %{app-bundle-id} = com.microsoft.VSCode || test %{app-bundle-id} = com.jetbrains.PhpStorm', run = 'move-node-to-workspace C; workspace C' },
 
     # T - Terminals (Ghostty, Terminal, iTerm2, Kitty, Alacritty, WezTerm)
-    { if = 'test %{app-bundle-id} = com.mitchellh.ghostty || test %{app-bundle-id} = com.apple.Terminal || test %{app-bundle-id} = com.googlecode.iterm2 || test %{app-bundle-id} = net.kovidgoyal.kitty || test %{app-bundle-id} = org.alacritty || test %{app-bundle-id} = com.github.wez.wezterm', run = 'move-node-to-workspace T' },
+    { if = 'test %{app-bundle-id} = com.mitchellh.ghostty || test %{app-bundle-id} = com.apple.Terminal || test %{app-bundle-id} = com.googlecode.iterm2 || test %{app-bundle-id} = net.kovidgoyal.kitty || test %{app-bundle-id} = org.alacritty || test %{app-bundle-id} = com.github.wez.wezterm', run = 'move-node-to-workspace T; workspace T' },
 ]
+
+# Note: on-window-detected only fires when a new window is created.
+# Existing windows aren't re-arranged automatically. To move a window that's
+# already open, focus it and press alt-shift-<workspace-letter> (e.g. alt-shift-b
+# for workspace B), or restart the application.
 
 focus-follows-mouse.enabled = true
 
