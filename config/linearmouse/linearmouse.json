@@ -1,5 +1,5 @@
 {
-  "$schema" : "https:\/\/schema.linearmouse.app\/0.11.4-beta.3",
+  "$schema" : "https:\/\/schema.linearmouse.app\/0.11.4",
   "schemes" : [
     {
       "buttons" : {
@@ -10,7 +10,7 @@
             "right" : "missionControl.spaceRight",
             "up" : "missionControl"
           },
-          "enabled" : false,
+          "enabled" : true,
           "threshold" : 50,
           "trigger" : {
             "button" : {
@@ -88,10 +88,25 @@
       "logitech" : {
         "highResolutionWheel" : true
       },
+      "pointer" : {
+        "acceleration" : "unset",
+        "disableAcceleration" : false,
+        "redirectsToScroll" : false,
+        "speed" : 0.0842
+      },
       "scrolling" : {
+        "acceleration" : 6.13,
+        "distance" : "auto",
         "reverse" : {
+          "horizontal" : false,
           "vertical" : true
-        }
+        },
+        "smoothed" : {
+          "vertical" : {
+            "enabled" : false
+          }
+        },
+        "speed" : 0
       }
     }
   ]
