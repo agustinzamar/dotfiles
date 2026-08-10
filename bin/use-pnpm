@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-# Blocks other JS package managers so pnpm stays the one. npm, yarn, bun and
-# npx in this directory are symlinks here; bin/ precedes Homebrew on PATH, so
-# the first one found wins. Escape hatch: `command /opt/homebrew/bin/npm`.
-tool=$(basename "$0")
-echo "Don't use $tool. Remember to use pnpm ❤️" >&2
-exit 1
