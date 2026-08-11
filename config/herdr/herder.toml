@@ -1,3 +1,4 @@
+onboarding = false
 # This file is copied into ~/.config/herdr/config.toml during installation.
 
 [theme]
@@ -34,7 +35,7 @@ next_agent = "prefix+alt+j"
 focus_agent = "prefix+ctrl+1..9"
 
 [ui.toast]
-delivery = "terminal"
+delivery = "herdr"
 
 [ui.sound]
 enabled = true
