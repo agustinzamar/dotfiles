@@ -1,0 +1,26 @@
+#compdef pnpm
+# Complete package.json script names for `pnpm <TAB>` and `pnpm run <TAB>`.
+# Reads the nearest package.json walking up from $PWD, which is the one pnpm
+# itself resolves. jq instead of `pnpm run`, because a subprocess spawn at TAB
+# latency reads as a hang.
+
+local dir=$PWD pkg=
+while [[ -n $dir ]]; do
+  [[ -f $dir/package.json ]] && { pkg=$dir/package.json; break }
+  [[ $dir == / ]] && break
+  dir=${dir:h}
+done
+
+# Scripts only in script position: `pnpm <script>` or `pnpm run <script>`.
+if [[ -z $pkg ]] || { (( CURRENT != 2 )) && ! { (( CURRENT == 3 )) && [[ $words[2] == (run|run-script) ]] } }; then
+  _default
+  return
+fi
+
+local -a names
+names=(${(f)"$(jq -r '.scripts // {} | keys_unsorted[]' $pkg 2>/dev/null)"})
+names=(${names:#})
+(( ${#names} )) || { _default; return }
+
+_tags scripts
+compadd -a names

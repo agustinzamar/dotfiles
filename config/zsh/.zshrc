@@ -108,6 +108,10 @@ zstyle ':completion:*' menu no
 # fzf-tab: preview directories with eza
 zstyle ':fzf-tab:complete:*:*' fzf-preview 'eza -la --icons --group-directories-first --color --no-permissions --no-filesize --no-user $realpath'
 
+# pnpm script candidates are names, not paths, so the eza preview above would
+# fail on every one. Preview the script body from the nearest package.json.
+zstyle ':fzf-tab:complete:pnpm:*' fzf-preview 'p=$PWD; while [[ $p != / && ! -f $p/package.json ]]; do p=${p:h}; done; jq -r --arg k "$word" ".scripts[\$k] // empty" $p/package.json 2>/dev/null'
+
 # fzf default opts: smart-case matching (case-insensitive unless the query
 # contains uppercase), consistent across Ctrl-T / Ctrl-R / **<TAB> / fzf-tab.
 export FZF_DEFAULT_OPTS='--ansi --layout=reverse --info=inline --smart-case'
