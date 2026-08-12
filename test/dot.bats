@@ -15,7 +15,7 @@ setup() {
   run "$DOT" help
   [ "$status" -eq 0 ]
   [[ "$output" == *"install"* ]]
-  [[ "$output" == *"link zsh"* ]]
+  [[ "$output" == *"link <name>"* ]]
   [[ "$output" == *"doctor"* ]]
 }
 
@@ -63,7 +63,7 @@ setup() {
 
 # The completion parses `dot help`, so a change to the help format silently
 # leaves it offering nothing. The 3-space minimum in the sed regex skips
-# sub-arg lines (`link zsh`, `install <topic>`, `install --all`) which have
+# sub-arg lines (`link <name>`, `install <topic>`, `install --all`) which have
 # only one space between the command word and its argument; without it the
 # completion menu would show `link` and `install` three times each.
 @test "the zsh completion parses every command out of help" {
@@ -75,7 +75,7 @@ setup() {
   [ -n "$from_completion" ]
   [ "$from_help" = "$from_completion" ]
   # No command should appear more than once; that has happened when the
-  # regex picked up sub-arg lines (`link zsh`, `install <topic>`).
+  # regex picked up sub-arg lines (`link <name>`, `install <topic>`).
   local counts duplicate
   counts=$("$DOT" help |
     sed -n 's/^   \([a-z][a-z0-9-]*\)   *\(.*\)$/\1/p' | sort | uniq -d)
@@ -249,9 +249,9 @@ setup() {
   [ "$status" -eq 0 ]
   [[ "$output" == *"install/topics/core"* ]]
 
-  HOME="$(mktemp -d)" run "$DOT" link zsh --dry-run
+  HOME="$(mktemp -d)" run "$DOT" link p10k --dry-run
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Linking shell dotfiles"* ]]
+  [[ "$output" == *"Linking p10k"* ]]
 }
 
 @test "an unknown install target exits 1" {
@@ -299,10 +299,7 @@ setup() {
 # some way, so a newly-added orphan fails loudly instead of sitting silent.
 @test "every tracked config file is wired into an install path" {
   # Consumed directly by their own install/*.sh, not through links.sh.
-  local handled="config/claude/config.json config/opencode/opencode.json config/git/config"
-  # Known gap: app-writable, pending the plan in
-  # docs/superpowers/plans/2026-07-29-git-managed-app-writable-configs.md,
-  # which only covers Claude and OpenCode so far.
+  local handled="config/claude/config.json config/git/config"
   local known_gaps=""
 
   local sources
@@ -378,36 +375,22 @@ setup() {
   [[ "$output" == *"dot link"* ]]
 }
 
-@test "AI skills target selected agent" {
-  run "$DOT" install ai claude --skills --dry-run
+@test "AI skills install for Claude Code" {
+  run "$DOT" install ai --skills --dry-run
   [ "$status" -eq 0 ]
   [[ "$output" == *"--agent claude-code"* ]]
-  [[ "$output" != *"Plugin [claude]"* ]]
+  [[ "$output" != *"Plugin:"* ]]
 }
 
-@test "AI skills remove stale agent directory symlinks" {
+@test "AI skills remove a stale skills directory symlink" {
   local home
   home="$(mktemp -d)"
   mkdir -p "$home/.claude"
   ln -s "$home/missing-skills" "$home/.claude/skills"
 
-  HOME="$home" run "$DOT" install ai claude --skills --dry-run
+  HOME="$home" run "$DOT" install ai --skills --dry-run
   [ "$status" -eq 0 ]
   [[ "$output" == *"rm $home/.claude/skills"* ]]
-}
-
-@test "AI plugins target selected tool" {
-  local stub
-  stub="$(mktemp -d)"
-  printf '#!/bin/sh\nexit 99\n' >"$stub/codex"
-  chmod +x "$stub/codex"
-
-  PATH="$stub:$PATH" run "$DOT" install ai codex --plugins --dry-run
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"codex plugin marketplace add DietrichGebert/ponytail"* ]]
-  [[ "$output" == *"codex plugin install ponytail@ponytail"* ]]
-  [[ "$output" == *"codex plugin install superpowers@openai-curated"* ]]
-  [[ "$output" != *"Installing skill"* ]]
 }
 
 @test "AI plugins install through Claude Code CLI" {
@@ -422,56 +405,42 @@ exit 0
 EOF
   chmod +x "$stub/claude"
 
-  PLUGIN_LOG="$log" PATH="$stub:$PATH" run "$DOT" install ai claude --plugins
+  PLUGIN_LOG="$log" PATH="$stub:$PATH" run "$DOT" install ai --plugins
   [ "$status" -eq 0 ]
   grep -q '^plugin marketplace add DietrichGebert/ponytail$' "$log"
   grep -q '^plugin install ponytail@ponytail$' "$log"
   grep -q '^plugin install superpowers@claude-plugins-official$' "$log"
 }
 
-@test "AI plugins install through Codex CLI" {
-  local stub log
-  stub="$(mktemp -d)"
-  log="$stub/log"
-  cat >"$stub/codex" <<'EOF'
-#!/bin/sh
-printf '%s\n' "$*" >>"$PLUGIN_LOG"
-[ "$1 $2 $3" = "plugin marketplace list" ] && printf '[]\n'
-exit 0
-EOF
-  chmod +x "$stub/codex"
-
-  PLUGIN_LOG="$log" PATH="$stub:$PATH" run "$DOT" install ai codex --plugins
-  [ "$status" -eq 0 ]
-  grep -q '^plugin marketplace add DietrichGebert/ponytail$' "$log"
-  grep -q '^plugin install ponytail@ponytail$' "$log"
-  grep -q '^plugin install superpowers@openai-curated$' "$log"
-}
-
-@test "AI plugins warn when selected CLI is missing" {
+@test "AI plugins warn when the Claude Code CLI is missing" {
   local stub
   stub="$(mktemp -d)"
   ln -s "$(command -v jq)" "$stub/jq"
-  PATH="$stub:/usr/bin:/bin" run /bin/bash "$DOT" install ai claude --plugins
+  PATH="$stub:/usr/bin:/bin" run /bin/bash "$DOT" install ai --plugins
   [ "$status" -eq 0 ]
   [[ "$output" == *"Claude Code CLI not found; skipping plugins"* ]]
 }
 
-@test "AI plugins report no OpenCode V2 plugins" {
-  run "$DOT" install ai opencode --plugins --dry-run
+@test "AI accepts both customization flags" {
+  local stub
+  stub="$(mktemp -d)"
+  printf '#!/bin/sh\nexit 0\n' >"$stub/claude"
+  chmod +x "$stub/claude"
+
+  PATH="$stub:$PATH" run "$DOT" install ai --skills --plugins --dry-run
   [ "$status" -eq 0 ]
-  [[ "$output" == *"No OpenCode V2-compatible plugins configured"* ]]
+  [[ "$output" == *"--agent claude-code"* ]]
+  [[ "$output" == *"Plugin: ponytail"* ]]
 }
 
-@test "AI accepts both customization flags" {
-  run "$DOT" install ai opencode --skills --plugins --dry-run
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"--agent opencode"* ]]
-  [[ "$output" == *"No OpenCode V2-compatible plugins configured"* ]]
+@test "AI rejects an unknown flag" {
+  run "$DOT" install ai --nope
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Usage: dot install ai"* ]]
 }
 
 @test "AI install supports macOS system bash" {
-  run /bin/bash "$DOT" install ai claude --skills --dry-run
+  run /bin/bash "$DOT" install ai --skills --dry-run
   [ "$status" -eq 0 ]
   [[ "$output" == *"--agent claude-code"* ]]
 }
@@ -569,42 +538,6 @@ EOF
   [ "$status" -eq 0 ]
   [ "$(readlink "$target")" = "$source" ]
   [ "$(cat "$target")" = '{"tracked":true}' ]
-}
-
-# The existence check used to be `command opencode2` — a typo missing `-v`
-# that, on a machine with the real `opencode2` binary installed, launched its
-# interactive TUI instead of testing for it. Both directions get covered:
-# absent must skip cleanly, present must actually merge.
-@test "opencode config merge skips cleanly when opencode is not on PATH" {
-  local stub
-  stub="$(mktemp -d)"
-  PATH="$stub:/usr/bin:/bin" run bash -c \
-    '. "$1"; install_opencode_config' _ "$DOTFILES_DIR/install/opencode.sh"
-
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"opencode not installed, skipping config merge"* ]]
-}
-
-@test "opencode config merge writes defaults when opencode is on PATH" {
-  local stub home repo defaults target common opencode_config
-  stub="$(mktemp -d)"
-  printf '#!/bin/sh\nexit 0\n' >"$stub/opencode"
-  chmod +x "$stub/opencode"
-
-  home="$(mktemp -d)"
-  repo="$(mktemp -d)"
-  defaults="$repo/config/opencode/opencode.json"
-  target="$home/.config/opencode/opencode.json"
-  common="$DOTFILES_DIR/install/common.sh"
-  opencode_config="$DOTFILES_DIR/install/opencode.sh"
-  mkdir -p "$(dirname "$defaults")"
-  printf '{"tracked":true}\n' >"$defaults"
-
-  DOTFILES_DIR="$repo" HOME="$home" DRY_RUN=false PATH="$stub:$PATH" \
-    run bash -c '. "$1"; . "$2"; install_opencode_config' _ "$common" "$opencode_config"
-  [ "$status" -eq 0 ]
-  [ -f "$target" ]
-  [[ "$(cat "$target")" == *'"tracked":true'* ]]
 }
 
 # check_link previously had no coverage at all: a stale or foreign symlink

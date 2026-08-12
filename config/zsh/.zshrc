@@ -140,3 +140,7 @@ for f in "${HOME}"/dotfiles/system/env/*.zsh(N); do source "$f"; done
 
 # Yazi: force Kitty Graphics Protocol for image previews in Ghostty
 export YAZI_IMAGE_PROTOCOL=kitty
+
+# Herd's installer appends HERD_PHP_*_INI_SCAN_DIR here, hardcoded to this
+# machine's $HOME. system/env/20-herd.zsh already sets them portably — delete
+# any block Herd re-adds below rather than committing it.

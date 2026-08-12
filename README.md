@@ -48,7 +48,6 @@ change, and `dot help` names it on the `install <topic>` line.
 | `install` | Everything below, in order (`macos` covers `dock`) |
 | `brew` | Install Homebrew and every topic |
 | `link` | Symlink every config into place |
-| `link zsh` | Symlink the shell configs only |
 | `link <name>` | Symlink one config (`ghostty`, `tmux`, `yazi`, …) |
 | `unlink` | Remove symlinks that point into this repo |
 | `zsh` | Install Oh My Zsh, its theme and plugins |
@@ -71,9 +70,8 @@ dot install --dry-run
 dot link --dry-run
 ```
 
-`make` targets (`install`, `link`, `unlink`, `update`, `doctor`, `backup`,
-`test`, `check`, `lint`) are thin aliases for the same commands. A bare `make`
-is the default target (`install`) and is the one-shot first init.
+A bare `make` is the one-shot first init (`dot install`). The Makefile also
+carries `make test`, `make check` and `make lint`, which CI runs.
 
 ## Layout
 
@@ -81,7 +79,6 @@ is the default target (`install`) and is the one-shot first init.
   whatever `install/topics/` holds
 - `install/common.sh` — `run`, `log`, `link_file`; the only copies
 - `install/topics/` — one Brewfile per package group; each is also a command.
-- `install/lists/` — the non-Brewfile package lists (`Codefile`, `duti`)
 - `install/*.sh` — the per-topic install steps
 - `config/` — application configuration
 - `system/` — shell aliases, functions, exports, `env/`, `completions/`, `defaults/`
@@ -106,11 +103,6 @@ same-named files do not collide.
 
 Git identity is committed in `config/git/config`; nothing is generated or
 prompted for.
-
-No secret is written to disk. `config/opencode/opencode.json` passes
-`{env:GITHUB_PAT}` to the shadcn MCP server, which OpenCode expands from the
-environment at runtime — export it from wherever you keep it. Unset, the server
-runs without a GitHub token.
 
 Shell configuration is loaded directly from `~/dotfiles/system/`.
 `~/.dotfiles-custom/` is sourced if present, for anything that should not be

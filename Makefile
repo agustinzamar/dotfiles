@@ -8,28 +8,15 @@ SHELL := /bin/bash
 # with, so a bare `dot` is not found.
 DOT := $(DOTFILES_DIR)/bin/dot
 
-SCRIPTS := bin/dot install/*.sh system/defaults/*.sh install.sh remote-install.sh
+SCRIPTS := bin/dot install/*.sh system/defaults/*.sh remote-install.sh
 
+# Everything else is `dot <command>` — this file only carries the first-init
+# entry point and the lint targets CI runs.
 # `install` and `test` are also directory names, so these must stay phony.
-.PHONY: install link unlink update doctor backup test check lint
+.PHONY: install test check lint
 
 install:
 	$(DOT) install
-
-link:
-	$(DOT) link
-
-unlink:
-	$(DOT) unlink
-
-update:
-	$(DOT) update
-
-doctor:
-	$(DOT) doctor
-
-backup:
-	$(DOT) backup
 
 test:
 	$(DOT) test

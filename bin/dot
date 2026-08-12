@@ -28,8 +28,6 @@ set -- ${args[@]+"${args[@]}"}
 . "$DOTFILES_DIR/install/git.sh"
 # shellcheck source=../install/claude.sh
 . "$DOTFILES_DIR/install/claude.sh"
-# shellcheck source=../install/opencode.sh
-. "$DOTFILES_DIR/install/opencode.sh"
 
 sub_help() {
   echo "Usage: $BIN_NAME <command> [--dry-run]"
@@ -46,7 +44,6 @@ sub_help() {
   echo
   echo "Config links:"
   echo "   link             Symlink every config into place"
-  echo "   link zsh         Symlink shell configs only (.zshrc, p10k, exports, shell groups)"
   echo "   link <name>      Symlink one config: $(link_names)"
   echo
   echo "Install (each also works as \`dot <name>\`, no \`install\` needed):"
@@ -71,7 +68,7 @@ resolve_install_target() {
   local sub="sub_$cmd"
   if declare -F "$sub" >/dev/null; then
     printf '%s' "$sub"
-  elif topic_path "$cmd" >/dev/null; then
+  elif topic_path "$cmd"; then
     printf 'topic:%s' "$cmd"
   else
     return 1
@@ -100,7 +97,7 @@ sub_install() {
     "" | bootstrap)
       sub_bootstrap
       local phase failures=()
-      for phase in link claude_config opencode_config; do
+      for phase in link claude_config; do
         "sub_$phase" || failures+=("$phase")
       done
       if ((${#failures[@]})); then
@@ -125,109 +122,60 @@ sub_install() {
   esac
 }
 
+# Skills and plugins for Claude Code, from the ai/*.json manifests.
 sub_install_ai() {
+  local skills_dir="$HOME/.claude/skills"
+
   _install_skills() {
-    local tool="$1"
-    local IFS='|' dir
-    for dir in $link_dirs; do
-      [[ -L "$dir" && ! -e "$dir" ]] && run rm "$dir"
-    done
+    # A dangling symlink from a previous run would make link_file back up a
+    # broken target instead of replacing it.
+    [[ -L "$skills_dir" && ! -e "$skills_dir" ]] && run rm "$skills_dir"
 
-    local manifest="$DOTFILES_DIR/ai/skills.json"
-    if [[ -f "$manifest" ]]; then
-      local source skill
-      while IFS=$'\t' read -r source skill; do
-        [[ -z "$source" ]] && continue
-        if [[ -z "$skill" || "$skill" == "null" ]]; then
-          log "Installing skill [$tool]: $source"
-          run pnpm dlx skills add "$source" --agent "$agent" -y
-        else
-          log "Installing skill [$tool]: $source/$skill"
-          run pnpm dlx skills add "$source" --agent "$agent" --skill "$skill" -y
-        fi
-      done < <(jq -r '.skills[] | [.source, (.skill // null)] | @tsv' "$manifest" 2>/dev/null)
-    fi
+    local source skill
+    while IFS=$'\t' read -r source skill; do
+      [[ -n "$source" ]] || continue
+      if [[ -z "$skill" || "$skill" == "null" ]]; then
+        log "Skill: $source"
+        run pnpm dlx skills add "$source" --agent claude-code -y
+      else
+        log "Skill: $source/$skill"
+        run pnpm dlx skills add "$source" --agent claude-code --skill "$skill" -y
+      fi
+    done < <(jq -r '.skills[] | [.source, (.skill // null)] | @tsv' \
+      "$DOTFILES_DIR/ai/skills.json" 2>/dev/null)
 
-    [[ -d "$DOTFILES_DIR/ai/skills" && "$(ls -A "$DOTFILES_DIR/ai/skills" 2>/dev/null)" ]] || return 0
-    for dir in $link_dirs; do
-      link_file "ai/skills" "$dir"
-    done
+    [[ -n "$(ls -A "$DOTFILES_DIR/ai/skills" 2>/dev/null)" ]] || return 0
+    link_file "ai/skills" "$skills_dir"
   }
 
   _install_plugins() {
-    local manifest="$DOTFILES_DIR/ai/plugins.json"
-    [[ -f "$manifest" ]] || return 0
+    if ! is_executable claude; then
+      echo "Claude Code CLI not found; skipping plugins" >&2
+      return 0
+    fi
 
-    _install_cli_plugins() {
-      local tool="$1" cli="$2" label="$3"
-      if ! is_executable "$cli"; then
-        echo "$label CLI not found; skipping plugins" >&2
-        return 0
+    local name repo install_cmd
+    while IFS='|' read -r name repo install_cmd; do
+      [[ -n "$install_cmd" ]] || continue
+      log "Plugin: $name ($repo)"
+      if "$DRY_RUN"; then
+        echo "+ $install_cmd"
+      else
+        eval "$install_cmd"
       fi
-
-      local name repo install_cmd
-      while IFS='|' read -r name repo install_cmd; do
-        [[ -n "$install_cmd" ]] || continue
-        log "Plugin [$tool]: $name ($repo)"
-        if "$DRY_RUN"; then
-          echo "+ $install_cmd"
-        else
-          eval "$install_cmd"
-        fi
-      done < <(jq -r --arg tool "$tool" '.plugins[] | select(.install[$tool]) |
-        [.name, .repo, .install[$tool]] | join("|")' "$manifest")
-    }
-
-    case "$agent" in
-      claude-code) _install_cli_plugins claude-code claude "Claude Code" ;;
-      codex) _install_cli_plugins codex codex Codex ;;
-      opencode) log "No OpenCode V2-compatible plugins configured" ;;
-      '*')
-        _install_cli_plugins claude-code claude "Claude Code" || return
-        _install_cli_plugins codex codex Codex || return
-        log "No OpenCode V2-compatible plugins configured"
-        ;;
-    esac
+    done < <(jq -r '.plugins[] | select(.install["claude-code"]) |
+      [.name, .repo, .install["claude-code"]] | join("|")' \
+      "$DOTFILES_DIR/ai/plugins.json" 2>/dev/null)
   }
 
-  # Parse: dot install ai [tool] [--skills|--plugins].
-  # Without a flag, both skills and plugins run. Without a tool, all.
-  local target="${1:-all}"
-  shift 2>/dev/null || true
-  # If the first positional looks like a flag (no tool given),
-  # treat it as target=all and push it back as a flag.
-  [[ "$target" == "--"* ]] && {
-    set -- "$target" "$@"
-    target=all
-  }
-
-  local agent link_dirs
-  case "$target" in
-    all)
-      agent='*'
-      link_dirs="$HOME/.claude/skills|$HOME/.agents/skills"
-      ;;
-    claude)
-      agent=claude-code
-      link_dirs="$HOME/.claude/skills"
-      ;;
-    codex | opencode)
-      agent="$target"
-      link_dirs="$HOME/.agents/skills"
-      ;;
-    *)
-      echo "Usage: dot install ai [all|claude|codex|opencode] [--skills|--plugins]" >&2
-      return 1
-      ;;
-  esac
-
+  # dot install ai [--skills|--plugins]; neither flag runs both.
   local do_skills=false do_plugins=false arg
   for arg in "$@"; do
     case "$arg" in
       --skills) do_skills=true ;;
       --plugins) do_plugins=true ;;
       *)
-        echo "unknown flag: $arg" >&2
+        echo "Usage: dot install ai [--skills|--plugins]" >&2
         return 1
         ;;
     esac
@@ -237,15 +185,15 @@ sub_install_ai() {
     do_plugins=true
   }
 
-  $do_skills && _install_skills "$target"
-  $do_plugins && _install_plugins "$target"
+  $do_skills && _install_skills
+  $do_plugins && _install_plugins
   return 0
 }
 
 sub_full() {
   log "Full install"
   local phase failures=()
-  for phase in bootstrap brew link zsh code macos duti git claude_config opencode_config; do
+  for phase in bootstrap brew link zsh code macos duti git claude_config; do
     "sub_$phase" || failures+=("$phase")
   done
 
@@ -354,11 +302,6 @@ sub_claude_config() {
   install_claude_config
 }
 
-sub_opencode_config() {
-  log "Installing Opencode defaults"
-  install_opencode_config
-}
-
 sub_link() {
   local target="${1:-}"
   shift 2>/dev/null || true
@@ -367,14 +310,9 @@ sub_link() {
       log "Linking dotfiles"
       link_all
       ;;
-    zsh | shell)
-      log "Linking shell dotfiles"
-      link_shell
-      ;;
     help)
       echo "Usage: $BIN_NAME link [target]"
       echo "   (no target)  Symlink every config into place"
-      echo "   zsh          Symlink the shell configs only"
       echo "   <name>       Symlink one config: $(link_names)"
       ;;
     *)
@@ -395,14 +333,6 @@ sub_macos() {
 
 sub_dock() {
   apply_defaults "$DOTFILES_DIR/system/defaults/dock.sh"
-}
-
-sub_chrome() {
-  apply_defaults "$DOTFILES_DIR/system/defaults/chrome.sh"
-}
-
-sub_rectangle() {
-  apply_defaults "$DOTFILES_DIR/system/defaults/rectangle.sh"
 }
 
 sub_doctor() {

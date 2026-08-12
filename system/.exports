@@ -8,12 +8,7 @@ export PATH="/opt/homebrew/sbin:$PATH"
 # This repo's own CLI (dot, is-*). ~/dotfiles is the canonical clone path.
 export PATH="$HOME/dotfiles/bin:$PATH"
 
-# pnpm
-export PNPM_HOME="$HOME/Library/pnpm"
-case ":$PATH:" in
-  *":$PNPM_HOME:"*) ;;
-  *) export PATH="$PNPM_HOME:$PATH" ;;
-esac
+# pnpm lives in system/env/10-path.zsh.
 
 # pipx
 export PATH="$PATH:$HOME/.local/bin"
@@ -24,14 +19,4 @@ if [[ -d "/Users/Shared/DBngin/mysql" ]]; then
     export PATH="$dir:$PATH"
   done
 fi
-
-# Preferred editor
-if command -v nvim >/dev/null 2>&1; then
-  if [[ -n $SSH_CONNECTION ]]; then
-    export EDITOR='vim'
-  else
-    export EDITOR='nvim'
-  fi
-fi
-
 

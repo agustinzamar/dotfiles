@@ -6,16 +6,10 @@
 # or a group. A name may appear more than once (ghostty serves two targets).
 # link/unlink walk the same map, so a path is declared exactly once.
 
-shell_links() {
-	cat <<-EOF
+all_links() {
+  cat <<-EOF
 		zsh|config/zsh/.zshrc|$HOME/.zshrc
 		p10k|config/p10k/.p10k.zsh|$HOME/.p10k.zsh
-	EOF
-}
-
-all_links() {
-  shell_links
-  cat <<-EOF
 		ghostty|config/ghostty/config|$HOME/.config/ghostty/config
 		ghostty|config/ghostty/config|$HOME/Library/Application Support/Muxy/ghostty.conf
 		ghostty|config/ghostty/theme/catppuccin-frappe.conf|$HOME/.config/ghostty/themes/catppuccin-frappe.conf
@@ -34,6 +28,7 @@ all_links() {
 		hunk|config/hunk/config.toml|$HOME/.config/hunk/config.toml
 		lazygit|config/lazygit/config.yml|$HOME/.config/lazygit/config.yml
 		git|config/git/ignore|$HOME/.config/git/ignore
+		claude|config/claude/statusline-command.sh|$HOME/.claude/statusline-command.sh
 	EOF
 }
 
@@ -50,10 +45,6 @@ _walk_links() {
     [[ -z "$filter" || "$name" == "$filter" ]] || continue
     "$action" "$source" "$target" "$mode"
   done < <("$map")
-}
-
-link_shell() {
-  _walk_links shell_links link_file
 }
 
 link_all() {

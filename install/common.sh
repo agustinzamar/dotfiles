@@ -108,30 +108,18 @@ TOPIC_DIR="$DOTFILES_DIR/install/topics"
 
 # `return 0` because a glob that ends on a non-file would otherwise leave the
 # function's status non-zero, which `set -e` treats as a failure.
-_topic_names() {
+topics() {
   local file
-  for file in "$1"/*; do
+  for file in "$TOPIC_DIR"/*; do
     [[ -f "$file" ]] && basename "$file"
   done
   return 0
 }
 
-topics() { _topic_names "$TOPIC_DIR"; }
-
 # Every topic name a user can install by name, comma-joined.
-topic_names() {
-  topics | paste -sd, - | sed 's/,/, /g'
-  return 0
-}
+topic_names() { topics | paste -sd, - | sed 's/,/, /g'; }
 
-topic_path() {
-  local dir="$TOPIC_DIR/$1"
-  [[ -f "$dir" ]] && {
-    printf '%s' "$dir"
-    return 0
-  }
-  return 1
-}
+topic_path() { [[ -f "$TOPIC_DIR/$1" ]]; }
 
 # Run a single Brewfile by absolute path, logging under the given label.
 run_topic_file() {
