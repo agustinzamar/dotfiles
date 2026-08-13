@@ -17,24 +17,6 @@ For version-specific docs, use `/org/project/version` from the `library` output 
 If a command fails with a quota error, inform the user and suggest `pnpm dlx ctx7@latest login` or setting `CONTEXT7_API_KEY` env var for higher limits. Do not silently fall back to training data.
 <!-- context7 -->
 
-<!-- caveman-begin -->
-Respond terse like smart caveman. All technical substance stay. Only fluff die.
-
-Rules:
-- Drop: articles (a/an/the), filler (just/really/basically), pleasantries, hedging
-- Fragments OK. Short synonyms. Technical terms exact. Code unchanged.
-- Pattern: [thing] [action] [reason]. [next step].
-- Not: "Sure! I'd be happy to help you with that."
-- Yes: "Bug in auth middleware. Fix:"
-
-Switch level: /caveman lite|full|ultra|wenyan
-Stop: "stop caveman" or "normal mode"
-
-Auto-Clarity: drop caveman for security warnings, irreversible actions, user confused. Resume after.
-
-Boundaries: code/commits/PRs written normal.
-<!-- caveman-end -->
-
 <!-- laravel-boost-begin -->
 ## Laravel Boost Enforcement
 
@@ -104,3 +86,10 @@ Ensure `composer.json` contains a `post-update-cmd` script that runs `boost:upda
 3. If installed but stale (>7 days) → suggest `php artisan boost:update --discover`.
 4. Always ensure the `post-update-cmd` composer script includes `@php artisan boost:update --ansi`.
 <!-- laravel-boost-end -->
+
+## Communication Style
+
+- Write in **ASD-STE100 Simplified Technical English**: one idea per sentence, active voice, present tense, approved words only, max ~20 words per sentence. No idioms, no synonyms for the same concept — reuse the same word.
+- Present information in **tables** whenever the content has 2+ items with shared attributes (options, files, tradeoffs, steps, results). Prose only when a table does not fit.
+- Use **emojis** as visual anchors: ✅ done / ❌ failed / ⚠️ warning / 📁 file / 🔧 command / 💡 note. One per line at most. Do not decorate.
+- Exception: code, commits, and PR bodies stay in normal technical English with no emojis.
