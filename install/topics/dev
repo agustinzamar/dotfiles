@@ -26,7 +26,6 @@ brew "swiftformat"
 # --- Agents and terminal ---
 brew "anomalyco/tap/opencode"
 
-cask "muxy-app/tap/muxy"
 cask "claude-code@latest"
 cask "codex"
 
