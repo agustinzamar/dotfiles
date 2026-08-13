@@ -10,21 +10,21 @@ if ! command -v dockutil >/dev/null 2>&1; then
 fi
 
 DOCK_APPS=(
+  "/Applications/System Settings.app"
   "/Applications/WhatsApp.app"
   "/Applications/Discord.app"
+  "/Applications/Zoom.app"
+  "/Applications/Slack.app"
+  "/Applications/Google Chrome.app"
   "/Applications/Claude.app"
   "/Applications/OrbStack.app"
-  "/Applications/Google Chrome.app"
-  "/Applications/Muxy.app"
-  "/Applications/Ghostty.app"
+  "/Applications/Docker Desktop.app"
   "/Applications/Visual Studio Code.app"
+  "/Applications/Ghostty.app"
   "/Applications/PhpStorm.app"
 )
 
 dockutil --no-restart --remove all
-
-# if/fi rather than `&&`: sourced under `set -e`, a final missing app would
-# abort the whole run. Apps can be absent when a cask has yet to install.
 
 # Ensure a single Finder entry at the beginning. dockutil may or may not remove
 # it with `--remove all`, so explicitly remove any existing entry first.
@@ -33,6 +33,9 @@ if [[ -d "/System/Library/CoreServices/Finder.app" ]]; then
   dockutil --no-restart --add "/System/Library/CoreServices/Finder.app" --position 1
 fi
 
+
+# if/fi rather than `&&`: sourced under `set -e`, a final missing app would
+# abort the whole run. Apps can be absent when a cask has yet to install.
 for dock_app in "${DOCK_APPS[@]}"; do
   if [[ -d "$dock_app" ]]; then
     dockutil --no-restart --add "$dock_app"
