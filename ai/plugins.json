@@ -19,16 +19,6 @@
         "codex": "codex plugin install superpowers@openai-curated",
         "opencode": "superpowers@git+https://github.com/obra/superpowers.git"
       }
-    },
-    {
-      "name": "caveman",
-      "repo": "juliusbrussee/caveman",
-      "homepage": "https://github.com/juliusbrussee/caveman",
-      "install": {
-        "claude-code": "claude plugin marketplace add JuliusBrussee/caveman && claude plugin install caveman@caveman",
-        "codex": "codex plugin marketplace add JuliusBrussee/caveman && codex plugin install caveman@caveman",
-        "opencode": "npx skills add JuliusBrussee/caveman -a opencode --all --yes"
-      }
     }
   ]
 }
