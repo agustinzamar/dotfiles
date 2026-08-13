@@ -59,6 +59,10 @@
     {
       "source": "wshobson/agents",
       "skill": "typescript-advanced-types"
+    },
+    {
+      "source": "mattpocock/skills",
+      "skill": "handoff"
     }
   ]
 }
