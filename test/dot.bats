@@ -238,6 +238,18 @@ setup() {
   [ "$output" = "$DOTFILES_DIR" ]
 }
 
+# An exported secret is inherited by every command the shell runs. Tokens go to
+# the one process that needs them, through a wrapper in system/functions/.
+@test "no shell file exports a secret" {
+  local hits
+  hits=$(grep -rlE '^ *export [A-Z_]*(TOKEN|SECRET|PASSWORD|API_KEY)' \
+    "$DOTFILES_DIR"/system "$DOTFILES_DIR"/config 2>/dev/null || true)
+  [ -z "$hits" ] || {
+    echo "exports a secret into every child process: $hits"
+    return 1
+  }
+}
+
 # The phase list drives the loop that collects failures; if a phase is dropped
 # from it, install silently stops doing that work.
 # topics/code and topics/duti are a VS Code extension list and a duti mapping
