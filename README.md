@@ -12,7 +12,11 @@ curl -fsSL https://raw.githubusercontent.com/agustinzamar/dotfiles/main/remote-i
 ```
 
 It falls back to a tarball when git is not there yet, which is the case before
-the Xcode command line tools are installed. Or clone it yourself:
+the Xcode command line tools are installed.
+
+That line runs whatever `main` serves at that moment. Open
+[`remote-install.sh`](remote-install.sh) before you pipe it — it is 37 lines —
+or skip the pipe entirely and clone, which does the same work:
 
 ```bash
 git clone git@github.com:agustinzamar/dotfiles.git ~/dotfiles
@@ -70,6 +74,12 @@ dot ai opencode --plugins          # one agent, plugins only
 dot link agents                    # point the agents at ai/AGENTS.md
 dot claude_config                  # merge Claude Code defaults
 ```
+
+An `install` value is a shell command, run as you, with network access. That
+makes these two files the trust boundary of this repo — more than the install
+one-liner, which only fetches code you can read here. Read every command you
+paste in, from a README or anywhere else, and treat a change to them like a
+change to a script, not like a change to a config value.
 
 ## Usage
 

@@ -17,6 +17,10 @@
 #
 # Every generated command installs globally and without prompting, and every
 # CLI involved is idempotent, so `dot ai` is safe to re-run.
+#
+# An `install` value is executed as a shell command, as you, with the network
+# available. These manifests are the trust boundary of this repo: read anything
+# you paste into them the way you would read a script.
 
 # The one place an agent is declared: `<manifest name>:<executable>`, where the
 # executable is what proves the agent is on this machine. Adding an agent is
