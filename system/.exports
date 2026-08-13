@@ -5,8 +5,9 @@ export LANG=en_US.UTF-8
 export PATH="/opt/homebrew/bin:$PATH"
 export PATH="/opt/homebrew/sbin:$PATH"
 
-# This repo's own CLI (dot, is-*). ~/dotfiles is the canonical clone path.
-export PATH="$HOME/dotfiles/bin:$PATH"
+# This repo's own CLI (dot, is-*). .zshrc exports DOTFILES_DIR from its own
+# resolved path before sourcing this; the default covers any other caller.
+export PATH="${DOTFILES_DIR:-$HOME/dotfiles}/bin:$PATH"
 
 # pnpm lives in system/env/10-path.zsh.
 

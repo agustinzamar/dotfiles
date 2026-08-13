@@ -153,11 +153,17 @@ setup() {
 @test "every package is declared with the right type" {
   command -v brew >/dev/null || skip "brew not installed"
 
-  # Two `brew` calls rather than one per package: `brew info` costs a second
-  # each, these are instant and give the complete name lists.
-  local formulae casks
-  formulae=$(brew search --formula '' 2>/dev/null) || skip "brew formulae unavailable"
-  casks=$(brew search --cask '' 2>/dev/null) || skip "brew casks unavailable"
+  # Prefer the API name caches. `brew search --cask ''` exits 1 as soon as one
+  # third-party tap is untrusted, which turned this test into a permanent skip
+  # on a real machine — and that is how `brew "ghostty"` (a cask) survived.
+  local formulae casks api="${HOMEBREW_CACHE:-$HOME/Library/Caches/Homebrew}/api"
+  if [ -r "$api/formula_names.txt" ] && [ -r "$api/cask_names.txt" ]; then
+    formulae=$(<"$api/formula_names.txt")
+    casks=$(<"$api/cask_names.txt")
+  else
+    formulae=$(brew search --formula '' 2>/dev/null) || skip "brew formulae unavailable"
+    casks=$(brew search --cask '' 2>/dev/null) || skip "brew casks unavailable"
+  fi
 
   local file line name wrong=0
   for file in "$DOTFILES_DIR"/install/topics/*; do
@@ -174,18 +180,22 @@ setup() {
       # added, which CI does not do. Nothing to check against.
       case "$name" in */*) continue ;; esac
 
+      # Only a definite mismatch fails: the name is declared one way and exists
+      # the other way. A name in neither list is an alias (`7zip` ->
+      # `sevenzip`, `postgresql` -> `postgresql@18`) or lives in a tap, and
+      # both of those install fine.
       case "$line" in
         'brew "'*)
-          grep -qxF "$name" <<<"$formulae" || {
-            echo "$(basename "$file"): brew \"$name\" is not a formula"
+          if ! grep -qxF "$name" <<<"$formulae" && grep -qxF "$name" <<<"$casks"; then
+            echo "$(basename "$file"): brew \"$name\" is a cask"
             wrong=1
-          }
+          fi
           ;;
         'cask "'*)
-          grep -qxF "$name" <<<"$casks" || {
-            echo "$(basename "$file"): cask \"$name\" is not a cask"
+          if ! grep -qxF "$name" <<<"$casks" && grep -qxF "$name" <<<"$formulae"; then
+            echo "$(basename "$file"): cask \"$name\" is a formula"
             wrong=1
-          }
+          fi
           ;;
       esac
     done < "$file"
@@ -212,6 +222,20 @@ setup() {
   # two real topics: a substring that also occurs in "failed" would pass here
   # even when only one topic ran.
   [[ "$output" == *"dev"* && "$output" == *"media"* ]]
+}
+
+# .zshrc runs before there is a prompt, so it must not clone anything, and it
+# must find the repo from its own path rather than assuming ~/dotfiles.
+@test "zshrc installs nothing and hardcodes no repo path" {
+  local zshrc="$DOTFILES_DIR/config/zsh/.zshrc"
+  ! grep -qE 'git clone' "$zshrc"
+  ! grep -qE '\$\{?HOME\}?/dotfiles' "$zshrc"
+  grep -q 'DOTFILES_DIR=' "$zshrc"
+
+  # zsh resolves it through the symlink that `dot link zsh` puts at ~/.zshrc.
+  run zsh -c "source '$zshrc' >/dev/null 2>&1; print -- \$DOTFILES_DIR"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$DOTFILES_DIR" ]
 }
 
 # The phase list drives the loop that collects failures; if a phase is dropped

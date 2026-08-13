@@ -23,7 +23,7 @@ cask "pearcleaner"
 # --- Multiplexers and terminals ---
 brew "tmux"
 brew "herdr"
-brew "ghostty"
+cask "ghostty"
 
 # --- File extensions and MIME types ---
 brew "7zip"

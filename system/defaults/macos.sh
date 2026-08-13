@@ -158,6 +158,9 @@ defaults write com.apple.screencapture location -string "${SCREENSHOTS_FOLDER}"
 # Save screenshots in PNG format (other options: BMP, GIF, JPG, PDF, TIFF)
 defaults write com.apple.screencapture type -string "png"
 
+# Save screenshots to the Clipboard instead of saving to a file
+defaults write com.apple.screencapture copy-to-clipboard -bool true
+
 # Enable subpixel font rendering on non-Apple LCDs
 defaults write NSGlobalDomain AppleFontSmoothing -int 2
 

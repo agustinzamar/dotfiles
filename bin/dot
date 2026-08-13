@@ -235,6 +235,16 @@ sub_brew() {
 sub_zsh() {
   log "Setting up Zsh"
 
+  # .zshrc only sources zinit; installing it from an interactive shell would
+  # mean cloning from GitHub before the prompt can be drawn.
+  local zinit_home="${XDG_DATA_HOME:-$HOME/.local/share}/zinit/zinit.git"
+  if [[ -r "$zinit_home/zinit.zsh" ]]; then
+    echo 'zinit already installed, skipping'
+  else
+    run mkdir -p "$(dirname "$zinit_home")"
+    run git clone --depth=1 https://github.com/zdharma-continuum/zinit.git "$zinit_home"
+  fi
+
   # Handle fzf post install script
   local brew_prefix
   brew_prefix=$(brew --prefix 2>/dev/null || true)
@@ -249,12 +259,20 @@ sub_zsh() {
 sub_code() {
   if is_executable code; then
     log "Installing VS Code extensions"
-    local installed extension
+    local installed extension present=0 added=0
     installed=$(code --list-extensions 2>/dev/null | tr '[:upper:]' '[:lower:]')
     while read -r extension; do
-      grep -qxF "$(tr '[:upper:]' '[:lower:]' <<<"$extension")" <<<"$installed" ||
-        run code --install-extension "$extension"
+      if grep -qxF "$(tr '[:upper:]' '[:lower:]' <<<"$extension")" <<<"$installed"; then
+        present=$((present + 1))
+        continue
+      fi
+      echo "-- $extension"
+      run code --install-extension "$extension"
+      added=$((added + 1))
     done < <(read_package_file "$DOTFILES_DIR/install/topics/code")
+    # Without this the step prints a heading and nothing else on a machine that
+    # already has every extension, which reads like it did no work.
+    echo "$present already installed, $added added"
   else
     echo "VS Code not installed, skipping extension setup" >&2
   fi
