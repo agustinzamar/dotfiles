@@ -191,5 +191,6 @@
   "prettier.documentSelectors": [
     "**/*.gts",
     "**/*.gjs"
-  ]
+  ],
+  "window.zoomLevel": 1
 }
