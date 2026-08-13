@@ -314,6 +314,7 @@ sub_link() {
       echo "Usage: $BIN_NAME link [target]"
       echo "   (no target)  Symlink every config into place"
       echo "   <name>       Symlink one config: $(link_names)"
+      echo "   opt-in only  $(optional_link_names) — skipped by a bare \`link\`"
       ;;
     *)
       link_named "$target"

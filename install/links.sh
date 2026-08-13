@@ -32,9 +32,28 @@ all_links() {
 	EOF
 }
 
+# Opt-in links, in the same `name|source|target` shape. These are never walked
+# by `dot link` / `dot link all`: each one adopts a path another tool also
+# writes, so it stays a deliberate `dot link <name>`. `dot unlink` still cleans
+# them up.
+optional_links() {
+  cat <<-EOF
+		agents|ai/AGENTS.md|$HOME/.claude/CLAUDE.md
+		agents|ai/AGENTS.md|$HOME/.agents/AGENTS.md
+	EOF
+}
+
 # Every name `dot link <name>` accepts, space-separated.
 link_names() {
-  all_links | cut -d'|' -f1 | sort -u | paste -sd ' ' -
+  {
+    all_links
+    optional_links
+  } | cut -d'|' -f1 | sort -u | paste -sd ' ' -
+}
+
+# The subset that a bare `dot link` skips.
+optional_link_names() {
+  optional_links | cut -d'|' -f1 | sort -u | paste -sd ' ' -
 }
 
 # _walk_links <map-function> <action-function> [name-filter]
@@ -54,13 +73,19 @@ link_all() {
 # Link every target sharing a name (`ghostty` -> two rows). Unknown names fail
 # loudly instead of silently doing nothing.
 link_named() {
-  local name="$1"
-  if ! all_links | cut -d'|' -f1 | grep -qx "$name"; then
-    echo "no such link: $name — try: $(link_names)" >&2
-    return 1
-  fi
-  log "Linking $name"
-  _walk_links all_links link_file "$name"
+  local name="$1" map
+  for map in all_links optional_links; do
+    if "$map" | cut -d'|' -f1 | grep -qx "$name"; then
+      log "Linking $name"
+      _walk_links "$map" link_file "$name"
+      return 0
+    fi
+  done
+  echo "no such link: $name — try: $(link_names)" >&2
+  return 1
 }
 
-unlink_all() { _walk_links all_links unlink_file; }
+unlink_all() {
+  _walk_links all_links unlink_file
+  _walk_links optional_links unlink_file
+}
