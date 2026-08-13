@@ -223,8 +223,8 @@ defaults write com.apple.finder FXInfoPanesExpanded -dict General -bool true Ope
 # Show indicator lights for open applications in the Dock
 defaults write com.apple.dock show-process-indicators -bool true
 
-# Don’t animate opening applications from the Dock
-defaults write com.apple.dock launchanim -bool false
+# Animate opening applications from the Dock
+defaults write com.apple.dock launchanim -bool true
 
 # Disable automatically hide and show the Dock
 defaults write com.apple.dock autohide -bool false
@@ -245,7 +245,7 @@ defaults write com.apple.dock wvous-bl-corner -int 0
 defaults write com.apple.dock wvous-br-corner -int 0
 
 # Don't show recently used applications in the Dock
-defaults write com.Apple.Dock show-recents -bool false
+defaults write com.apple.dock show-recents -bool false
 
 ###############################################################################
 # Calendar                                                                    #
