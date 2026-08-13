@@ -41,7 +41,7 @@ change, and `dot help` names it on the `install <topic>` line.
 
 ## AI agents
 
-Homebrew installs the agent CLIs (`install/topics/ai`). Everything they load on
+Homebrew installs the agent CLIs (`install/topics/dev`). Everything they load on
 top lives in `ai/` and is opt-in: no install phase writes an agent's config,
 adds a plugin, or links the instructions file.
 
