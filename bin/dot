@@ -155,7 +155,7 @@ sub_ai() {
     do_skills=true
     do_plugins=true
   }
-  ((${#agents[@]})) || agents=("${AI_AGENTS[@]}")
+  ((${#agents[@]})) || read -ra agents <<<"$(ai_agent_names)"
 
   for agent in "${agents[@]}"; do
     if $do_skills; then ai_install skills "$agent" || failures+=("$agent/skills"); fi

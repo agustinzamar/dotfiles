@@ -18,20 +18,29 @@
 # Every generated command installs globally and without prompting, and every
 # CLI involved is idempotent, so `dot ai` is safe to re-run.
 
-AI_AGENTS=(claude-code codex opencode)
+# The one place an agent is declared: `<manifest name>:<executable>`, where the
+# executable is what proves the agent is on this machine. Adding an agent is
+# adding one entry here. bash 3.2 ships no associative arrays, hence the pairs.
+AI_AGENTS=(claude-code:claude codex:codex opencode:opencode)
 
-# The executable that proves an agent is installed. Also the guard that keeps
-# `dot ai` quiet about agents this machine does not have.
 ai_agent_cli() {
-  case "$1" in
-    claude-code) printf 'claude' ;;
-    codex) printf 'codex' ;;
-    opencode) printf 'opencode' ;;
-    *) return 1 ;;
-  esac
+  local pair
+  for pair in "${AI_AGENTS[@]}"; do
+    if [[ "${pair%%:*}" == "$1" ]]; then
+      printf '%s' "${pair#*:}"
+      return 0
+    fi
+  done
+  return 1
 }
 
-ai_agent_names() { printf '%s' "${AI_AGENTS[*]}"; }
+# Every agent name, space separated. Feeds the help text, the error messages,
+# the manifest default, and `dot ai` with no agent named.
+ai_agent_names() {
+  local pair names=()
+  for pair in "${AI_AGENTS[@]}"; do names+=("${pair%%:*}"); done
+  printf '%s' "${names[*]}"
+}
 
 # Emit `item|command` lines for one manifest and one agent.
 #
@@ -42,7 +51,7 @@ ai_manifest_lines() {
   local kind="$1" agent="$2"
   case "$kind" in
     skills)
-      jq -r --arg agent "$agent" --arg all "${AI_AGENTS[*]}" '
+      jq -r --arg agent "$agent" --arg all "$(ai_agent_names)" '
         .skills[]
         | select((.agents // ($all | split(" "))) | index($agent))
         | [ (.source + (if .skill then "/" + .skill else "" end)),
@@ -73,9 +82,21 @@ ai_link_local_skills() {
   link_file "ai/skills" "$target"
 }
 
+# The skills CLI runs through pnpm. Install it once, up front, rather than
+# letting every entry fail on its own.
+ai_ensure_pnpm() {
+  is_executable pnpm && return 0
+  is_executable brew || {
+    echo "pnpm is missing and Homebrew is not here to install it" >&2
+    return 1
+  }
+  log "Installing pnpm"
+  run brew install pnpm
+}
+
 # ai_install <skills|plugins> <agent>
 ai_install() {
-  local kind="$1" agent="$2" cli item cmd failures=()
+  local kind="$1" agent="$2" cli lines item cmd failures=()
   cli=$(ai_agent_cli "$agent") || {
     echo "unknown agent: $agent — try: $(ai_agent_names)" >&2
     return 1
@@ -84,6 +105,9 @@ ai_install() {
     echo "$agent: $cli is not installed, skipping $kind" >&2
     return 0
   fi
+
+  lines=$(ai_manifest_lines "$kind" "$agent")
+  [[ "$lines" == *"pnpm "* ]] && { ai_ensure_pnpm || return 1; }
 
   log "Installing $kind for $agent"
   while IFS='|' read -r item cmd; do
@@ -94,7 +118,7 @@ ai_install() {
     else
       eval "$cmd" || failures+=("$item")
     fi
-  done < <(ai_manifest_lines "$kind" "$agent")
+  done <<<"$lines"
 
   [[ "$kind" == skills && "$agent" == claude-code ]] && ai_link_local_skills
 

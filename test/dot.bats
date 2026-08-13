@@ -469,6 +469,33 @@ EOF
   [[ "$output" != *"claude plugin"* ]]
 }
 
+# The default skill command runs through pnpm. Without this the run fails once
+# per entry instead of saying what is wrong.
+@test "AI stops when pnpm cannot be installed" {
+  local stub
+  stub="$(mktemp -d)"
+  printf '#!/bin/sh\nexit 0\n' >"$stub/claude"
+  chmod +x "$stub/claude"
+  ln -s "$(command -v jq)" "$stub/jq"
+
+  PATH="$stub:/usr/bin:/bin" run /bin/bash "$DOT" ai claude-code --skills --dry-run
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"pnpm is missing"* ]]
+}
+
+@test "AI installs pnpm through Homebrew when it is absent" {
+  local stub
+  stub="$(mktemp -d)"
+  printf '#!/bin/sh\nexit 0\n' >"$stub/claude"
+  printf '#!/bin/sh\nexit 0\n' >"$stub/brew"
+  chmod +x "$stub/claude" "$stub/brew"
+  ln -s "$(command -v jq)" "$stub/jq"
+
+  PATH="$stub:/usr/bin:/bin" run /bin/bash "$DOT" ai claude-code --skills --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"brew install pnpm"* ]]
+}
+
 @test "AI skips an agent whose CLI is missing" {
   local stub
   stub="$(mktemp -d)"
