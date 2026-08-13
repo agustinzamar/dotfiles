@@ -39,6 +39,38 @@ command with no additional code. Promoting or demoting a topic is a `git mv`.
 Adding a topic means adding one file: it becomes a command with no code
 change, and `dot help` names it on the `install <topic>` line.
 
+## AI agents
+
+Homebrew installs the agent CLIs (`install/topics/ai`). Everything they load on
+top lives in `ai/` and is opt-in: no install phase writes an agent's config,
+adds a plugin, or links the instructions file.
+
+| Path | What it holds |
+| --- | --- |
+| `ai/AGENTS.md` | One instructions file for every agent |
+| `ai/skills.json` | Skill packages, by default installed with the skills CLI |
+| `ai/plugins.json` | Plugins, one command per agent |
+| `ai/skills/` | Skills written here rather than pulled from a package |
+
+An entry can install differently per agent, because the same upstream ships as
+a skill package for one CLI and as a plugin for another:
+
+```json
+{ "source": "mattpocock/skills",
+  "install": { "claude-code": "claude plugin install mattpocock-skills" } }
+```
+
+`install.<agent>` overrides the default command; `agents` narrows which agents
+want the entry at all. Every command installs globally and unattended, and each
+CLI is idempotent, so these are safe to re-run:
+
+```bash
+dot ai                             # every agent CLI found on this machine
+dot ai opencode --plugins          # one agent, plugins only
+dot link agents                    # point the agents at ai/AGENTS.md
+dot claude_config                  # merge Claude Code defaults
+```
+
 ## Usage
 
 `dot <command>`. Run `dot help` for the full list.
@@ -49,6 +81,7 @@ change, and `dot help` names it on the `install <topic>` line.
 | `brew` | Install Homebrew and every topic |
 | `link` | Symlink every config into place |
 | `link <name>` | Symlink one config (`ghostty`, `tmux`, `yazi`, …) |
+| `ai [agent]` | Install AI skills and plugins (opt-in, never part of `install`) |
 | `unlink` | Remove symlinks that point into this repo |
 | `zsh` | Install Oh My Zsh, its theme and plugins |
 | `code` | Install the VS Code extensions in `install/topics/code` |

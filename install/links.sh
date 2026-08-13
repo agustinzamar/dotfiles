@@ -24,7 +24,6 @@ all_links() {
 		vscode|config/vscode/settings.json|$HOME/Library/Application Support/Code/User/settings.json
 		vscode|config/vscode/keybindings.json|$HOME/Library/Application Support/Code/User/keybindings.json
 		opencode|config/opencode/themes|$HOME/.config/opencode/themes
-		opencode|ai/AGENTS.md|$HOME/.config/opencode/AGENTS.md
 		hunk|config/hunk/config.toml|$HOME/.config/hunk/config.toml
 		lazygit|config/lazygit/config.yml|$HOME/.config/lazygit/config.yml
 		git|config/git/ignore|$HOME/.config/git/ignore
@@ -33,13 +32,14 @@ all_links() {
 }
 
 # Opt-in links, in the same `name|source|target` shape. These are never walked
-# by `dot link` / `dot link all`: each one adopts a path another tool also
-# writes, so it stays a deliberate `dot link <name>`. `dot unlink` still cleans
-# them up.
+# by `dot link` / `dot link all`: each one hands an AI agent a file it reads on
+# every run, so it stays a deliberate `dot link <name>`. `dot unlink` still
+# cleans them up.
 optional_links() {
   cat <<-EOF
 		agents|ai/AGENTS.md|$HOME/.claude/CLAUDE.md
 		agents|ai/AGENTS.md|$HOME/.agents/AGENTS.md
+		agents|ai/AGENTS.md|$HOME/.config/opencode/AGENTS.md
 	EOF
 }
 

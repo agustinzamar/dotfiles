@@ -375,72 +375,124 @@ setup() {
   [[ "$output" == *"dot link"* ]]
 }
 
-@test "AI skills install for Claude Code" {
-  run "$DOT" install ai --skills --dry-run
+# A machine gets the agent CLIs from Homebrew and nothing else until asked, so
+# no install phase may reach the ai/ manifests or an agent's own config.
+@test "AI work never runs as part of an install phase" {
+  local phase
+  for phase in ai claude_config; do
+    grep -q "for phase in .*\b$phase\b" "$DOT" && {
+      echo "'$phase' is back in an install loop; ai/ must stay opt-in"
+      return 1
+    }
+  done
+  # Same rule for the instructions file: only `dot link agents` places it.
+  run "$DOT" --dry-run link
   [ "$status" -eq 0 ]
-  [[ "$output" == *"--agent claude-code"* ]]
-  [[ "$output" != *"Plugin:"* ]]
+  [[ "$output" != *"AGENTS.md"* ]]
+}
+
+# Skills default to the skills CLI, installed globally and unattended.
+@test "AI skills install through the skills CLI" {
+  local stub
+  stub="$(mktemp -d)"
+  printf '#!/bin/sh\nexit 0\n' >"$stub/claude"
+  chmod +x "$stub/claude"
+
+  PATH="$stub:$PATH" run "$DOT" ai claude-code --skills --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"--agent claude-code --global --yes"* ]]
+  [[ "$output" != *"plugins for"* ]]
+}
+
+# The same upstream ships as a skill package for one agent and a plugin for
+# another; an entry's install map wins over the default command.
+@test "AI entries override the default command per agent" {
+  local stub
+  stub="$(mktemp -d)"
+  printf '#!/bin/sh\nexit 0\n' >"$stub/claude"
+  printf '#!/bin/sh\nexit 0\n' >"$stub/opencode"
+  chmod +x "$stub/claude" "$stub/opencode"
+
+  PATH="$stub:$PATH" run "$DOT" ai claude-code --skills --dry-run
+  [[ "$output" == *"claude plugin install mattpocock-skills"* ]]
+
+  PATH="$stub:$PATH" run "$DOT" ai opencode --skills --dry-run
+  [[ "$output" == *"add mattpocock/skills --agent opencode"* ]]
+  [[ "$output" != *"mattpocock-skills"* ]]
 }
 
 @test "AI skills remove a stale skills directory symlink" {
-  local home
+  local home stub
   home="$(mktemp -d)"
+  stub="$(mktemp -d)"
+  printf '#!/bin/sh\nexit 0\n' >"$stub/claude"
+  chmod +x "$stub/claude"
   mkdir -p "$home/.claude"
   ln -s "$home/missing-skills" "$home/.claude/skills"
 
-  HOME="$home" run "$DOT" install ai --skills --dry-run
+  HOME="$home" PATH="$stub:$PATH" run "$DOT" ai claude-code --skills --dry-run
   [ "$status" -eq 0 ]
   [[ "$output" == *"rm $home/.claude/skills"* ]]
 }
 
-@test "AI plugins install through Claude Code CLI" {
+@test "AI plugins install through the agent CLI" {
   local stub log
   stub="$(mktemp -d)"
   log="$stub/log"
   cat >"$stub/claude" <<'EOF'
 #!/bin/sh
 printf '%s\n' "$*" >>"$PLUGIN_LOG"
-[ "$1 $2 $3" = "plugin marketplace list" ] && printf '[]\n'
 exit 0
 EOF
   chmod +x "$stub/claude"
 
-  PLUGIN_LOG="$log" PATH="$stub:$PATH" run "$DOT" install ai --plugins
+  PLUGIN_LOG="$log" PATH="$stub:$PATH" run "$DOT" ai claude-code --plugins
   [ "$status" -eq 0 ]
   grep -q '^plugin marketplace add DietrichGebert/ponytail$' "$log"
-  grep -q '^plugin install ponytail@ponytail$' "$log"
-  grep -q '^plugin install superpowers@claude-plugins-official$' "$log"
+  grep -q '^plugin install ponytail@ponytail --scope user$' "$log"
+  grep -q '^plugin install superpowers@claude-plugins-official --scope user$' "$log"
 }
 
-@test "AI plugins warn when the Claude Code CLI is missing" {
+# Only the named agent's commands run, so an opencode-only plugin never reaches
+# Claude Code and vice versa.
+@test "AI installs only for the agent asked for" {
+  local stub
+  stub="$(mktemp -d)"
+  printf '#!/bin/sh\nexit 0\n' >"$stub/opencode"
+  chmod +x "$stub/opencode"
+
+  PATH="$stub:$PATH" run "$DOT" ai opencode --plugins --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"opencode plugin @tarquinen/opencode-dcp@latest --global"* ]]
+  [[ "$output" != *"claude plugin"* ]]
+}
+
+@test "AI skips an agent whose CLI is missing" {
   local stub
   stub="$(mktemp -d)"
   ln -s "$(command -v jq)" "$stub/jq"
-  PATH="$stub:/usr/bin:/bin" run /bin/bash "$DOT" install ai --plugins
+  PATH="$stub:/usr/bin:/bin" run /bin/bash "$DOT" ai claude-code --plugins
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Claude Code CLI not found; skipping plugins"* ]]
+  [[ "$output" == *"claude-code: claude is not installed"* ]]
 }
 
-@test "AI accepts both customization flags" {
+@test "AI rejects an unknown flag and an unknown agent" {
+  run "$DOT" ai --nope
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Usage: dot ai"* ]]
+
+  run "$DOT" ai gemini
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"unknown agent: gemini"* ]]
+}
+
+@test "AI install supports macOS system bash" {
   local stub
   stub="$(mktemp -d)"
   printf '#!/bin/sh\nexit 0\n' >"$stub/claude"
   chmod +x "$stub/claude"
 
-  PATH="$stub:$PATH" run "$DOT" install ai --skills --plugins --dry-run
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"--agent claude-code"* ]]
-  [[ "$output" == *"Plugin: ponytail"* ]]
-}
-
-@test "AI rejects an unknown flag" {
-  run "$DOT" install ai --nope
-  [ "$status" -eq 1 ]
-  [[ "$output" == *"Usage: dot install ai"* ]]
-}
-
-@test "AI install supports macOS system bash" {
-  run /bin/bash "$DOT" install ai --skills --dry-run
+  PATH="$stub:$PATH" run /bin/bash "$DOT" ai claude-code --skills --dry-run
   [ "$status" -eq 0 ]
   [[ "$output" == *"--agent claude-code"* ]]
 }

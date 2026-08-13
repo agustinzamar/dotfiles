@@ -28,6 +28,8 @@ set -- ${args[@]+"${args[@]}"}
 . "$DOTFILES_DIR/install/git.sh"
 # shellcheck source=../install/claude.sh
 . "$DOTFILES_DIR/install/claude.sh"
+# shellcheck source=../install/ai.sh
+. "$DOTFILES_DIR/install/ai.sh"
 
 sub_help() {
   echo "Usage: $BIN_NAME <command> [--dry-run]"
@@ -57,6 +59,13 @@ sub_help() {
   echo "   duti                 Set default apps for file types"
   echo "   install <topic>      Install a topic: $(topic_names)"
   echo "   install --all        Install everything"
+  echo
+  echo "AI extras (opt-in — no install phase runs these):"
+  echo "   ai                   Install skills and plugins for every agent CLI found"
+  echo "   ai <agent>           Limit to one agent: $(ai_agent_names)"
+  echo "   ai --skills          Skills only (add --plugins for plugins only)"
+  echo "   claude_config        Merge Claude Code defaults into its settings.json"
+  echo "   link agents          Point the agent CLIs at ai/AGENTS.md"
 }
 
 # Resolve an `install` subcommand or topic name to what runs it. Echoes the
@@ -87,7 +96,7 @@ sub_install() {
       return $?
       ;;
     ai)
-      sub_install_ai "$@"
+      sub_ai "$@"
       return $?
       ;;
     link | links)
@@ -96,12 +105,8 @@ sub_install() {
       ;;
     "" | bootstrap)
       sub_bootstrap
-      local phase failures=()
-      for phase in link claude_config; do
-        "sub_$phase" || failures+=("$phase")
-      done
-      if ((${#failures[@]})); then
-        log "Finished with failures: ${failures[*]}"
+      if ! sub_link; then
+        log "Finished with failures: link"
         return 1
       fi
       log "Bootstrap complete — run \`dot install\` again or \`dot install --full\` for everything"
@@ -122,61 +127,27 @@ sub_install() {
   esac
 }
 
-# Skills and plugins for Claude Code, from the ai/*.json manifests.
-sub_install_ai() {
-  local skills_dir="$HOME/.claude/skills"
-
-  _install_skills() {
-    # A dangling symlink from a previous run would make link_file back up a
-    # broken target instead of replacing it.
-    [[ -L "$skills_dir" && ! -e "$skills_dir" ]] && run rm "$skills_dir"
-
-    local source skill
-    while IFS=$'\t' read -r source skill; do
-      [[ -n "$source" ]] || continue
-      if [[ -z "$skill" || "$skill" == "null" ]]; then
-        log "Skill: $source"
-        run pnpm dlx skills add "$source" --agent claude-code -y
-      else
-        log "Skill: $source/$skill"
-        run pnpm dlx skills add "$source" --agent claude-code --skill "$skill" -y
-      fi
-    done < <(jq -r '.skills[] | [.source, (.skill // null)] | @tsv' \
-      "$DOTFILES_DIR/ai/skills.json" 2>/dev/null)
-
-    [[ -n "$(ls -A "$DOTFILES_DIR/ai/skills" 2>/dev/null)" ]] || return 0
-    link_file "ai/skills" "$skills_dir"
-  }
-
-  _install_plugins() {
-    if ! is_executable claude; then
-      echo "Claude Code CLI not found; skipping plugins" >&2
-      return 0
-    fi
-
-    local name repo install_cmd
-    while IFS='|' read -r name repo install_cmd; do
-      [[ -n "$install_cmd" ]] || continue
-      log "Plugin: $name ($repo)"
-      if "$DRY_RUN"; then
-        echo "+ $install_cmd"
-      else
-        eval "$install_cmd"
-      fi
-    done < <(jq -r '.plugins[] | select(.install["claude-code"]) |
-      [.name, .repo, .install["claude-code"]] | join("|")' \
-      "$DOTFILES_DIR/ai/plugins.json" 2>/dev/null)
-  }
-
-  # dot install ai [--skills|--plugins]; neither flag runs both.
-  local do_skills=false do_plugins=false arg
+# dot ai [agent...] [--skills|--plugins]
+#
+# Opt-in: no install phase calls this. Named agents win; otherwise every agent
+# whose CLI is on this machine gets its share of the manifests. Neither flag
+# runs both kinds.
+sub_ai() {
+  local do_skills=false do_plugins=false agents=() arg agent failures=()
   for arg in "$@"; do
     case "$arg" in
       --skills) do_skills=true ;;
       --plugins) do_plugins=true ;;
-      *)
-        echo "Usage: dot install ai [--skills|--plugins]" >&2
+      -*)
+        echo "Usage: dot ai [$(ai_agent_names)] [--skills|--plugins]" >&2
         return 1
+        ;;
+      *)
+        ai_agent_cli "$arg" >/dev/null || {
+          echo "unknown agent: $arg — try: $(ai_agent_names)" >&2
+          return 1
+        }
+        agents+=("$arg")
         ;;
     esac
   done
@@ -184,16 +155,24 @@ sub_install_ai() {
     do_skills=true
     do_plugins=true
   }
+  ((${#agents[@]})) || agents=("${AI_AGENTS[@]}")
 
-  $do_skills && _install_skills
-  $do_plugins && _install_plugins
+  for agent in "${agents[@]}"; do
+    if $do_skills; then ai_install skills "$agent" || failures+=("$agent/skills"); fi
+    if $do_plugins; then ai_install plugins "$agent" || failures+=("$agent/plugins"); fi
+  done
+
+  if ((${#failures[@]})); then
+    log "Finished with failures: ${failures[*]}"
+    return 1
+  fi
   return 0
 }
 
 sub_full() {
   log "Full install"
   local phase failures=()
-  for phase in bootstrap brew link zsh code macos duti git claude_config; do
+  for phase in bootstrap brew link zsh code macos duti git; do
     "sub_$phase" || failures+=("$phase")
   done
 
@@ -297,6 +276,8 @@ sub_git() {
   done
 }
 
+# Opt-in like everything else under ai/: `dot install` never touches an agent's
+# own settings file.
 sub_claude_config() {
   log "Installing Claude defaults"
   install_claude_config

@@ -1,6 +1,12 @@
 {
   "skills": [
     {
+      "source": "mattpocock/skills",
+      "install": {
+        "claude-code": "claude plugin install mattpocock-skills@claude-plugins-official --scope user"
+      }
+    },
+    {
       "source": "shadcn/ui",
       "skill": "shadcn"
     },
@@ -59,10 +65,6 @@
     {
       "source": "wshobson/agents",
       "skill": "typescript-advanced-types"
-    },
-    {
-      "source": "mattpocock/skills",
-      "skill": "handoff"
     }
   ]
 }
