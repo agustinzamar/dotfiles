@@ -93,7 +93,7 @@ change to a script, not like a change to a config value.
 | `link <name>` | Symlink one config (`ghostty`, `tmux`, `yazi`, …) |
 | `ai [agent]` | Install AI skills and plugins (opt-in, never part of `install`) |
 | `unlink` | Remove symlinks that point into this repo |
-| `zsh` | Install Oh My Zsh, its theme and plugins |
+| `zsh` | Run the fzf key-binding installer (zinit loads the plugins from `.zshrc`) |
 | `code` | Install the VS Code extensions in `install/topics/code` |
 | `duti` | Set default apps for file types |
 | `macos` | Apply macOS system defaults |

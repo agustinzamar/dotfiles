@@ -51,7 +51,7 @@ sub_help() {
   echo "Install (each also works as \`dot <name>\`, no \`install\` needed):"
   echo "   install              Install core tools (xcode, brew, shell and basic tools)"
   echo "   brew                 Install Homebrew and every default topic"
-  echo "   zsh                  Install Oh My Zsh, its theme and plugins"
+  echo "   zsh                  Run the fzf key-binding installer (zinit loads plugins from .zshrc)"
   echo "   code                 Install VS Code extensions"
   echo "   git                  Setup git config"
   echo "   macos                Apply macOS system defaults"
@@ -219,6 +219,10 @@ sub_brew() {
   log "Installing Homebrew packages"
   local topic failures=()
   while read -r topic; do
+    # `code` and `duti` live in topics/ but are plain lists, not Brewfiles:
+    # sub_code and sub_duti read them, and `brew bundle` chokes on both. A
+    # topic with its own installer is not this loop's business.
+    declare -F "sub_$topic" >/dev/null && continue
     run_topic_file "$topic" "$TOPIC_DIR/$topic" || failures+=("$topic")
   done < <(topics)
 

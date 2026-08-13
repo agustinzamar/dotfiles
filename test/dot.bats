@@ -216,6 +216,27 @@ setup() {
 
 # The phase list drives the loop that collects failures; if a phase is dropped
 # from it, install silently stops doing that work.
+# topics/code and topics/duti are a VS Code extension list and a duti mapping
+# table. `brew bundle` reads a Brewfile as Ruby and dies on both, so `dot brew`
+# reported two failed topics on every machine.
+@test "brew skips the topics that have their own installer" {
+  local stub log
+  stub="$(mktemp -d)"
+  log="$stub/log"
+  cat >"$stub/brew" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$*" >>"$BREW_LOG"
+exit 0
+EOF
+  chmod +x "$stub/brew"
+
+  BREW_LOG="$log" PATH="$stub:$PATH" run "$DOT" install brew
+  [ "$status" -eq 0 ]
+  grep -q 'topics/core' "$log"
+  ! grep -q 'topics/duti' "$log"
+  ! grep -q 'topics/code' "$log"
+}
+
 @test "install runs every phase through the failure-collecting loop" {
   local phase
   for phase in brew link zsh code macos duti git; do
