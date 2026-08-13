@@ -89,7 +89,7 @@ dot claude_config                  # merge Claude Code defaults
 | `macos` | Apply macOS system defaults |
 | `dock` | Apply Dock settings |
 | `doctor` | Check required tools and symlinks |
-| `update` | Pull, upgrade packages, re-run the install |
+| `update` | Pull this repo, re-link configs, then upgrade packages (`topgrade`, else `brew`) |
 | `backup` | Commit and push this repo |
 | `clean` | Clean up caches |
 | `edit` | Open this repo in `$VISUAL` |

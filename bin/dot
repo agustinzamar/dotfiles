@@ -109,7 +109,7 @@ sub_install() {
         log "Finished with failures: link"
         return 1
       fi
-      log "Bootstrap complete — run \`dot install\` again or \`dot install --full\` for everything"
+      log "Bootstrap complete — run \`dot install\` again or \`dot install --all\` for everything"
       return 0
       ;;
     *)
@@ -325,9 +325,15 @@ sub_doctor() {
       failed=1
     }
   }
+  # Takes the same (source, target, mode) a link map row carries, so the whole
+  # map can be walked instead of a hand-kept subset that goes stale.
+  # shellcheck disable=SC2329  # called by name from _walk_links
   check_link() {
-    [[ -L "$2" && "$(readlink "$2")" == "$DOTFILES_DIR/$1" ]] || {
-      echo "broken: $2"
+    local source=$1 target=$2 mode=${3:-}
+    # An app-writable target is a live file on purpose, never a symlink.
+    [[ "$mode" == app-writable ]] && return 0
+    [[ -L "$target" && "$(readlink "$target")" == "$DOTFILES_DIR/$source" ]] || {
+      echo "broken: $target"
       failed=1
     }
   }
@@ -337,17 +343,17 @@ sub_doctor() {
     echo "not on PATH: dot (run \`dot link\` then restart your shell; the repo must live at ~/dotfiles)"
     failed=1
   }
-  check_link config/zsh/.zshrc "$HOME/.zshrc"
-  check_link config/p10k/.p10k.zsh "$HOME/.p10k.zsh"
-  check_link config/ghostty/config "$HOME/.config/ghostty/config"
-  check_link config/tmux/tmux.conf "$HOME/.config/tmux/tmux.conf"
-  check_link config/aerospace/aerospace.toml "$HOME/.config/aerospace/aerospace.toml"
+  # Opt-in links stay out of this: not having them is a choice, not a fault.
+  _walk_links all_links check_link
   if ((failed == 0)); then echo "dotfiles: healthy"; fi
   return "$failed"
 }
 
 sub_update() {
   run git -C "$DOTFILES_DIR" pull
+  # A pull can add a row to the link map; linking is idempotent, so re-run it
+  # here rather than leaving the new config unlinked until the next install.
+  sub_link
   if is_executable topgrade; then
     run topgrade
   else
@@ -357,11 +363,24 @@ sub_update() {
 }
 
 sub_backup() {
+  local untracked
   if [[ -z "$(git -C "$DOTFILES_DIR" status --porcelain)" ]]; then
     echo "No changes to commit."
     return 0
   fi
-  run git -C "$DOTFILES_DIR" add -A
+
+  # Tracked changes only. This repo is public, so a stray file in the working
+  # tree must be added on purpose, not swept in by a backup command.
+  untracked=$(git -C "$DOTFILES_DIR" ls-files --others --exclude-standard)
+  if [[ -n "$untracked" ]]; then
+    printf '\nNot committed, untracked — add them yourself if you want them:\n%s\n' "$untracked" >&2
+  fi
+
+  if git -C "$DOTFILES_DIR" diff --quiet && git -C "$DOTFILES_DIR" diff --cached --quiet; then
+    echo "Nothing tracked to commit."
+    return 0
+  fi
+  run git -C "$DOTFILES_DIR" add -u
   run git -C "$DOTFILES_DIR" commit -m "backup: $(date '+%Y-%m-%d %H:%M')"
   run git -C "$DOTFILES_DIR" push
 }

@@ -209,8 +209,10 @@ setup() {
   PATH="$stub:$PATH" run "$DOT" install brew
   [ "$status" -eq 1 ]
   [[ "$output" == *"topics that failed:"* ]]
-  # Every topic was attempted rather than the run stopping at the first.
-  [[ "$output" == *"ai"* && "$output" == *"media"* ]]
+  # Every topic was attempted rather than the run stopping at the first. Name
+  # two real topics: a substring that also occurs in "failed" would pass here
+  # even when only one topic ran.
+  [[ "$output" == *"dev"* && "$output" == *"media"* ]]
 }
 
 # The phase list drives the loop that collects failures; if a phase is dropped
@@ -594,6 +596,20 @@ EOF
 
 # check_link previously had no coverage at all: a stale or foreign symlink
 # would never fail a test even though sub_doctor's whole job is to catch it.
+# doctor used to check a hand-written subset of the link map, so drift in the
+# rest went unseen.
+@test "doctor checks every link in the map" {
+  local home
+  home="$(mktemp -d)"
+
+  HOME="$home" run "$DOT" doctor
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"$home/.config/yazi/yazi.toml"* ]]
+  [[ "$output" == *"$home/.config/lazygit/config.yml"* ]]
+  # An app-writable target is a live file by design, never a symlink.
+  [[ "$output" != *"herdr/config.toml"* ]]
+}
+
 @test "doctor reports a symlink that doesn't point into the repo" {
   local home
   home="$(mktemp -d)"
