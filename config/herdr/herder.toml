@@ -49,10 +49,10 @@ mouse_scroll_lines = 1
 delivery = "herdr"
 
 [ui.toast.herdr]
-position = "top-center"
+position = "top-right"
 
 [ui.toast.clipboard]
-position = "top-center"
+position = "top-right"
 
 [ui.sound]
 enabled = true
