@@ -60,7 +60,7 @@ enabled = true
 [ui.sidebar.spaces]
 row_gap = 0
 rows = [
-  ["workspace"],
+  ["state_icon", "workspace"],
   ["state_text", "git_status"],
 ]
 
