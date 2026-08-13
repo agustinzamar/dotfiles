@@ -27,6 +27,10 @@
       "skill": "agent-browser"
     },
     {
+      "source": "humanlayer/skills",
+      "skill": "show-me"
+    },
+    {
       "source": "vercel-labs/agent-skills",
       "skill": "vercel-react-view-transitions"
     },
