@@ -64,7 +64,7 @@ sub_help() {
   echo "   ai                   Install skills and plugins for every agent CLI found"
   echo "   ai <agent>           Limit to one agent: $(ai_agent_names)"
   echo "   ai --skills          Skills only (add --plugins for plugins only)"
-  echo "   claude_config        Merge Claude Code defaults into its settings.json"
+  echo "   claude-config        Merge Claude Code defaults into its settings.json"
   echo "   link agents          Point the agent CLIs at ai/AGENTS.md"
 }
 
@@ -74,7 +74,9 @@ sub_help() {
 # a bare `dot brew` and `dot install brew` recognize the same set of names.
 resolve_install_target() {
   local cmd="$1"
-  local sub="sub_$cmd"
+  # Commands are kebab-case, function names are snake_case, the same way the
+  # top-level dispatcher translates them.
+  local sub="sub_${cmd//-/_}"
   if declare -F "$sub" >/dev/null; then
     printf '%s' "$sub"
   elif topic_path "$cmd"; then
@@ -338,7 +340,8 @@ sub_doctor() {
     }
   }
 
-  for command in brew git; do check "$command"; done
+  # jq reads the ai/ manifests; without it `dot ai` cannot run at all.
+  for command in brew git jq; do check "$command"; done
   is_executable dot || {
     echo "not on PATH: dot (run \`dot link\` then restart your shell; the repo must live at ~/dotfiles)"
     failed=1

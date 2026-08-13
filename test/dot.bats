@@ -26,8 +26,7 @@ setup() {
   while read -r command; do
     name="sub_${command//-/_}"
     grep -q "^$name()" "$DOT" ||
-    [ -f "$DOTFILES_DIR/install/topics/$command" ] ||
-    [ -f "$DOTFILES_DIR/install/profiles/$command" ] || {
+      [ -f "$DOTFILES_DIR/install/topics/$command" ] || {
         echo "'$command' has neither $name() nor a topic file"
         return 1
       }
