@@ -117,7 +117,7 @@ sub_install() {
       sub_bootstrap
       sub_baseline
       if ! sub_link; then
-        log "Finished with failures: link"
+        echo "❌ Finished with failures: link" >&2
         return 1
       fi
       log "Baseline installation complete"
@@ -181,7 +181,7 @@ sub_ai() {
   if $do_plugins; then ai_install plugins "${agents[@]}" || failures+=("plugins"); fi
 
   if ((${#failures[@]})); then
-    log "Finished with failures: ${failures[*]}"
+    echo "❌ Finished with failures: ${failures[*]}" >&2
     return 1
   fi
   return 0
@@ -195,7 +195,7 @@ sub_full() {
   done
 
   if ((${#failures[@]})); then
-    log "Finished with failures: ${failures[*]}"
+    echo "❌ Finished with failures: ${failures[*]}" >&2
     return 1
   fi
   log "Installation complete"
@@ -216,14 +216,14 @@ install_topic() {
 sub_bootstrap() {
   log "Installing Xcode"
   if xcode-select -p >/dev/null 2>&1; then
-    echo 'Xcode already installed, skipping'
+    echo '✅ Xcode already installed'
   else
     run xcode-select --install
   fi
 
   log "Installing Homebrew"
   if is_executable brew; then
-    echo 'Homebrew already installed, skipping'
+    echo '✅ Homebrew already installed'
   elif "$DRY_RUN"; then
     echo '+ install Homebrew'
   else
@@ -255,7 +255,7 @@ sub_zsh() {
   # mean cloning from GitHub before the prompt can be drawn.
   local zinit_home="${XDG_DATA_HOME:-$HOME/.local/share}/zinit/zinit.git"
   if [[ -r "$zinit_home/zinit.zsh" ]]; then
-    echo 'zinit already installed, skipping'
+    echo '✅ zinit already installed'
   else
     run mkdir -p "$(dirname "$zinit_home")"
     run git clone --depth=1 https://github.com/zdharma-continuum/zinit.git "$zinit_home"
@@ -293,7 +293,7 @@ sub_code() {
     # already has every extension, which reads like it did no work.
     echo "$present already installed, $added added"
   else
-    echo "VS Code not installed, skipping extension setup" >&2
+    echo "⚠️ VS Code not installed; skipping extension setup" >&2
   fi
 }
 
@@ -302,7 +302,7 @@ sub_duti() {
     log "Setting default apps for file types"
     run duti -v "$DOTFILES_DIR/install/topics/duti" 2>&1 | grep -v "error -50" || true
   else
-    echo "duti not installed, skipping default app setup" >&2
+    echo "⚠️ duti not installed; skipping default app setup" >&2
   fi
 }
 

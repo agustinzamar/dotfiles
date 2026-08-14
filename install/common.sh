@@ -32,30 +32,28 @@ read_package_file() {
 # Run a command, or print it when --dry-run is in effect.
 run() {
   if "$DRY_RUN"; then
-    printf '+ '
+    printf '🔧 + '
     printf '%q ' "$@"
     printf '\n'
-  else
-    "$@"
+    return 0
   fi
+  local output
+  if output=$("$@" 2>&1); then
+    printf '✅ %s\n' "$*"
+    return 0
+  fi
+  printf '❌ %s\n' "$*" >&2
+  [[ -n "$output" ]] && printf '%s\n' "$output" >&2
+  return 1
 }
 
 # Run a noisy third-party installer without leaking its success chatter. Errors
 # remain visible because they are the useful output when a setup step fails.
 run_quiet() {
-  if "$DRY_RUN"; then
-    run "$@"
-    return
-  fi
-  local output
-  if output=$("$@" 2>&1); then
-    return 0
-  fi
-  printf '%s\n' "$output" >&2
-  return 1
+  run "$@"
 }
 
-log() { printf '\n==> %s\n' "$*"; }
+log() { printf '\n==> 🔧 %s\n' "$*"; }
 
 is_executable() { type "$1" >/dev/null 2>&1; }
 
