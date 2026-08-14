@@ -115,6 +115,7 @@ sub_install() {
       ;;
     "" | bootstrap)
       sub_bootstrap
+      sub_baseline
       if ! sub_link; then
         log "Finished with failures: link"
         return 1
@@ -135,6 +136,14 @@ sub_install() {
       fi
       ;;
   esac
+}
+
+sub_baseline() {
+  log "Installing baseline tools"
+  run brew install go zsh fzf git gh lazygit git-delta hunk tmux yazi neovim
+  run brew install --cask ghostty
+  sub_zsh
+  sub_git
 }
 
 # dot ai [agent...] [--skills|--plugins]

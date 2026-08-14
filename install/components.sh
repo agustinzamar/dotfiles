@@ -4,7 +4,7 @@ DOT_PROFILE=${DOT_PROFILE:-${XDG_CONFIG_HOME:-$HOME/.config}/dot/profile.json}
 
 component_default_selected() {
   case "$1" in
-    base | shell | git | terminal) return 0 ;;
+    base | shell | git | hunk | terminal) return 0 ;;
     *) return 1 ;;
   esac
 }

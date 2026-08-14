@@ -16,7 +16,7 @@ func Components() []Component {
 		{ID: "base", Label: "Base tools", Category: "Base", Default: true, Required: true, Commands: []string{"xcode-select --install", "brew install go"}},
 		{ID: "shell", Label: "Zsh and plugins", Category: "Shell", Default: true, Links: []string{"zsh", "p10k"}, Commands: []string{"brew install zsh fzf", "dot zsh"}},
 		{ID: "git", Label: "Git and configuration", Category: "Git", Default: true, Links: []string{"git", "lazygit"}, Commands: []string{"brew install git gh lazygit git-delta", "dot git"}},
-		{ID: "hunk", Label: "Hunk", Category: "Git", Links: []string{"hunk"}, Commands: []string{"brew install hunk"}, Dependencies: []string{"git"}},
+		{ID: "hunk", Label: "Hunk", Category: "Git", Default: true, Links: []string{"hunk"}, Commands: []string{"brew install hunk"}, Dependencies: []string{"git"}},
 		{ID: "terminal", Label: "Terminal tools", Category: "Terminal", Default: true, Links: []string{"ghostty", "tmux", "yazi"}, Commands: []string{"brew install --cask ghostty", "brew install tmux yazi neovim"}},
 		{ID: "php", Label: "PHP", Category: "PHP", Commands: []string{"brew install php composer"}},
 		{ID: "laravel", Label: "Laravel", Category: "Laravel", Commands: []string{"brew install laravel Herd"}, Dependencies: []string{"php"}},

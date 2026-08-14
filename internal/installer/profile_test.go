@@ -14,8 +14,8 @@ func TestProfileDefaultsAndRoundTrip(t *testing.T) {
 	if !profile.Components["base"] || !profile.Components["git"] || !profile.Components["terminal"] {
 		t.Fatal("baseline not selected")
 	}
-	if profile.Components["hunk"] {
-		t.Fatal("optional Hunk selected")
+	if !profile.Components["hunk"] {
+		t.Fatal("baseline Hunk not selected")
 	}
 	if err := SaveProfile(path, profile); err != nil {
 		t.Fatal(err)
