@@ -63,11 +63,11 @@ _walk_links() {
 		[[ -n "$source" ]] || continue
 		[[ -z "$filter" || "$name" == "$filter" ]] || continue
 		if [[ "$action" == link_file && "${LINK_FORCE:-false}" != true && -n "$component" ]] && ! component_selected "$component"; then
-			echo "skipping $name: component $component is not selected" >&2
+		[[ "${LINK_VERBOSE:-false}" == true ]] && echo "skipping $name: component $component is not selected" >&2
 			continue
 		fi
 		if [[ "$action" == link_file && "${LINK_FORCE:-false}" != true && -n "$requirement" ]] && ! is_executable "$requirement"; then
-			echo "skipping $name: missing requirement $requirement" >&2
+		[[ "${LINK_VERBOSE:-false}" == true ]] && echo "skipping $name: missing requirement $requirement" >&2
 			continue
 		fi
 		"$action" "$source" "$target" "$mode"

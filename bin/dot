@@ -120,7 +120,7 @@ sub_install() {
         log "Finished with failures: link"
         return 1
       fi
-      log "Bootstrap complete — run \`dot install\` again or \`dot install --all\` for everything"
+      log "Baseline installation complete"
       return 0
       ;;
     *)
