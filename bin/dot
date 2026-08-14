@@ -140,8 +140,8 @@ sub_install() {
 
 sub_baseline() {
   log "Installing baseline tools"
-  run brew install go zsh fzf git gh lazygit git-delta hunk tmux yazi neovim
-  run brew install --cask ghostty
+  run_step "Core command-line tools" brew install go zsh fzf git gh lazygit git-delta hunk tmux yazi neovim
+  run_step "Ghostty" brew install --cask ghostty
   sub_zsh
   sub_git
 }
@@ -268,8 +268,7 @@ sub_zsh() {
     # --no-update-rc: --all would otherwise append a source line to ~/.zshrc,
     # which is a symlink into this repo, so the installer edits a tracked file
     # on every run. .zshrc sources ~/.fzf.zsh instead.
-    run_quiet "$brew_prefix/opt/fzf/install" --all --no-update-rc --no-bash --no-fish
-    echo "fzf key bindings ready"
+    run_step "fzf key bindings" "$brew_prefix/opt/fzf/install" --all --no-update-rc --no-bash --no-fish
   fi
 }
 

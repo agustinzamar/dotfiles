@@ -29,7 +29,8 @@ read_package_file() {
   sed -e 's/#.*//' -e 's/[[:space:]]*$//' "$1" | grep -v '^$' || true
 }
 
-# Run a command, or print it when --dry-run is in effect.
+# Run a command, or print it when --dry-run is in effect. Successful commands
+# stay quiet; user-facing steps should use run_step for a useful label.
 run() {
   if "$DRY_RUN"; then
     printf '🔧 + '
@@ -39,10 +40,28 @@ run() {
   fi
   local output
   if output=$("$@" 2>&1); then
-    printf '✅ %s\n' "$*"
     return 0
   fi
-  printf '❌ %s\n' "$*" >&2
+  printf '❌ command failed\n' >&2
+  [[ -n "$output" ]] && printf '%s\n' "$output" >&2
+  return 1
+}
+
+run_step() {
+  local label=$1
+  shift
+  if "$DRY_RUN"; then
+    printf '🔧 + '
+    printf '%q ' "$@"
+    printf '\n'
+    return 0
+  fi
+  local output
+  if output=$("$@" 2>&1); then
+    printf '✅ %s installed\n' "$label"
+    return 0
+  fi
+  printf '❌ %s install failed\n' "$label" >&2
   [[ -n "$output" ]] && printf '%s\n' "$output" >&2
   return 1
 }
