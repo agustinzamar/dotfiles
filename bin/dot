@@ -450,7 +450,9 @@ sub_backup() {
 }
 
 sub_clean() {
-  if is_executable mole; then run_step "Mole cleanup" complete mole clean; fi
+  # run_step captures output, so Mole's terminal sudo prompt would be invisible
+  # and wait forever. Non-interactive mode skips system cleanup without sudo.
+  if is_executable mole; then run_step "Mole cleanup" complete mole clean </dev/null; fi
   run_step "Homebrew cleanup" complete brew cleanup
   if is_executable pnpm; then run_step "pnpm store cleanup" complete pnpm store prune; fi
 }
