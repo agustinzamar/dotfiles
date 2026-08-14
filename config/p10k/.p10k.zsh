@@ -205,9 +205,11 @@
   typeset -g POWERLEVEL9K_VCS_DISABLE_GITSTATUS_FORMATTING=true
   # Install our own Git status formatter.
   typeset -g POWERLEVEL9K_VCS_CONTENT_EXPANSION='${$((my_git_formatter(1)))+${my_git_format}}'
-  typeset -g POWERLEVEL9K_VCS_LOADING_CONTENT_EXPANSION='${$((my_git_formatter()))+${my_git_format}}'
-  # Grey Git status when loading.
-  typeset -g POWERLEVEL9K_VCS_LOADING_FOREGROUND=246
+  # Render nothing while gitstatusd is still scanning. The loading state carries the counts from
+  # the previous scan, and once formatted they look identical to live ones, so a clean tree can
+  # keep showing "+1 -1 ?1" from an earlier state. Hiding the segment costs one late redraw and
+  # never reports a working tree that no longer exists.
+  typeset -g POWERLEVEL9K_VCS_LOADING_CONTENT_EXPANSION=''
 
   # Disable async loading indicator to make directories that aren't Git repositories
   # indistinguishable from large Git repositories without known state.
