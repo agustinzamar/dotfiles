@@ -1,74 +1,51 @@
 {
   "skills": [
     {
-      "source": "mattpocock/skills",
-      "install": {
-        "claude-code": "claude plugin install mattpocock-skills@claude-plugins-official --scope user"
-      }
+      "source": "mattpocock/skills"
     },
     {
       "source": "shadcn/ui",
-      "skill": "shadcn"
+      "skills": ["shadcn"]
     },
     {
-      "source": "vercel-labs/agent-browser",
-      "skill": "find-skills"
-    },
-    {
-      "source": "vercel-labs/agent-skills",
-      "skill": "vercel-react-best-practices"
-    },
-    {
-      "source": "vercel-labs/agent-skills",
-      "skill": "vercel-composition-patterns"
-    },
-    {
-      "source": "vercel-labs/agent-browser",
-      "skill": "agent-browser"
-    },
-    {
-      "source": "humanlayer/skills",
-      "skill": "show-me"
-    },
-    {
-      "source": "vercel-labs/agent-skills",
-      "skill": "vercel-react-view-transitions"
+      "source": "vercel-labs/skills",
+      "skills": ["find-skills"]
     },
     {
       "source": "vercel-labs/open-agents",
-      "skill": "web-design-guidelines"
+      "skills": ["agent-browser", "vercel-react-best-practices"]
     },
     {
-      "source": "antropics/skills",
-      "skill": "frontend-design"
+      "source": "vercel-labs/agent-skills",
+      "skills": [
+        "vercel-composition-patterns",
+        "vercel-react-view-transitions",
+        "web-design-guidelines"
+      ]
     },
     {
-      "source": "antropics/skills",
-      "skill": "skill-creator"
+      "source": "humanlayer/skills",
+      "skills": ["show-me"]
+    },
+    {
+      "source": "anthropics/skills",
+      "skills": ["frontend-design", "skill-creator"]
     },
     {
       "source": "supabase/agent-skills",
-      "skill": "supabase-postgress-best-practices"
+      "skills": ["supabase-postgres-best-practices"]
     },
     {
       "source": "nextlevelbuilder/ui-ux-pro-max-skill",
-      "skill": "ui-ux-pro-max"
+      "skills": ["ui-ux-pro-max"]
     },
     {
       "source": "antfu/skills",
-      "skill": "vite"
-    },
-    {
-      "source": "antfu/skills",
-      "skill": "pnpm"
+      "skills": ["vite", "pnpm"]
     },
     {
       "source": "wshobson/agents",
-      "skill": "tailwind-design-system"
-    },
-    {
-      "source": "wshobson/agents",
-      "skill": "typescript-advanced-types"
+      "skills": ["tailwind-design-system", "typescript-advanced-types"]
     }
   ]
 }

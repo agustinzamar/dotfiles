@@ -462,21 +462,37 @@ EOF
   [[ "$output" != *"plugins for"* ]]
 }
 
-# The same upstream ships as a skill package for one agent and a plugin for
-# another; an entry's install map wins over the default command.
-@test "AI entries override the default command per agent" {
+# Agents sharing the default skills CLI command collapse into one call per
+# entry, with one --agent flag per agent.
+@test "AI groups agents into one skills CLI call per entry" {
   local stub
   stub="$(mktemp -d)"
   printf '#!/bin/sh\nexit 0\n' >"$stub/claude"
+  printf '#!/bin/sh\nexit 0\n' >"$stub/codex"
   printf '#!/bin/sh\nexit 0\n' >"$stub/opencode"
-  chmod +x "$stub/claude" "$stub/opencode"
+  chmod +x "$stub/claude" "$stub/codex" "$stub/opencode"
 
-  PATH="$stub:$PATH" run "$DOT" ai claude-code --skills --dry-run
-  [[ "$output" == *"claude plugin install mattpocock-skills"* ]]
-
-  PATH="$stub:$PATH" run "$DOT" ai opencode --skills --dry-run
-  [[ "$output" == *"add mattpocock/skills --agent opencode"* ]]
+  PATH="$stub:$PATH" run "$DOT" ai --skills --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"add mattpocock/skills --agent claude-code --agent codex --agent opencode --global --yes"* ]]
   [[ "$output" != *"mattpocock-skills"* ]]
+}
+
+# A vendor with several picked skills becomes one call with repeated --skill
+# flags, and a single-skill vendor folds into the aggregator that hosts it.
+@test "AI emits one skills CLI call per vendor with repeated --skill flags" {
+  local stub
+  stub="$(mktemp -d)"
+  printf '#!/bin/sh\nexit 0\n' >"$stub/claude"
+  printf '#!/bin/sh\nexit 0\n' >"$stub/codex"
+  printf '#!/bin/sh\nexit 0\n' >"$stub/opencode"
+  chmod +x "$stub/claude" "$stub/codex" "$stub/opencode"
+
+  PATH="$stub:$PATH" run "$DOT" ai --skills --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"add vercel-labs/agent-skills --skill vercel-composition-patterns --skill vercel-react-view-transitions --skill web-design-guidelines --agent claude-code --agent codex --agent opencode --global --yes"* ]]
+  [[ "$output" == *"add vercel-labs/open-agents --skill agent-browser --skill vercel-react-best-practices --agent claude-code --agent codex --agent opencode --global --yes"* ]]
+  [[ "$output" != *"add vercel-labs/agent-browser"* ]]
 }
 
 @test "AI skills remove a stale skills directory symlink" {

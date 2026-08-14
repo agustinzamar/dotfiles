@@ -133,9 +133,10 @@ sub_install() {
 #
 # Opt-in: no install phase calls this. Named agents win; otherwise every agent
 # whose CLI is on this machine gets its share of the manifests. Neither flag
-# runs both kinds.
+# runs both kinds. All named agents share one pass per kind, so the skills CLI
+# runs once per entry with a comma-joined --agent set.
 sub_ai() {
-  local do_skills=false do_plugins=false agents=() arg agent failures=()
+  local do_skills=false do_plugins=false agents=() arg failures=()
   for arg in "$@"; do
     case "$arg" in
       --skills) do_skills=true ;;
@@ -159,10 +160,8 @@ sub_ai() {
   }
   ((${#agents[@]})) || read -ra agents <<<"$(ai_agent_names)"
 
-  for agent in "${agents[@]}"; do
-    if $do_skills; then ai_install skills "$agent" || failures+=("$agent/skills"); fi
-    if $do_plugins; then ai_install plugins "$agent" || failures+=("$agent/plugins"); fi
-  done
+  if $do_skills; then ai_install skills "${agents[@]}" || failures+=("skills"); fi
+  if $do_plugins; then ai_install plugins "${agents[@]}" || failures+=("plugins"); fi
 
   if ((${#failures[@]})); then
     log "Finished with failures: ${failures[*]}"

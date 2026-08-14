@@ -54,14 +54,18 @@ adds a plugin, or links the instructions file.
 | `ai/AGENTS.md` | One instructions file for every agent |
 | `ai/skills.json` | Skill packages, by default installed with the skills CLI |
 | `ai/plugins.json` | Plugins, one command per agent |
-| `ai/skills/` | Skills written here rather than pulled from a package |
+| `ai/skills/` | Single-file skills tracked here, linked into Claude Code |
 
-An entry can install differently per agent, because the same upstream ships as
-a skill package for one CLI and as a plugin for another:
+Every skill entry installs once for every agent that wants it. Entries that
+share a source and the default command collapse into one skills CLI call with
+repeated `--skill` and `--agent` flags. An entry can instead name a per-agent
+command, because the same upstream sometimes ships as a skill package for one
+CLI and as a plugin for another:
 
 ```json
-{ "source": "mattpocock/skills",
-  "install": { "claude-code": "claude plugin install mattpocock-skills" } }
+{ "source": "shadcn/ui",
+  "skill": "shadcn",
+  "install": { "claude-code": "claude plugin install superpowers" } }
 ```
 
 `install.<agent>` overrides the default command; `agents` narrows which agents

@@ -6,7 +6,7 @@
       "homepage": "https://github.com/DietrichGebert/ponytail",
       "install": {
         "claude-code": "claude plugin marketplace add DietrichGebert/ponytail && claude plugin install ponytail@ponytail --scope user",
-        "codex": "codex plugin marketplace add DietrichGebert/ponytail && codex plugin install ponytail@ponytail",
+        "codex": "codex plugin marketplace add DietrichGebert/ponytail && codex plugin add ponytail@ponytail",
         "opencode": "opencode plugin @dietrichgebert/ponytail@4.9.0 --global"
       }
     },
@@ -16,7 +16,7 @@
       "homepage": "https://github.com/obra/superpowers",
       "install": {
         "claude-code": "claude plugin install superpowers@claude-plugins-official --scope user",
-        "codex": "codex plugin install superpowers@openai-curated",
+        "codex": "codex plugin add superpowers@openai-curated",
         "opencode": "pnpm dlx skills@latest add obra/superpowers --agent opencode --global --yes"
       }
     },
