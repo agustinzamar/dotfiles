@@ -145,8 +145,8 @@ sub_install() {
 
 sub_baseline() {
   log "Installing baseline tools"
-  run_step "Core command-line tools" brew install go zsh fzf git gh lazygit git-delta hunk tmux yazi neovim
-  run_step "Ghostty" brew install --cask ghostty
+  run_step "Core command-line tools" installed brew install go zsh fzf git gh lazygit git-delta hunk tmux yazi neovim
+  run_step "Ghostty" installed brew install --cask ghostty
   sub_zsh
   sub_git
 }
@@ -273,7 +273,7 @@ sub_zsh() {
     # --no-update-rc: --all would otherwise append a source line to ~/.zshrc,
     # which is a symlink into this repo, so the installer edits a tracked file
     # on every run. .zshrc sources ~/.fzf.zsh instead.
-    run_step "fzf key bindings" "$brew_prefix/opt/fzf/install" --all --no-update-rc --no-bash --no-fish
+    run_step "fzf key bindings" installed "$brew_prefix/opt/fzf/install" --all --no-update-rc --no-bash --no-fish
   fi
 }
 
@@ -450,9 +450,9 @@ sub_backup() {
 }
 
 sub_clean() {
-  if is_executable mole; then run mole clean; fi
-  run brew cleanup
-  if is_executable pnpm; then run pnpm store prune; fi
+  if is_executable mole; then run_step "Mole cleanup" complete mole clean; fi
+  run_step "Homebrew cleanup" complete brew cleanup
+  if is_executable pnpm; then run_step "pnpm store cleanup" complete pnpm store prune; fi
 }
 
 sub_edit() {

@@ -49,19 +49,21 @@ run() {
 
 run_step() {
   local label=$1
-  shift
+  local success=$2
+  shift 2
   if "$DRY_RUN"; then
     printf '🔧 + '
     printf '%q ' "$@"
     printf '\n'
     return 0
   fi
+  printf '🔧 %s...\n' "$label"
   local output
   if output=$("$@" 2>&1); then
-    printf '✅ %s installed\n' "$label"
+    printf '✅ %s %s\n' "$label" "$success"
     return 0
   fi
-  printf '❌ %s install failed\n' "$label" >&2
+  printf '❌ %s failed\n' "$label" >&2
   [[ -n "$output" ]] && printf '%s\n' "$output" >&2
   return 1
 }
