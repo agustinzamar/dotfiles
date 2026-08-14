@@ -83,6 +83,10 @@ bindkey -e
 bindkey '^[[A' history-search-backward
 bindkey '^[[B' history-search-forward
 
+# Home/End escapes, sent by Ghostty's cmd+left and cmd+right bindings.
+bindkey '\e[H' beginning-of-line
+bindkey '\e[F' end-of-line
+
 # Bind magic space to expand aliases and history words
 bindkey ' ' magic-space
 
