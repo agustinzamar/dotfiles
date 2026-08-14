@@ -40,6 +40,21 @@ run() {
   fi
 }
 
+# Run a noisy third-party installer without leaking its success chatter. Errors
+# remain visible because they are the useful output when a setup step fails.
+run_quiet() {
+  if "$DRY_RUN"; then
+    run "$@"
+    return
+  fi
+  local output
+  if output=$("$@" 2>&1); then
+    return 0
+  fi
+  printf '%s\n' "$output" >&2
+  return 1
+}
+
 log() { printf '\n==> %s\n' "$*"; }
 
 is_executable() { type "$1" >/dev/null 2>&1; }

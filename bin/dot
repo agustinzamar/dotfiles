@@ -268,7 +268,8 @@ sub_zsh() {
     # --no-update-rc: --all would otherwise append a source line to ~/.zshrc,
     # which is a symlink into this repo, so the installer edits a tracked file
     # on every run. .zshrc sources ~/.fzf.zsh instead.
-    run "$brew_prefix/opt/fzf/install" --all --no-update-rc --no-bash --no-fish
+    run_quiet "$brew_prefix/opt/fzf/install" --all --no-update-rc --no-bash --no-fish
+    echo "fzf key bindings ready"
   fi
 }
 
