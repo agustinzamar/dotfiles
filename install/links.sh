@@ -8,26 +8,26 @@
 
 all_links() {
   cat <<-EOF
-		zsh|config/zsh/.zshrc|$HOME/.zshrc
-		p10k|config/p10k/.p10k.zsh|$HOME/.p10k.zsh
-		ghostty|config/ghostty/config|$HOME/.config/ghostty/config
-		ghostty|config/ghostty/config|$HOME/Library/Application Support/Muxy/ghostty.conf
-		ghostty|config/ghostty/theme/catppuccin-frappe.conf|$HOME/.config/ghostty/themes/catppuccin-frappe.conf
-		herdr|config/herdr/herder.toml|$HOME/.config/herdr/config.toml|app-writable
-		tmux|config/tmux/tmux.conf|$HOME/.config/tmux/tmux.conf
-		yazi|config/yazi/yazi.toml|$HOME/.config/yazi/yazi.toml
-		yazi|config/yazi/keymap.toml|$HOME/.config/yazi/keymap.toml
-		yazi|config/yazi/theme.toml|$HOME/.config/yazi/theme.toml
-		linearmouse|config/linearmouse/linearmouse.json|$HOME/.config/linearmouse/linearmouse.json
-		aerospace|config/aerospace/aerospace.toml|$HOME/.config/aerospace/aerospace.toml
-		npm|config/npm/.npmrc|$HOME/.npmrc
-		vscode|config/vscode/settings.json|$HOME/Library/Application Support/Code/User/settings.json
-		vscode|config/vscode/keybindings.json|$HOME/Library/Application Support/Code/User/keybindings.json
-		opencode|config/opencode/themes|$HOME/.config/opencode/themes
-		hunk|config/hunk/config.toml|$HOME/.config/hunk/config.toml
-		lazygit|config/lazygit/config.yml|$HOME/.config/lazygit/config.yml
-		git|config/git/ignore|$HOME/.config/git/ignore
-		claude|config/claude/statusline-command.sh|$HOME/.claude/statusline-command.sh
+		zsh|config/zsh/.zshrc|$HOME/.zshrc||shell
+		p10k|config/p10k/.p10k.zsh|$HOME/.p10k.zsh||shell
+		ghostty|config/ghostty/config|$HOME/.config/ghostty/config||terminal
+		ghostty|config/ghostty/config|$HOME/Library/Application Support/Muxy/ghostty.conf||terminal
+		ghostty|config/ghostty/theme/catppuccin-frappe.conf|$HOME/.config/ghostty/themes/catppuccin-frappe.conf||terminal
+		herdr|config/herdr/herder.toml|$HOME/.config/herdr/config.toml|app-writable|laravel
+		tmux|config/tmux/tmux.conf|$HOME/.config/tmux/tmux.conf||terminal
+		yazi|config/yazi/yazi.toml|$HOME/.config/yazi/yazi.toml||terminal
+		yazi|config/yazi/keymap.toml|$HOME/.config/yazi/keymap.toml||terminal
+		yazi|config/yazi/theme.toml|$HOME/.config/yazi/theme.toml||terminal
+		linearmouse|config/linearmouse/linearmouse.json|$HOME/.config/linearmouse/linearmouse.json||desktop
+		aerospace|config/aerospace/aerospace.toml|$HOME/.config/aerospace/aerospace.toml||desktop
+		npm|config/npm/.npmrc|$HOME/.npmrc||dev
+		vscode|config/vscode/settings.json|$HOME/Library/Application Support/Code/User/settings.json||vscode|code
+		vscode|config/vscode/keybindings.json|$HOME/Library/Application Support/Code/User/keybindings.json||vscode|code
+		opencode|config/opencode/themes|$HOME/.config/opencode/themes||ai|opencode
+		hunk|config/hunk/config.toml|$HOME/.config/hunk/config.toml||hunk|hunk
+		lazygit|config/lazygit/config.yml|$HOME/.config/lazygit/config.yml||git|lazygit
+		git|config/git/ignore|$HOME/.config/git/ignore||git|git
+		claude|config/claude/statusline-command.sh|$HOME/.claude/statusline-command.sh||ai|claude
 	EOF
 }
 
@@ -37,9 +37,9 @@ all_links() {
 # cleans them up.
 optional_links() {
   cat <<-EOF
-		agents|ai/AGENTS.md|$HOME/.claude/CLAUDE.md
-		agents|ai/AGENTS.md|$HOME/.agents/AGENTS.md
-		agents|ai/AGENTS.md|$HOME/.config/opencode/AGENTS.md
+		agents|ai/AGENTS.md|$HOME/.claude/CLAUDE.md|||ai
+		agents|ai/AGENTS.md|$HOME/.agents/AGENTS.md|||ai
+		agents|ai/AGENTS.md|$HOME/.config/opencode/AGENTS.md|||ai
 	EOF
 }
 
@@ -58,11 +58,19 @@ optional_link_names() {
 
 # _walk_links <map-function> <action-function> [name-filter]
 _walk_links() {
-  local map="$1" action="$2" filter="${3:-}" name source target mode
-  while IFS='|' read -r name source target mode; do
-    [[ -n "$source" ]] || continue
-    [[ -z "$filter" || "$name" == "$filter" ]] || continue
-    "$action" "$source" "$target" "$mode"
+	local map="$1" action="$2" filter="${3:-}" name source target mode component requirement
+	while IFS='|' read -r name source target mode component requirement; do
+		[[ -n "$source" ]] || continue
+		[[ -z "$filter" || "$name" == "$filter" ]] || continue
+		if [[ "$action" == link_file && "${LINK_FORCE:-false}" != true && -n "$component" ]] && ! component_selected "$component"; then
+			echo "skipping $name: component $component is not selected" >&2
+			continue
+		fi
+		if [[ "$action" == link_file && "${LINK_FORCE:-false}" != true && -n "$requirement" ]] && ! is_executable "$requirement"; then
+			echo "skipping $name: missing requirement $requirement" >&2
+			continue
+		fi
+		"$action" "$source" "$target" "$mode"
   done < <("$map")
 }
 

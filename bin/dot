@@ -22,6 +22,8 @@ set -- ${args[@]+"${args[@]}"}
 
 # shellcheck source=../install/common.sh
 . "$DOTFILES_DIR/install/common.sh"
+# shellcheck source=../install/components.sh
+. "$DOTFILES_DIR/install/components.sh"
 # shellcheck source=../install/links.sh
 . "$DOTFILES_DIR/install/links.sh"
 # shellcheck source=../install/git.sh
@@ -47,6 +49,7 @@ sub_help() {
   echo "Config links:"
   echo "   link             Symlink every config into place"
   echo "   link <name>      Symlink one config: $(link_names)"
+  echo "   tui              Select and install components interactively"
   echo
   echo "Install (each also works as \`dot <name>\`, no \`install\` needed):"
   echo "   install              Install core tools (xcode, brew, shell and basic tools)"
@@ -91,6 +94,11 @@ resolve_install_target() {
 sub_install() {
   local cmd="${1:-}"
   shift 2>/dev/null || true
+
+  if [[ "$cmd" == --profile ]]; then
+    run_profile_install "${1:-${XDG_CONFIG_HOME:-$HOME/.config}/dot/profile.json}"
+    return $?
+  fi
 
   case "$cmd" in
     --all | -a)
@@ -258,7 +266,9 @@ sub_zsh() {
 sub_code() {
   if is_executable code; then
     log "Installing VS Code extensions"
-    local installed extension present=0 added=0
+    local installed extension present added
+    present=0
+    added=0
     installed=$(code --list-extensions 2>/dev/null | tr '[:upper:]' '[:lower:]')
     while read -r extension; do
       if grep -qxF "$(tr '[:upper:]' '[:lower:]' <<<"$extension")" <<<"$installed"; then
@@ -310,9 +320,12 @@ sub_link() {
   local target="${1:-}"
   shift 2>/dev/null || true
   case "$target" in
-    "" | all)
+    "")
       log "Linking dotfiles"
       link_all
+      ;;
+    all | --all)
+      LINK_FORCE=true link_all
       ;;
     help)
       echo "Usage: $BIN_NAME link [target]"
@@ -321,9 +334,22 @@ sub_link() {
       echo "   opt-in only  $(optional_link_names) — skipped by a bare \`link\`"
       ;;
     *)
-      link_named "$target"
+      LINK_FORCE=true link_named "$target"
       ;;
   esac
+}
+
+run_profile_install() {
+  local profile="$1"
+  is_executable go || { echo "Go is required for profile installation" >&2; return 1; }
+  local args=(-apply -profile "$profile" -repo "$DOTFILES_DIR")
+  "$DRY_RUN" && args+=(-dry-run)
+  run go run "$DOTFILES_DIR/cmd/dot-tui" "${args[@]}"
+}
+
+sub_tui() {
+  if ! is_executable go; then run brew install go; fi
+  run go run "$DOTFILES_DIR/cmd/dot-tui" -repo "$DOTFILES_DIR"
 }
 
 sub_unlink() {
@@ -423,7 +449,7 @@ sub_test() {
   bats "$DOTFILES_DIR"/test/*.bats
 }
 
-TOP_COMMANDS=" backup clean doctor edit help install link test unlink update "
+TOP_COMMANDS=" backup clean doctor edit help install link test tui unlink update "
 
 COMMAND_NAME=${1:-}
 case "$COMMAND_NAME" in

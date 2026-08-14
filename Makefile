@@ -13,7 +13,7 @@ SCRIPTS := bin/dot install/*.sh system/defaults/*.sh remote-install.sh
 # Everything else is `dot <command>` — this file only carries the first-init
 # entry point and the lint targets CI runs.
 # `install` and `test` are also directory names, so these must stay phony.
-.PHONY: install test check lint
+.PHONY: install test check lint go-test
 
 install:
 	$(DOT) install
@@ -23,7 +23,11 @@ test:
 
 check:
 	bash -n $(SCRIPTS)
+	go vet ./...
 
 lint:
 	shellcheck -x $(SCRIPTS)
 	shfmt -d $(SCRIPTS)
+
+go-test:
+	go test ./...

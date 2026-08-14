@@ -92,8 +92,11 @@ change to a script, not like a change to a config value.
 | Command | What it does |
 | --- | --- |
 | `install` | Everything below, in order (`macos` covers `dock`) |
+| `tui` | Select baseline and optional components in the Bubble Tea installer |
+| `install --profile PATH` | Apply a saved component profile without the TUI |
 | `brew` | Install Homebrew and every topic |
-| `link` | Symlink every config into place |
+| `link` | Link selected components from `~/.config/dot/profile.json` |
+| `link --all` | Link every valid config explicitly |
 | `link <name>` | Symlink one config (`ghostty`, `tmux`, `yazi`, …) |
 | `ai [agent]` | Install AI skills and plugins (opt-in, never part of `install`) |
 | `unlink` | Remove symlinks that point into this repo |
@@ -115,7 +118,13 @@ nothing:
 ```bash
 dot install --dry-run
 dot link --dry-run
+dot install --dry-run --profile ~/.config/dot/profile.json
 ```
+
+The TUI selects Base, Shell, Git, and Terminal by default. Go is required and
+cannot be disabled. Optional PHP, Laravel, AI, desktop, communication, media,
+editor, and service components start unselected. Selections persist in the
+machine-local profile at `~/.config/dot/profile.json`.
 
 A bare `make` is the one-shot first init (`dot install`). The Makefile also
 carries `make test`, `make check` and `make lint`, which CI runs.
