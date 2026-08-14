@@ -19,8 +19,6 @@ set_git_config() {
 }
 
 install_git() {
-  log "Setting git config"
-
   local cfg="$DOTFILES_DIR/config/git/config"
   if [[ -f "$cfg" ]]; then
     local key val
