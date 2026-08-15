@@ -238,8 +238,7 @@ setup() {
   [ "$output" = "$DOTFILES_DIR" ]
 }
 
-# An exported secret is inherited by every command the shell runs. Tokens go to
-# the one process that needs them, through a wrapper in system/functions/.
+# An exported secret is inherited by every command the shell runs.
 @test "no shell file exports a secret" {
   local hits
   hits=$(grep -rlE '^ *export [A-Z_]*(TOKEN|SECRET|PASSWORD|API_KEY)' \
