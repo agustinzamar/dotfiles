@@ -28,8 +28,6 @@ set -- ${args[@]+"${args[@]}"}
 . "$DOTFILES_DIR/install/links.sh"
 # shellcheck source=../install/git.sh
 . "$DOTFILES_DIR/install/git.sh"
-# shellcheck source=../install/claude.sh
-. "$DOTFILES_DIR/install/claude.sh"
 # shellcheck source=../install/ai.sh
 . "$DOTFILES_DIR/install/ai.sh"
 
@@ -38,15 +36,11 @@ sub_help() {
   echo "Options: --dry-run"
   echo
   echo "Commands:"
-  echo "   backup           Commit and push this repo"
-  echo "   clean            Clean up caches"
   echo "   doctor           Check that required tools and symlinks are in place"
-  echo "   edit             Open dotfiles in \$VISUAL"
   echo "   help             This help message"
   echo "   test             Run tests"
   echo "   unlink           Remove symlinks that point into this repo"
   echo "   update           Pull latest dotfiles and upgrade installed packages"
-  echo "   bootstrap        Install Xcode and Homebrew"
   echo
   echo "Config links:"
   echo "   link             Symlink selected configs whose tools are available"
@@ -58,13 +52,6 @@ sub_help() {
   echo "   install              Install core tools (Xcode, Homebrew, Go, shell and basic tools)"
   echo "   install --profile PATH  Apply a saved component profile"
   echo "   install --dry-run --profile PATH  Preview a saved component profile"
-  echo "   brew                 Install Homebrew packages from package topics"
-  echo "   zsh                  Install Zinit and run the fzf key-binding installer"
-  echo "   code                 Install VS Code extensions"
-  echo "   git                  Setup Git config and SSH keys"
-  echo "   macos                Apply macOS system defaults"
-  echo "   dock                 Apply macOS Dock settings"
-  echo "   duti                 Set default apps for file types"
   echo "   install <topic>      Install a topic: $(topic_names)"
   echo "   install --all        Install all standard phases; AI stays opt-in"
   echo
@@ -72,7 +59,6 @@ sub_help() {
   echo "   ai                   Install skills and plugins for every agent CLI found"
   echo "   ai <agent>           Limit to one agent: $(ai_agent_names)"
   echo "   ai --skills          Skills only (add --plugins for plugins only)"
-  echo "   claude-config        Merge Claude Code defaults into its settings.json"
   echo "   link agents          Point the agent CLIs at ai/AGENTS.md"
 }
 
@@ -323,13 +309,6 @@ sub_git() {
   done
 }
 
-# Opt-in like everything else under ai/: `dot install` never touches an agent's
-# own settings file.
-sub_claude_config() {
-  log "Installing Claude defaults"
-  install_claude_config
-}
-
 sub_link() {
   local target="${1:-}"
   shift 2>/dev/null || true
@@ -356,14 +335,14 @@ sub_link() {
 run_profile_install() {
   local profile="$1"
   is_executable go || { echo "Go is required for profile installation" >&2; return 1; }
-  local args=(-apply -profile "$profile" -repo "$DOTFILES_DIR")
+  local args=(-apply -profile "$profile")
   "$DRY_RUN" && args+=(-dry-run)
   run go run "$DOTFILES_DIR/cmd/dot-tui" "${args[@]}"
 }
 
 sub_tui() {
   if ! is_executable go; then run brew install go; fi
-  run go run "$DOTFILES_DIR/cmd/dot-tui" -repo "$DOTFILES_DIR"
+  run go run "$DOTFILES_DIR/cmd/dot-tui"
 }
 
 sub_unlink() {

@@ -356,7 +356,7 @@ EOF
 # some way, so a newly-added orphan fails loudly instead of sitting silent.
 @test "every tracked config file is wired into an install path" {
   # Consumed directly by their own install/*.sh, not through links.sh.
-  local handled="config/claude/config.json config/git/config"
+  local handled="config/git/config"
   local known_gaps=""
 
   local sources
@@ -436,7 +436,7 @@ EOF
 # no install phase may reach the ai/ manifests or an agent's own config.
 @test "AI work never runs as part of an install phase" {
   local phase
-  for phase in ai claude_config; do
+  for phase in ai; do
     grep -q "for phase in .*\b$phase\b" "$DOT" && {
       echo "'$phase' is back in an install loop; ai/ must stay opt-in"
       return 1

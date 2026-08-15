@@ -76,7 +76,6 @@ CLI is idempotent, so these are safe to re-run:
 dot ai                             # every agent CLI found on this machine
 dot ai opencode --plugins          # one agent, plugins only
 dot link agents                    # point the agents at ai/AGENTS.md
-dot claude_config                  # merge Claude Code defaults
 ```
 
 An `install` value is a shell command, run as you, with network access. That
@@ -94,22 +93,13 @@ change to a script, not like a change to a config value.
 | `install` | Everything below, in order (`macos` covers `dock`) |
 | `tui` | Select baseline and optional components in the Bubble Tea installer |
 | `install --profile PATH` | Apply a saved component profile without the TUI |
-| `brew` | Install Homebrew and every topic |
 | `link` | Link selected components from `~/.config/dot/profile.json` |
 | `link --all` | Link every valid config explicitly |
 | `link <name>` | Symlink one config (`ghostty`, `tmux`, `yazi`, …) |
 | `ai [agent]` | Install AI skills and plugins (opt-in, never part of `install`) |
 | `unlink` | Remove symlinks that point into this repo |
-| `zsh` | Run the fzf key-binding installer (zinit loads the plugins from `.zshrc`) |
-| `code` | Install the VS Code extensions in `install/topics/code` |
-| `duti` | Set default apps for file types |
-| `macos` | Apply macOS system defaults |
-| `dock` | Apply Dock settings |
 | `doctor` | Check required tools and symlinks |
 | `update` | Pull this repo, re-link configs, then upgrade packages (`topgrade`, else `brew`) |
-| `backup` | Commit and push this repo |
-| `clean` | Clean up caches |
-| `edit` | Open this repo in `$VISUAL` |
 | `test` | Run the Bats suite |
 
 Every command accepts `--dry-run`, which prints what would run and touches
