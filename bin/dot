@@ -342,7 +342,11 @@ run_profile_install() {
 
 sub_tui() {
   if ! is_executable go; then run brew install go; fi
-  run go run "$DOTFILES_DIR/cmd/dot-tui"
+  if "$DRY_RUN"; then
+    run go run "$DOTFILES_DIR/cmd/dot-tui"
+  else
+    go run "$DOTFILES_DIR/cmd/dot-tui"
+  fi
 }
 
 sub_unlink() {
