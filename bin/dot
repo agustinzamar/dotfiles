@@ -452,7 +452,7 @@ sub_backup() {
 sub_clean() {
   if is_executable mole; then
     if ! "$DRY_RUN" && ! sudo -n true 2>/dev/null; then
-      log "Requesting administrator access"
+      printf '\n==> 🔒 Requesting administrator access\n'
       if ! sudo -v; then
         echo '❌ Administrator access failed' >&2
         return 1
