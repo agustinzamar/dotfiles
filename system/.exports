@@ -2,8 +2,8 @@
 export LANG=en_US.UTF-8
 
 # Homebrew
-export PATH="/opt/homebrew/bin:$PATH"
 export PATH="/opt/homebrew/sbin:$PATH"
+export PATH="/opt/homebrew/bin:$PATH"
 
 # This repo's own CLI (dot, is-*). .zshrc exports DOTFILES_DIR from its own
 # resolved path before sourcing this; the default covers any other caller.
