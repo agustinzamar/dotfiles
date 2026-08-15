@@ -450,9 +450,19 @@ sub_backup() {
 }
 
 sub_clean() {
-  # run_step captures output, so Mole's terminal sudo prompt would be invisible
-  # and wait forever. Non-interactive mode skips system cleanup without sudo.
-  if is_executable mole; then run_step "Mole cleanup" complete mole clean </dev/null; fi
+  if is_executable mole; then
+    if ! "$DRY_RUN" && ! sudo -n true 2>/dev/null; then
+      log "Requesting administrator access"
+      if ! sudo -v; then
+        echo '❌ Administrator access failed' >&2
+        return 1
+      fi
+    fi
+
+    # run_step captures output, so Mole's terminal sudo prompt would be
+    # invisible and wait forever. Close stdin after the initial sudo prompt.
+    run_step "Mole cleanup" complete mole clean </dev/null || return 1
+  fi
   run_step "Homebrew cleanup" complete brew cleanup
   if is_executable pnpm; then run_step "pnpm store cleanup" complete pnpm store prune; fi
 }
