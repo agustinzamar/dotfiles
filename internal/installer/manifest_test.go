@@ -23,4 +23,7 @@ func TestManifestHasStableBaselineAndIndependentOptions(t *testing.T) {
 			t.Fatal("hunk must be a Git component with a link")
 		}
 	}
+	if seen["laravel"] || seen["phpstorm"] {
+		t.Fatal("PHP tooling must be one component")
+	}
 }
