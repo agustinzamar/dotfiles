@@ -58,8 +58,20 @@ run_step() {
     return 0
   fi
   printf '🔧 %s...\n' "$label"
-  local output
-  if output=$("$@" 2>&1); then
+  local output progress=false pid
+  if output=$(
+    "$@" 2>&1 &
+    pid=$!
+    while kill -0 "$pid" 2>/dev/null; do
+      progress=true
+      printf '.' >&2
+      sleep 1
+    done
+    local status=0
+    wait "$pid" || status=$?
+    if "$progress"; then printf '\n' >&2; fi
+    return "$status"
+  ); then
     printf '✅ %s %s\n' "$label" "$success"
     return 0
   fi
