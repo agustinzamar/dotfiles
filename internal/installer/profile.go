@@ -11,6 +11,38 @@ type Profile struct {
 	Components map[string]bool `json:"components"`
 }
 
+var legacyComponentIDs = map[string][]string{
+	"communication": {
+		"communication-discord",
+		"communication-telegram",
+		"communication-whatsapp",
+		"communication-slack",
+	},
+	"desktop": {
+		"desktop-chrome",
+		"desktop-firefox",
+		"desktop-brave",
+		"communication-discord",
+		"communication-telegram",
+		"communication-whatsapp",
+		"communication-slack",
+		"desktop-raycast",
+		"desktop-finetune",
+		"desktop-typewhisper",
+		"desktop-rectangle",
+		"desktop-aerospace",
+		"desktop-linearmouse",
+		"desktop-localsend",
+	},
+	"media": {
+		"media-tools",
+		"media-spotify",
+		"media-stremio",
+		"media-vlc",
+		"media-castor",
+	},
+}
+
 func DefaultProfile() Profile {
 	components := make(map[string]bool)
 	for _, component := range Components() {
@@ -34,6 +66,10 @@ func LoadProfile(path string) (Profile, error) {
 	if profile.Components == nil {
 		return Profile{}, fmt.Errorf("invalid profile: components is required")
 	}
+	profile, migrated, err := MigrateProfileData(profile)
+	if err != nil {
+		return Profile{}, err
+	}
 	ids := componentIDs()
 	for id := range profile.Components {
 		if !ids[id] {
@@ -50,7 +86,33 @@ func LoadProfile(path string) (Profile, error) {
 			profile.Components[component.ID] = true
 		}
 	}
+	if migrated {
+		if err := SaveProfile(path, profile); err != nil {
+			return Profile{}, err
+		}
+	}
 	return profile, nil
+}
+
+func MigrateProfileData(profile Profile) (Profile, bool, error) {
+	if profile.Components == nil {
+		return Profile{}, false, fmt.Errorf("invalid profile: components is required")
+	}
+	changed := false
+	for legacyID, componentIDs := range legacyComponentIDs {
+		enabled, ok := profile.Components[legacyID]
+		if !ok {
+			continue
+		}
+		if enabled {
+			for _, componentID := range componentIDs {
+				profile.Components[componentID] = true
+			}
+		}
+		delete(profile.Components, legacyID)
+		changed = true
+	}
+	return profile, changed, nil
 }
 
 func SaveProfile(path string, profile Profile) error {

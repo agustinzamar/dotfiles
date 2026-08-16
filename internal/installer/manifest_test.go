@@ -18,6 +18,16 @@ func TestManifestHasStableBaselineAndIndependentOptions(t *testing.T) {
 			t.Fatalf("missing baseline %q", id)
 		}
 	}
+	for _, id := range []string{"communication", "media", "desktop"} {
+		if seen[id] {
+			t.Fatalf("aggregate component %q still exists", id)
+		}
+	}
+	for _, id := range []string{"communication-discord", "communication-slack", "media-spotify", "media-vlc", "desktop-chrome"} {
+		if !seen[id] {
+			t.Fatalf("missing individual component %q", id)
+		}
+	}
 	for _, component := range Components() {
 		if component.ID == "base" && !component.Required {
 			t.Fatal("base must be required")
