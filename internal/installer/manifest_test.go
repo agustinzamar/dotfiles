@@ -23,7 +23,7 @@ func TestManifestHasStableBaselineAndIndependentOptions(t *testing.T) {
 			t.Fatalf("aggregate component %q still exists", id)
 		}
 	}
-	for _, id := range []string{"communication-discord", "communication-slack", "media-spotify", "media-vlc", "desktop-chrome"} {
+	for _, id := range []string{"communication-discord", "communication-slack", "media-spotify", "media-vlc", "desktop-chrome", "service-mysql", "service-postgresql", "service-redis", "service-sqlite"} {
 		if !seen[id] {
 			t.Fatalf("missing individual component %q", id)
 		}

@@ -41,6 +41,12 @@ var legacyComponentIDs = map[string][]string{
 		"media-vlc",
 		"media-castor",
 	},
+	"databases": {
+		"service-mysql",
+		"service-postgresql",
+		"service-redis",
+		"service-sqlite",
+	},
 }
 
 func DefaultProfile() Profile {

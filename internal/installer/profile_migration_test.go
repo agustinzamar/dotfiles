@@ -13,6 +13,7 @@ func TestMigrateProfileDataMapsLegacyComponents(t *testing.T) {
 		"communication": true,
 		"desktop":       false,
 		"media":         true,
+		"databases":     true,
 	}})
 	if err != nil {
 		t.Fatal(err)
@@ -23,12 +24,13 @@ func TestMigrateProfileDataMapsLegacyComponents(t *testing.T) {
 	for _, id := range []string{
 		"communication-discord", "communication-telegram", "communication-whatsapp", "communication-slack",
 		"media-tools", "media-spotify", "media-stremio", "media-vlc", "media-castor",
+		"service-mysql", "service-postgresql", "service-redis", "service-sqlite",
 	} {
 		if !profile.Components[id] {
 			t.Fatalf("migrated component %q is not selected", id)
 		}
 	}
-	if profile.Components["desktop-chrome"] || profile.Components["communication"] || profile.Components["desktop"] || profile.Components["media"] {
+	if profile.Components["desktop-chrome"] || profile.Components["communication"] || profile.Components["desktop"] || profile.Components["media"] || profile.Components["databases"] {
 		t.Fatal("legacy component state remains or false desktop was enabled")
 	}
 }
