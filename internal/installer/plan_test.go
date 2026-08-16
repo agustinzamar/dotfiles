@@ -3,28 +3,25 @@ package installer
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 )
 
-func TestPlanOrdersDependencies(t *testing.T) {
+func TestPlanIncludesHunkInGit(t *testing.T) {
 	profile := DefaultProfile()
-	profile.Components["hunk"] = true
 	tasks, _, err := Plan(profile, Environment{Commands: map[string]bool{"brew": true}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	git, hunk := -1, -1
-	for i, task := range tasks {
-		if task.ComponentID == "git" && git == -1 {
-			git = i
+	for _, task := range tasks {
+		if task.ComponentID == "hunk" {
+			t.Fatal("Hunk must not be a separate task")
 		}
-		if task.ComponentID == "hunk" && hunk == -1 {
-			hunk = i
+		if task.ComponentID == "git" && strings.Contains(task.Operation, "hunk") {
+			return
 		}
 	}
-	if git == -1 || hunk == -1 || git > hunk {
-		t.Fatalf("dependency order is wrong: git=%d hunk=%d", git, hunk)
-	}
+	t.Fatal("Git task does not include Hunk")
 }
 
 func TestPlanSkipsXcodeInstallWhenToolsExist(t *testing.T) {

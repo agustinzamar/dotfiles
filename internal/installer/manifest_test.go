@@ -1,6 +1,9 @@
 package installer
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestManifestHasStableBaselineAndIndependentOptions(t *testing.T) {
 	seen := map[string]bool{}
@@ -19,12 +22,14 @@ func TestManifestHasStableBaselineAndIndependentOptions(t *testing.T) {
 		if component.ID == "base" && !component.Required {
 			t.Fatal("base must be required")
 		}
-		if component.ID == "hunk" && (component.Category != "Git" || len(component.Links) == 0) {
-			t.Fatal("hunk must be a Git component with a link")
+		if component.ID == "git" {
+			if !contains(component.Links, "hunk") || !strings.Contains(component.Commands[0], "hunk") {
+				t.Fatal("Git must include Hunk")
+			}
 		}
 	}
-	if seen["laravel"] || seen["phpstorm"] {
-		t.Fatal("PHP tooling must be one component")
+	if seen["hunk"] || seen["laravel"] || seen["phpstorm"] {
+		t.Fatal("Git and PHP tooling must use combined components")
 	}
 	for _, component := range Components() {
 		if component.ID != "php" {
@@ -36,4 +41,13 @@ func TestManifestHasStableBaselineAndIndependentOptions(t *testing.T) {
 			}
 		}
 	}
+}
+
+func contains(values []string, want string) bool {
+	for _, value := range values {
+		if value == want {
+			return true
+		}
+	}
+	return false
 }
