@@ -20,7 +20,7 @@ func TestSummarizeResultsByComponent(t *testing.T) {
 	if results[0].Status != "installed" {
 		t.Fatalf("shell status = %q, want installed", results[0].Status)
 	}
-	if results[1].Status != "failed" || results[1].Output != "command failed" {
+	if results[1].ComponentID != "git" || results[1].Status != "failed" || results[1].Output != "command failed" {
 		t.Fatalf("git result = %#v", results[1])
 	}
 }

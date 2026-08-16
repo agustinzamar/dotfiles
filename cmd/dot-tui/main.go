@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 
 	tea "charm.land/bubbletea/v2"
@@ -45,53 +46,71 @@ func main() {
 			fmt.Fprintln(os.Stderr, err)
 			os.Exit(1)
 		}
+		if output, err := linkProfile(*flagProfilePath); err != nil {
+			fmt.Fprintln(os.Stderr, "❌ Config links failed")
+			fmt.Fprintln(os.Stderr, output)
+			os.Exit(1)
+		}
 		if failed {
 			os.Exit(1)
 		}
 		return
 	}
-	finalModel, err := tea.NewProgram(installer.NewModel()).Run()
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-	model, ok := finalModel.(installer.Model)
-	if !ok || !model.Submitted() {
-		return
-	}
-
 	configPath := os.Getenv("XDG_CONFIG_HOME")
 	if configPath == "" {
 		configPath = filepath.Join(os.Getenv("HOME"), ".config")
 	}
 	profilePath := filepath.Join(configPath, "dot", "profile.json")
-	profile := model.Profile()
-	tasks, skips, err := installer.Plan(profile, installer.DetectEnvironment())
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-	for _, skip := range skips {
-		fmt.Printf("skip %s: %s\n", skip.ComponentID, skip.Reason)
-	}
-	failed := false
-	for _, result := range execute(tasks) {
-		printResult(result)
-		failed = failed || result.Status == "failed"
-	}
-	if err := installer.SaveProfile(profilePath, profile); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
-	}
-	if failed {
-		os.Exit(1)
+	model := installer.NewModel()
+	for {
+		finalModel, err := tea.NewProgram(model).Run()
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return
+		}
+		selection, ok := finalModel.(installer.Model)
+		if !ok || !selection.Submitted() {
+			return
+		}
+
+		profile := selection.Profile()
+		if err := installer.SaveProfile(profilePath, profile); err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return
+		}
+		tasks, skips, err := installer.PlanWithApplied(profile, installer.DetectEnvironment(), selection.Applied())
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			return
+		}
+		for _, skip := range skips {
+			fmt.Printf("skip %s: %s\n", skip.ComponentID, skip.Reason)
+		}
+		results := execute(tasks)
+		successful := make([]string, 0, len(results))
+		for _, result := range results {
+			printResult(result)
+			if result.Status == "installed" {
+				successful = append(successful, result.ComponentID)
+			}
+		}
+		selection.MarkApplied(successful)
+		if output, err := linkProfile(profilePath); err != nil {
+			fmt.Fprintln(os.Stderr, "❌ Config links failed")
+			fmt.Fprintln(os.Stderr, output)
+		} else {
+			fmt.Println("✅ Config links installed")
+		}
+		selection.ResetSubmission()
+		model = selection
 	}
 }
 
 type componentResult struct {
-	Label  string
-	Status string
-	Output string
+	ComponentID string
+	Label       string
+	Status      string
+	Output      string
 }
 
 func execute(tasks []installer.Task) []componentResult {
@@ -114,7 +133,7 @@ func summarize(results []installer.Result) []componentResult {
 		index, ok := indexes[id]
 		if !ok {
 			indexes[id] = len(components)
-			components = append(components, componentResult{Label: result.Task.Label, Status: result.Status})
+			components = append(components, componentResult{ComponentID: id, Label: result.Task.Label, Status: result.Status})
 			index = len(components) - 1
 		}
 		component := &components[index]
@@ -136,6 +155,13 @@ func summarize(results []installer.Result) []componentResult {
 		}
 	}
 	return components
+}
+
+func linkProfile(profilePath string) (string, error) {
+	command := exec.Command("dot", "link")
+	command.Env = append(os.Environ(), "DOT_PROFILE="+profilePath)
+	output, err := command.CombinedOutput()
+	return string(output), err
 }
 
 func printResult(result componentResult) {

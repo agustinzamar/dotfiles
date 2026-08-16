@@ -40,6 +40,19 @@ func TestPlanSkipsXcodeInstallWhenToolsExist(t *testing.T) {
 	}
 }
 
+func TestPlanOmitsAppliedComponents(t *testing.T) {
+	profile := DefaultProfile()
+	tasks, _, err := PlanWithApplied(profile, Environment{Commands: map[string]bool{"brew": true}}, map[string]bool{"git": true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, task := range tasks {
+		if task.ComponentID == "git" {
+			t.Fatal("applied component was planned again")
+		}
+	}
+}
+
 func TestExecuteContinuesAndSkipsDependents(t *testing.T) {
 	tasks := []Task{{ComponentID: "git", Operation: "fail"}, {ComponentID: "hunk", Operation: "later", Dependencies: []string{"git"}}, {ComponentID: "media", Operation: "independent"}}
 	results := Execute(context.Background(), tasks, func(_ context.Context, command string) (string, error) {

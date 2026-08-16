@@ -51,6 +51,10 @@ func ShellRunner(ctx context.Context, command string) (string, error) {
 }
 
 func Plan(profile Profile, env Environment) ([]Task, []Skip, error) {
+	return PlanWithApplied(profile, env, nil)
+}
+
+func PlanWithApplied(profile Profile, env Environment, applied map[string]bool) ([]Task, []Skip, error) {
 	ordered := make([]Component, 0, len(Components()))
 	visiting, visited := map[string]bool{}, map[string]bool{}
 	var add func(Component)
@@ -71,7 +75,7 @@ func Plan(profile Profile, env Environment) ([]Task, []Skip, error) {
 		ordered = append(ordered, component)
 	}
 	for _, component := range Components() {
-		if profile.Components[component.ID] {
+		if profile.Components[component.ID] && !applied[component.ID] {
 			add(component)
 		}
 	}
