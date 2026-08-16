@@ -37,8 +37,8 @@ func main() {
 			return
 		}
 		failed := false
-		for _, result := range installer.Execute(context.Background(), tasks, installer.ShellRunner) {
-			fmt.Printf("%s %s: %s\n", result.Status, result.Task.Label, result.Output)
+		for _, result := range execute(tasks) {
+			printResult(result)
 			failed = failed || result.Status == "failed"
 		}
 		if err := installer.SaveProfile(*flagProfilePath, profile); err != nil {
@@ -75,8 +75,8 @@ func main() {
 		fmt.Printf("skip %s: %s\n", skip.ComponentID, skip.Reason)
 	}
 	failed := false
-	for _, result := range installer.Execute(context.Background(), tasks, installer.ShellRunner) {
-		fmt.Printf("%s %s: %s\n", result.Status, result.Task.Label, result.Output)
+	for _, result := range execute(tasks) {
+		printResult(result)
 		failed = failed || result.Status == "failed"
 	}
 	if err := installer.SaveProfile(profilePath, profile); err != nil {
@@ -85,5 +85,25 @@ func main() {
 	}
 	if failed {
 		os.Exit(1)
+	}
+}
+
+func execute(tasks []installer.Task) []installer.Result {
+	return installer.ExecuteWithProgress(context.Background(), tasks, installer.ShellRunner, func(task installer.Task) {
+		fmt.Printf("🔧 %s...\n", task.Label)
+	})
+}
+
+func printResult(result installer.Result) {
+	switch result.Status {
+	case "installed":
+		fmt.Printf("✅ %s installed\n", result.Task.Label)
+	case "skipped":
+		fmt.Printf("⚠️ %s skipped: %s\n", result.Task.Label, result.Output)
+	case "failed":
+		fmt.Fprintf(os.Stderr, "❌ %s install failed\n", result.Task.Label)
+		if result.Output != "" {
+			fmt.Fprintln(os.Stderr, result.Output)
+		}
 	}
 }

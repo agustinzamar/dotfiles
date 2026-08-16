@@ -2,6 +2,7 @@ package installer
 
 import (
 	"context"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -43,7 +44,9 @@ func DetectEnvironment() Environment {
 type Runner func(context.Context, string) (string, error)
 
 func ShellRunner(ctx context.Context, command string) (string, error) {
-	output, err := exec.CommandContext(ctx, "sh", "-c", command).CombinedOutput()
+	cmd := exec.CommandContext(ctx, "sh", "-c", command)
+	cmd.Env = append(os.Environ(), "HOMEBREW_NO_AUTO_UPDATE=1", "HOMEBREW_NO_ENV_HINTS=1")
+	output, err := cmd.CombinedOutput()
 	return string(output), err
 }
 
@@ -77,6 +80,9 @@ func Plan(profile Profile, env Environment) ([]Task, []Skip, error) {
 	var skips []Skip
 	for _, component := range ordered {
 		for _, command := range component.Commands {
+			if command == "xcode-select --install" && env.Commands["xcode-select"] {
+				continue
+			}
 			if strings.HasPrefix(command, "brew ") && !env.Commands["brew"] {
 				skips = append(skips, Skip{ComponentID: component.ID, Reason: "Homebrew is not installed"})
 				break
@@ -87,7 +93,13 @@ func Plan(profile Profile, env Environment) ([]Task, []Skip, error) {
 	return tasks, skips, nil
 }
 
+type Progress func(Task)
+
 func Execute(ctx context.Context, tasks []Task, run Runner) []Result {
+	return ExecuteWithProgress(ctx, tasks, run, nil)
+}
+
+func ExecuteWithProgress(ctx context.Context, tasks []Task, run Runner, progress Progress) []Result {
 	results := make([]Result, 0, len(tasks))
 	failed := map[string]bool{}
 	for _, task := range tasks {
@@ -106,6 +118,9 @@ func Execute(ctx context.Context, tasks []Task, run Runner) []Result {
 		if ctx.Err() != nil {
 			results = append(results, Result{Task: task, Status: "skipped", Output: "cancelled", Started: started, Finished: time.Now()})
 			continue
+		}
+		if progress != nil {
+			progress(task)
 		}
 		output, err := run(ctx, task.Operation)
 		status := "installed"
