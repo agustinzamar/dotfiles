@@ -88,20 +88,64 @@ func main() {
 	}
 }
 
-func execute(tasks []installer.Task) []installer.Result {
-	return installer.ExecuteWithProgress(context.Background(), tasks, installer.ShellRunner, func(task installer.Task) {
-		fmt.Printf("🔧 %s...\n", task.Label)
-	})
+type componentResult struct {
+	Label  string
+	Status string
+	Output string
 }
 
-func printResult(result installer.Result) {
+func execute(tasks []installer.Task) []componentResult {
+	started := map[string]bool{}
+	results := installer.ExecuteWithProgress(context.Background(), tasks, installer.ShellRunner, func(task installer.Task) {
+		if started[task.ComponentID] {
+			return
+		}
+		started[task.ComponentID] = true
+		fmt.Printf("🔧 %s...\n", task.Label)
+	})
+	return summarize(results)
+}
+
+func summarize(results []installer.Result) []componentResult {
+	components := make([]componentResult, 0)
+	indexes := map[string]int{}
+	for _, result := range results {
+		id := result.Task.ComponentID
+		index, ok := indexes[id]
+		if !ok {
+			indexes[id] = len(components)
+			components = append(components, componentResult{Label: result.Task.Label, Status: result.Status})
+			index = len(components) - 1
+		}
+		component := &components[index]
+		switch {
+		case result.Status == "failed":
+			if component.Status != "failed" {
+				component.Output = ""
+			}
+			component.Status = "failed"
+			if result.Output != "" {
+				if component.Output != "" {
+					component.Output += "\n"
+				}
+				component.Output += result.Output
+			}
+		case result.Status == "skipped" && component.Status != "failed":
+			component.Status = "skipped"
+			component.Output = result.Output
+		}
+	}
+	return components
+}
+
+func printResult(result componentResult) {
 	switch result.Status {
 	case "installed":
-		fmt.Printf("✅ %s installed\n", result.Task.Label)
+		fmt.Printf("✅ %s installed\n", result.Label)
 	case "skipped":
-		fmt.Printf("⚠️ %s skipped: %s\n", result.Task.Label, result.Output)
+		fmt.Printf("⚠️ %s skipped: %s\n", result.Label, result.Output)
 	case "failed":
-		fmt.Fprintf(os.Stderr, "❌ %s install failed\n", result.Task.Label)
+		fmt.Fprintf(os.Stderr, "❌ %s install failed\n", result.Label)
 		if result.Output != "" {
 			fmt.Fprintln(os.Stderr, result.Output)
 		}
