@@ -20,6 +20,19 @@ func TestModelEnterSubmitsSelection(t *testing.T) {
 	}
 }
 
+func TestModelViewportKeepsFooterVisible(t *testing.T) {
+	model := NewModel()
+	updated, _ := model.Update(tea.WindowSizeMsg{Height: 8, Width: 80})
+	model = updated.(Model)
+	content := model.View().Content
+	if !strings.Contains(content, "space toggle") {
+		t.Fatal("viewport removed the footer")
+	}
+	if !strings.Contains(content, "more") {
+		t.Fatal("viewport did not indicate clipped rows")
+	}
+}
+
 func TestModelSelectsCategoryAndSearches(t *testing.T) {
 	model := NewModel()
 	for index, component := range model.components {

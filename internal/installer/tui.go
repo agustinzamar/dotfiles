@@ -14,6 +14,7 @@ type Model struct {
 	query      string
 	searching  bool
 	applied    map[string]bool
+	height     int
 }
 
 func NewModel() Model {
@@ -27,6 +28,10 @@ func NewModel() Model {
 func (m Model) Init() tea.Cmd { return nil }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if size, ok := msg.(tea.WindowSizeMsg); ok {
+		m.height = size.Height
+		return m, nil
+	}
 	if key, ok := msg.(tea.KeyPressMsg); ok {
 		if m.searching {
 			switch key.String() {
@@ -129,18 +134,20 @@ func (m Model) visibleIndices() []int {
 }
 
 func (m Model) View() tea.View {
-	text := "dot installer\n\n"
 	indices := m.visibleIndices()
+	rows := make([]string, 0, len(indices)*2)
+	cursorRow := 0
 	lastCategory := ""
 	for i, index := range indices {
 		component := m.components[index]
 		if component.Category != lastCategory {
-			text += "[" + component.Category + "]\n"
+			rows = append(rows, "["+component.Category+"]")
 			lastCategory = component.Category
 		}
 		cursor := " "
 		if i == m.cursor {
 			cursor = ">"
+			cursorRow = len(rows)
 		}
 		mark := " "
 		if m.selected[component.ID] {
@@ -150,15 +157,45 @@ func (m Model) View() tea.View {
 		if m.applied[component.ID] {
 			status = " (installed)"
 		}
-		text += cursor + " [" + mark + "] " + component.Label + status + "\n"
+		rows = append(rows, cursor+" ["+mark+"] "+component.Label+status)
 	}
 	if len(indices) == 0 {
-		text += "No matching components.\n"
+		rows = append(rows, "No matching components.")
+	}
+
+	available := len(rows)
+	if m.height > 0 {
+		available = m.height - 4
+		if available < 1 {
+			available = 1
+		}
+	}
+	start := 0
+	if cursorRow >= available {
+		start = cursorRow - available + 1
+	}
+	if start+available > len(rows) {
+		start = len(rows) - available
+		if start < 0 {
+			start = 0
+		}
+	}
+	end := start + available
+	if end > len(rows) {
+		end = len(rows)
+	}
+	text := "dot installer"
+	if start > 0 {
+		text += "  ↑ more"
+	}
+	text += "\n\n" + strings.Join(rows[start:end], "\n")
+	if end < len(rows) {
+		text += "\n↓ more"
 	}
 	if m.searching {
-		text += "\nsearch: " + m.query + "_"
+		text += "\n\nsearch: " + m.query + "_"
 	} else {
-		text += "\nspace toggle  a all  n none  / search  enter apply  q quit"
+		text += "\n\nspace toggle  a all  n none  / search  enter apply  q quit"
 	}
 	return tea.NewView(text)
 }
