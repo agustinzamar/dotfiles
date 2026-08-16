@@ -26,4 +26,14 @@ func TestManifestHasStableBaselineAndIndependentOptions(t *testing.T) {
 	if seen["laravel"] || seen["phpstorm"] {
 		t.Fatal("PHP tooling must be one component")
 	}
+	for _, component := range Components() {
+		if component.ID != "php" {
+			continue
+		}
+		for _, command := range component.Commands {
+			if command == "brew install php" || command == "brew install php composer" {
+				t.Fatal("PHP must be installed through Herd")
+			}
+		}
+	}
 }
