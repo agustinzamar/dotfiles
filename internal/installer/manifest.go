@@ -23,6 +23,7 @@ func Components() []Component {
 		{ID: "service-redis", Label: "Redis", Category: "Services", Commands: []string{"brew install redis"}},
 		{ID: "service-sqlite", Label: "SQLite", Category: "Services", Commands: []string{"brew install sqlite"}},
 		{ID: "ai", Label: "AI tools", Category: "AI", Commands: []string{"brew install opencode"}, Links: []string{"claude", "agents"}},
+		{ID: "ai-herdr", Label: "Herdr", Category: "AI", Commands: []string{"brew install herdr"}, Links: []string{"herdr"}},
 		{ID: "vscode", Label: "VS Code", Category: "Editors", Commands: []string{"brew install --cask visual-studio-code", "dot code"}, Links: []string{"vscode"}},
 		{ID: "desktop-chrome", Label: "Chrome", Category: "Desktop", Commands: []string{"brew install --cask google-chrome"}},
 		{ID: "desktop-firefox", Label: "Firefox", Category: "Desktop", Commands: []string{"brew install --cask firefox"}},
