@@ -408,6 +408,17 @@ EOF
   [ -z "$(find "$home" -mindepth 1)" ]
 }
 
+@test "profile-aware link selects individual components" {
+  local home profile
+  home="$(mktemp -d)"
+  profile="$home/profile.json"
+  printf '{"components":{"desktop-aerospace":true}}\n' >"$profile"
+  HOME="$home" DOT_PROFILE="$profile" run "$DOT" link --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"config/aerospace/aerospace.toml"* ]]
+  [[ "$output" != *"config/linearmouse/linearmouse.json"* ]]
+}
+
 # A name can cover several targets (ghostty -> ghostty + Muxy), and must not
 # pull in unrelated configs.
 @test "link <name> links only that config" {

@@ -91,11 +91,11 @@ change to a script, not like a change to a config value.
 | Command | What it does |
 | --- | --- |
 | `install` | Everything below, in order (`macos` covers `dock`) |
-| `tui` | Select baseline and optional components in the Bubble Tea installer |
+| `tui` | Select baseline tools and individual optional apps in the Bubble Tea installer |
 | `install --profile PATH` | Apply a saved component profile without the TUI |
-| `link` | Link selected components from `~/.config/dot/profile.json` |
-| `link --all` | Link every valid config explicitly |
-| `link <name>` | Symlink one config (`ghostty`, `tmux`, `yazi`, …) |
+| `link` | Repair links selected in `~/.config/dot/profile.json` |
+| `link --all` | Force-link every valid config explicitly |
+| `link <name>` | Force-link one config (`ghostty`, `tmux`, `yazi`, …) |
 | `ai [agent]` | Install AI skills and plugins (opt-in, never part of `install`) |
 | `unlink` | Remove symlinks that point into this repo |
 | `doctor` | Check required tools and symlinks |
@@ -112,9 +112,12 @@ dot install --dry-run --profile ~/.config/dot/profile.json
 ```
 
 The TUI selects Base, Shell, Git, and Terminal by default. Go is required and
-cannot be disabled. Optional PHP, Laravel, AI, desktop, communication, media,
-editor, and service components start unselected. Selections persist in the
-machine-local profile at `~/.config/dot/profile.json`.
+cannot be disabled. Optional apps are individual selections, so you can select
+Discord without selecting Slack. Press Enter to install selected missing apps,
+repair their selected config links, and return to the TUI. Press q to quit.
+Successful work is not repeated during the same TUI session. Deselecting an
+installed app never uninstalls it or removes its config link. Selections persist
+in the machine-local profile at `~/.config/dot/profile.json`.
 
 A bare `make` is the one-shot first init (`dot install`). The Makefile also
 carries `make test`, `make check` and `make lint`, which CI runs.
