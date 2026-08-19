@@ -18,6 +18,13 @@
 	autocrlf = input
 	pager = hunk pager
 
+[diff]
+	tool = hunk
+	prompt = false
+
+[difftool "hunk"]
+	cmd = hunk difftool "$LOCAL" "$REMOTE" "$PATH"
+
 [push]
 	autoSetupRemote = true
 
