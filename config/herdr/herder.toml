@@ -37,10 +37,10 @@ prefix = "ctrl+a"
 # and Shift+number did not reach Herdr reliably in the current terminal setup.
 focus_agent = "prefix+ctrl+1..9"
 
-focus_pane_left = "ctrl+h"
-focus_pane_right = "ctrl+l"
-focus_pane_down = "ctrl+j"
-focus_pane_up = "ctrl+k"
+focus_pane_left = "ctrl+shift+h"
+focus_pane_right = "ctrl+shift+l"
+focus_pane_down = "ctrl+shift+j"
+focus_pane_up = "ctrl+shift+k"
 
 new_tab = "prefix+t"
 
@@ -55,14 +55,6 @@ key = "prefix+shift+n"
 type = "plugin_action"
 command = "workspace.layout.create-layout"
 description = "new workspace with 4 tabs"
-
-# Clear the focused pane. Ghostty maps cmd+k to the F5 sequence, because a raw
-# Ctrl+L byte would be captured here by focus_pane_right instead.
-[[keys.command]]
-key = "f5"
-type = "shell"
-command = "/Users/dzamarcoto/dotfiles/config/herdr/clear-focused-pane.sh"
-description = "clear focused pane"
 
 # Hyper chord so this does not steal ctrl+t from shells, editors, or Ghostty.
 # Toggle-popup plugin keeps the shell alive in a tmux session so the same key opens and closes it.
@@ -106,7 +98,7 @@ rows = [
 row_gap = 1
 rows = [
   ["state_icon", "workspace"],
-  ["state_text", "agent", "tab"]
+  ["state_text", "agent"]
 ]
 
 [terminal]
