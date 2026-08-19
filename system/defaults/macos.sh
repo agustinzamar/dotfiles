@@ -226,8 +226,14 @@ defaults write com.apple.dock show-process-indicators -bool true
 # Animate opening applications from the Dock
 defaults write com.apple.dock launchanim -bool true
 
-# Disable automatically hide and show the Dock
-defaults write com.apple.dock autohide -bool false
+# Automatically hide and show the Dock
+defaults write com.apple.dock autohide -bool true
+
+# Delay (seconds) before the Dock shows when the pointer hits the edge
+defaults write com.apple.dock autohide-delay -float 0
+
+# Animation duration (seconds). Default is 0.5.
+defaults write com.apple.dock autohide-time-modifier -float 0.3
 
 # Put the Dock on the bottom edge
 defaults write com.apple.dock orientation -string bottom
