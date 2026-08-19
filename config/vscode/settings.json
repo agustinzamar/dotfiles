@@ -179,7 +179,7 @@
   "typescript.updateImportsOnPaste.enabled": false,
   "javascript.updateImportsOnPaste.enabled": false,
   "typescript.tsserver.maxTsServerMemory": 24576,
-  "workbench.colorTheme": "Catppuccin Mocha",
+  "workbench.colorTheme": "Catppuccin Macchiato",
   "[glimmer-js]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.foldingStrategy": "indentation"
