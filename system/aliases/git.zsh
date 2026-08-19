@@ -1,13 +1,8 @@
 alias gpo="git push origin"
+alias ghopen='gh repo view --web'
 alias uncommit="git reset --soft HEAD~1"
-alias branches="git branch --sort=committerdate | head -10"
 alias gecor='git checkout $(git branch -a | fzf)'
 alias lg='lazygit'
-
-ghopen() {
-  local url=$(git config --get remote.origin.url | sed -E 's/git@github.com:(.*)\.git/https:\/\/github.com\/\1/')
-  open "$url"
-}
 
 clone() {
   if [ $# -eq 0 ]; then
