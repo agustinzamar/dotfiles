@@ -1,6 +1,6 @@
 # ┌──────────────────────────────────────────────────────────────────────────────┐
 # │                            Custom Ghostty config                             │
-# │                  Optimized for Zsh and Catppuccin Mocha theme                │
+# │                  Custom Ghostty colors (Catppuccin Macchiato)                 │
 # └──────────────────────────────────────────────────────────────────────────────┘
 
 # ┌──────────────────────────────────────────────────────────────────────────────┐
@@ -63,9 +63,6 @@ keybind = cmd+shift+right=text:\x1b[1;4F
 # │                                  THEME                                       │
 # └──────────────────────────────────────────────────────────────────────────────┘
 
-# --- Theme ---
-theme = "Catppuccin Macchiato"
-
 # --- Font ---
 font-family = "JetBrainsMono Nerd Font"
 font-size = 20
@@ -77,31 +74,32 @@ adjust-cell-height = 3
 # bold-is-bright = true
 
 # --- Base Colors ---
-# background = 06080f
-foreground = #f3f6f9
-cursor-color = #e0c15a
-selection-background = #263356
-selection-foreground = #f3f6f9
+background = #24273a
+foreground = #cad3f5
+cursor-color = #f4dbd6
+cursor-text = #24273a
+selection-background = #363a4f
+selection-foreground = #cad3f5
 
 # --- Normal Colors ---
-palette = 0=#06080f
-palette = 1=#cb7c94
-palette = 2=#b7cc85
-palette = 3=#ffe066
-palette = 4=#7fb4ca
-palette = 5=#ff8dd7
-palette = 6=#7aa89f
-palette = 7=#f3f6f9
+palette = 0=#494d64
+palette = 1=#ed8796
+palette = 2=#a6da95
+palette = 3=#eed49f
+palette = 4=#8aadf4
+palette = 5=#f5bde6
+palette = 6=#8bd5ca
+palette = 7=#b8c0e0
 
 # --- Bright Colors ---
-palette = 8=#8a8fa3
-palette = 9=#de8fa8
-palette = 10=#d1e8a9
-palette = 11=#fff7b1
-palette = 12=#a3d4d5
-palette = 13=#ffaeea
-palette = 14=#7fb4ca
-palette = 15=#f3f6f9
+palette = 8=#5b6078
+palette = 9=#ed8796
+palette = 10=#a6da95
+palette = 11=#eed49f
+palette = 12=#8aadf4
+palette = 13=#f5bde6
+palette = 14=#8bd5ca
+palette = 15=#a5adcb
 
 # ┌──────────────────────────────────────────────────────────────────────────────┐
 # │                                  SYSTEM                                      │
