@@ -152,14 +152,12 @@ _fzf_comprun() {
 
 typeset -U path PATH
 
-# Load aliases and functions, in filename order. See system/aliases/ and system/functions/ in the dotfiles repo.
+# Load shell aliases and functions, in filename order. See system/aliases/ in the dotfiles repo.
 for f in "$DOTFILES_DIR"/system/aliases/*.zsh(N); do source "$f"; done
-for f in "$DOTFILES_DIR"/system/functions/*.zsh(N); do source "$f"; done
 
 # Load private custom overrides (not committed, machine-specific)
 for f in "${HOME}"/.dotfiles-custom/exports/*.zsh(N); do source "$f"; done
-for f in "${HOME}"/.dotfiles-custom/aliases/*.zsh(N); do source "$f"; done
-for f in "${HOME}"/.dotfiles-custom/functions/*.zsh(N); do source "$f"; done
+for f in "${HOME}"/.dotfiles-custom/aliases/*.zsh(N) "${HOME}"/.dotfiles-custom/functions/*.zsh(N); do source "$f"; done
 
 # Per-tool environment, one file each, sourced in filename order. See
 # system/env/ in the dotfiles repo.

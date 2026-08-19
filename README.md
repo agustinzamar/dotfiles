@@ -130,7 +130,7 @@ carries `make test`, `make check` and `make lint`, which CI runs.
 - `install/topics/` — one Brewfile per package group; each is also a command.
 - `install/*.sh` — the per-topic install steps
 - `config/` — application configuration
-- `system/` — shell aliases, functions, exports, `env/`, `completions/`, `defaults/`
+- `system/` — shell aliases and functions, exports, `env/`, `completions/`, `defaults/`
 - `remote-install.sh` — one-line bootstrap for a fresh machine
 - `test/` — Bats tests
 
