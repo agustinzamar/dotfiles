@@ -2,7 +2,7 @@ alias cd='z'
 alias cat='bat --paging=never'
 alias ls='eza -la --icons --group-directories-first'
 alias ll='eza -la --icons --git'
-alias lt='eza --tree --icons'
+alias tree='eza --tree --icons'
 
 # zmv: batch rename/copy/link without the shell expanding glob patterns
 alias zmv='noglob zmv'
