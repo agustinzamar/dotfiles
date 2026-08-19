@@ -44,6 +44,18 @@ focus_pane_up = "ctrl+k"
 
 new_tab = "prefix+t"
 
+# prefix+shift+n is taken by the workspace.layout plugin action below.
+new_workspace = "prefix+shift+m"
+
+# prefix+shift+n: new workspace pre-loaded with 4 named tabs.
+# Plugin lives in dotfiles/config/herdr/workspace-layout; link with
+# herdr plugin link ~/dotfiles/config/herdr/workspace-layout
+[[keys.command]]
+key = "prefix+shift+n"
+type = "plugin_action"
+command = "workspace.layout.create-layout"
+description = "new workspace with 4 tabs"
+
 # Clear the focused pane. Ghostty maps cmd+k to the F5 sequence, because a raw
 # Ctrl+L byte would be captured here by focus_pane_right instead.
 [[keys.command]]

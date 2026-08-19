@@ -1,0 +1,12 @@
+id = "workspace.layout"
+name = "Workspace Layout"
+version = "0.1.0"
+min_herdr_version = "0.7.0"
+description = "Create a workspace with 4 named tabs"
+platforms = ["linux", "macos", "windows"]
+
+[[actions]]
+id = "create-layout"
+title = "New workspace with 4 tabs"
+contexts = ["workspace"]
+command = ["sh", "create.sh"]
