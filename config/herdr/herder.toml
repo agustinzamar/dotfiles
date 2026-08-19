@@ -33,25 +33,20 @@ peach = "#f5a97f"
 prefix = "ctrl+a"
 
 # Jump straight to agent N (1..9) as listed in the sidebar.
-# Use Ctrl after the prefix: Alt+number is owned by skhd/yabai spaces,
-# and Shift+number did not reach Herdr reliably in the current terminal setup.
 focus_agent = "prefix+ctrl+1..9"
 
-focus_pane_left = "ctrl+shift+h"
-focus_pane_right = "ctrl+shift+l"
-focus_pane_down = "ctrl+shift+j"
-focus_pane_up = "ctrl+shift+k"
+focus_pane_left = ["prefix+h", "cmd+alt+ctrl+shift+h"]
+focus_pane_right = ["prefix+l", "cmd+alt+ctrl+shift+l"]
+focus_pane_down = ["prefix+j", "cmd+alt+ctrl+shift+j"]
+focus_pane_up = ["prefix+k", "cmd+alt+ctrl+shift+k"]
 
 new_tab = "prefix+t"
-
-# prefix+shift+n is taken by the workspace.layout plugin action below.
-new_workspace = "prefix+shift+m"
 
 # prefix+shift+n: new workspace pre-loaded with 4 named tabs.
 # Plugin lives in dotfiles/config/herdr/workspace-layout; link with
 # herdr plugin link ~/dotfiles/config/herdr/workspace-layout
 [[keys.command]]
-key = "prefix+shift+n"
+key = "ctrl+alt+cmd+shift+n"
 type = "plugin_action"
 command = "workspace.layout.create-layout"
 description = "new workspace with 4 tabs"

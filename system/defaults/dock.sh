@@ -22,6 +22,8 @@ DOCK_APPS=(
   "/Applications/Visual Studio Code.app"
   "/Applications/Ghostty.app"
   "/Applications/PhpStorm.app"
+  "/Applications/Spotify.app"
+  "/Applications/Telegram.app"
 )
 
 dockutil --no-restart --remove all
