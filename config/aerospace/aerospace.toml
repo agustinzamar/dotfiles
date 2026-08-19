@@ -8,7 +8,9 @@ config-version = 2
 
 # You can use it to add commands that run after AeroSpace startup.
 # Available commands : https://nikitabobko.github.io/AeroSpace/commands
-after-startup-command = []
+after-startup-command = [
+  'exec-and-forget borders active_color=0xffe1e3e4 inactive_color=0xff494d64 width=5.0'
+]
 
 # Start AeroSpace at login
 start-at-login = true
@@ -45,7 +47,7 @@ on-focus-changed = ['move-mouse window-lazy-center']
 # You can effectively turn off macOS "Hide application" (cmd-h) feature by toggling this flag
 # Useful if you don't use this macOS feature, but accidentally hit cmd-h or cmd-alt-h key
 # Also see: https://nikitabobko.github.io/AeroSpace/goodies#disable-hide-app
-automatically-unhide-macos-hidden-apps = true
+automatically-unhide-macos-hidden-apps = false
 
 # List of workspaces that should stay alive even when they contain no windows,
 # even when they are invisible.
@@ -66,9 +68,6 @@ on-window-detected = [
     # O - Other browsers (Brave, Firefox, Safari)
     { if = 'test %{app-bundle-id} = com.brave.Browser || test %{app-bundle-id} = org.mozilla.firefox || test %{app-bundle-id} = com.apple.Safari', run = 'move-node-to-workspace O; workspace O' },
 
-    # W - WhatsApp
-    { if = 'test %{app-bundle-id} = net.whatsapp.WhatsApp', run = 'move-node-to-workspace W; workspace W' },
-
     # C - Code editors (VS Code, PHPStorm)
     { if = 'test %{app-bundle-id} = com.microsoft.VSCode || test %{app-bundle-id} = com.jetbrains.PhpStorm', run = 'move-node-to-workspace C; workspace C' },
 
@@ -81,7 +80,7 @@ on-window-detected = [
 # already open, focus it and press alt-shift-<workspace-letter> (e.g. alt-shift-b
 # for workspace B), or restart the application.
 
-focus-follows-mouse.enabled = true
+focus-follows-mouse.enabled = false
 
 # Possible values: (qwerty|dvorak|colemak)
 # See https://nikitabobko.github.io/AeroSpace/guide#key-mapping
@@ -116,7 +115,7 @@ gaps.outer.right =      5
     # - Special keys.   minus, equal, period, comma, slash, backslash, quote, semicolon,
     #                   backtick, leftSquareBracket, rightSquareBracket, space, enter, esc,
     #                   backspace, tab, pageUp, pageDown, home, end, forwardDelete,
-    #                   sectionSign (ISO keyboards only, european keyboards only)
+
     # - Keypad special. keypadClear, keypadDecimalMark, keypadDivide, keypadEnter, keypadEqual,
     #                   keypadMinus, keypadMultiply, keypadPlus
     # - Arrows.         left, down, up, right
