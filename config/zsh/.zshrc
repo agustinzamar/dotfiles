@@ -51,7 +51,6 @@ else
     OMZP::zoxide \
     OMZP::fzf \
     OMZP::command-not-found \
-    OMZP::per-directory-history/per-directory-history.zsh \
     OMZP::history \
     OMZP::sudo
 
@@ -94,10 +93,6 @@ bindkey '^x^c' copy-command-line
 
 # Enable zmv for batch renaming (used with noglob aliases in aliases/filesystem.zsh)
 autoload -U zmv
-
-# per-directory-history: start every shell in global (shared) mode; Ctrl-G
-# toggles to per-directory local mode on demand.
-export HISTORY_START_WITH_GLOBAL=true
 
 # History settings
 HISTFILE="${HOME}/.zsh_history"
