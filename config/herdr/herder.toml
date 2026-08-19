@@ -45,13 +45,12 @@ focus_pane_up = "ctrl+k"
 new_tab = "prefix+t"
 
 # Hyper chord so this does not steal ctrl+t from shells, editors, or Ghostty.
+# Toggle-popup plugin keeps the shell alive in a tmux session so the same key opens and closes it.
 [[keys.command]]
 key = "ctrl+shift+alt+cmd+t"
-type = "popup"
-command = "exec \"${SHELL:-sh}\""
-description = "open scratch terminal"
-width = "80%"
-height = "80%"
+type = "plugin_action"
+command = "maro114510.toggle-popup.toggle-shell"
+description = "toggle scratch terminal"
 
 [ui]
 show_agent_labels_on_pane_borders = true
