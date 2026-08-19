@@ -13,7 +13,7 @@ export DOTFILES_DIR="${${(%):-%N}:A:h:h:h}"
 # Source exports early so zinit plugins find brewed binaries
 source "$DOTFILES_DIR/system/.exports"
 
-# Set nvim as default editor for opencode and other tools
+# Set nvim as default editor
 export EDITOR="nvim"
 export VISUAL="nvim"
 
@@ -74,9 +74,8 @@ fi
 bindkey -e
 
 # History search with up/down arrows based on current input.
-# Fallback only: history-substring-search rebinds these in its atload above.
-bindkey '\e[A' history-search-backward
-bindkey '\e[B' history-search-forward
+bindkey '^[[A' history-search-backward
+bindkey '^[[B' history-search-forward
 
 # Bind magic space to expand aliases and history words
 bindkey ' ' magic-space
@@ -109,28 +108,47 @@ setopt hist_ignore_all_dups
 setopt hist_ignore_space
 setopt hist_save_no_dups
 setopt hist_find_no_dups
+setopt hist_expire_dups_first
 setopt appendhistory
 setopt sharehistory
 
 # Completion settings
-# Case/hyphen-insensitive, then substring anywhere ("back" -> "auditboard-backend")
+# Case/hyphen-insensitive, then substring anywhere
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z-_}={A-Za-z_-}' 'r:|=*' 'l:|=* r:|=*'
 zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
 zstyle ':completion:*' menu no
-
-# fzf-tab: preview directories with eza
-zstyle ':fzf-tab:complete:*:*' fzf-preview 'eza -la --icons --group-directories-first --color --no-permissions --no-filesize --no-user $realpath'
 
 # pnpm script candidates are names, not paths, so the eza preview above would
 # fail on every one. Preview the script body from the nearest package.json.
 zstyle ':fzf-tab:complete:pnpm:*' fzf-preview 'p=$PWD; while [[ $p != / && ! -f $p/package.json ]]; do p=${p:h}; done; jq -r --arg k "$word" ".scripts[\$k] // empty" $p/package.json 2>/dev/null'
 
+# fzf-tab: preview directories with eza
+zstyle ':fzf-tab:complete:*:*' fzf-preview 'eza -la --icons --group-directories-first --color --no-permissions --no-filesize --no-user $realpath'
+
 # fzf default opts: smart-case matching (case-insensitive unless the query
 # contains uppercase), consistent across Ctrl-T / Ctrl-R / **<TAB> / fzf-tab.
+show_file_or_dir_preview="if [ -d {} ]; then eza --tree --color=always {} | head -200; else bat -n --color=always --line-range :500 {}; fi"
+
 export FZF_DEFAULT_OPTS='--ansi --layout=reverse --info=inline --smart-case'
 export FZF_CTRL_R_OPTS='--sort'
-export FZF_CTRL_T_OPTS='--preview "bat --color=always --line-range=:100 {} 2>/dev/null || eza -la --icons {}"'
-export FZF_ALT_C_OPTS='--preview "eza -la --icons --color=always --group-directories-first {}"'
+export FZF_CTRL_T_OPTS="--preview '$show_file_or_dir_preview'"
+export FZF_ALT_C_OPTS="--preview 'eza --tree --color=always --group-directories-first {} | head -200'"
+
+# Advanced customization of fzf options via _fzf_comprun function
+# - The first argument to the function is the name of the command.
+# - You should make sure to pass the rest of the arguments to fzf.
+_fzf_comprun() {
+  local command=$1
+  shift
+
+  case "$command" in
+    cd)           fzf --preview 'eza --tree --color=always {} | head -200' "$@" ;;
+    export|unset) fzf --preview "eval 'echo \${}'"         "$@" ;;
+    ssh)          fzf --preview 'dig {}'                   "$@" ;;
+    *)            fzf --preview "$show_file_or_dir_preview" "$@" ;;
+  esac
+}
+
 
 typeset -U path PATH
 
@@ -153,7 +171,3 @@ for f in "$DOTFILES_DIR"/system/env/*.zsh(N); do source "$f"; done
 
 # Yazi: force Kitty Graphics Protocol for image previews in Ghostty
 export YAZI_IMAGE_PROTOCOL=kitty
-
-# Herd's installer appends HERD_PHP_*_INI_SCAN_DIR here, hardcoded to this
-# machine's $HOME. system/env/20-herd.zsh already sets them portably — delete
-# any block Herd re-adds below rather than committing it.
