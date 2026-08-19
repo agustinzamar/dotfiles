@@ -1,23 +1,43 @@
-# Lang
-export LANG=en_US.UTF-8
+# App-specific exports, sourced by .zshrc after the basic shell environment.
+# Basic env (LANG, Homebrew, dotfiles bin, pipx) lives inline in .zshrc.
+# Each block applies only when the tool is installed, so PATH and env stay
+# clean on machines without it.
 
-# Homebrew
-export PATH="/opt/homebrew/sbin:$PATH"
-export PATH="/opt/homebrew/bin:$PATH"
+# MySQL client
+[[ -d "/opt/homebrew/opt/mysql-client/bin" ]] &&
+  export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"
 
-# This repo's own CLI (dot, is-*). .zshrc exports DOTFILES_DIR from its own
-# resolved path before sourcing this; the default covers any other caller.
-export PATH="${DOTFILES_DIR:-$HOME/dotfiles}/bin:$PATH"
+# Ghostty CLI (use `ghostty +list-fonts`, `+show-config`, etc.)
+[[ -d "/Applications/Ghostty.app/Contents/MacOS" ]] &&
+  export PATH="/Applications/Ghostty.app/Contents/MacOS:$PATH"
 
-# pnpm lives in system/env/10-path.zsh.
-
-# pipx
-export PATH="$PATH:$HOME/.local/bin"
-
-# DBngin MySQL (auto-finds current version directory)
-if [[ -d "/Users/Shared/DBngin/mysql" ]]; then
-  for dir in /Users/Shared/DBngin/mysql/*/bin(N); do
-    export PATH="$dir:$PATH"
-  done
+# pnpm global bin
+if [[ -d "$HOME/Library/pnpm" ]]; then
+  export PNPM_HOME="$HOME/Library/pnpm"
+  export PATH="$PNPM_HOME/bin:$PNPM_HOME:$PATH"
 fi
 
+# Herd: ahead of /opt/homebrew/bin, so `php` is Herd's switchable one.
+if [[ -d "$HOME/Library/Application Support/Herd/bin" ]]; then
+  export PATH="$HOME/Library/Application Support/Herd/bin:$PATH"
+
+  # NVM
+  export NVM_DIR="$HOME/Library/Application Support/Herd/config/nvm"
+  [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+  [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+
+  # Herd shell integration
+  [[ -f "/Applications/Herd.app/Contents/Resources/config/shell/zshrc.zsh" ]] &&
+    builtin source "/Applications/Herd.app/Contents/Resources/config/shell/zshrc.zsh"
+
+  # PHP Binaries
+  export HERD_PHP_85_INI_SCAN_DIR="$HOME/Library/Application Support/Herd/config/php/85/"
+  export HERD_PHP_84_INI_SCAN_DIR="$HOME/Library/Application Support/Herd/config/php/84/"
+  export HERD_PHP_83_INI_SCAN_DIR="$HOME/Library/Application Support/Herd/config/php/83/"
+  export HERD_PHP_82_INI_SCAN_DIR="$HOME/Library/Application Support/Herd/config/php/82/"
+fi
+
+# Direnv
+if command -v direnv &>/dev/null; then
+  eval "$(direnv hook zsh)"
+fi

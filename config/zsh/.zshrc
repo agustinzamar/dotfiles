@@ -10,7 +10,14 @@ fi
 # assume the clone sits at ~/dotfiles.
 export DOTFILES_DIR="${${(%):-%N}:A:h:h:h}"
 
-# Source exports early so zinit plugins find brewed binaries
+# Basic shell environment. Inline here so zinit plugins find brewed binaries.
+export LANG=en_US.UTF-8
+export PATH="/opt/homebrew/sbin:$PATH"
+export PATH="/opt/homebrew/bin:$PATH"
+export PATH="${DOTFILES_DIR}/bin:$PATH"
+export PATH="$PATH:$HOME/.local/bin"
+
+# App-specific exports (Herd, pnpm, direnv, ...). See system/.exports.
 source "$DOTFILES_DIR/system/.exports"
 
 # Set nvim as default editor
@@ -153,10 +160,6 @@ for f in "$DOTFILES_DIR"/system/aliases/*.zsh(N); do source "$f"; done
 # Load private custom overrides (not committed, machine-specific)
 for f in "${HOME}"/.dotfiles-custom/exports/*.zsh(N); do source "$f"; done
 for f in "${HOME}"/.dotfiles-custom/aliases/*.zsh(N) "${HOME}"/.dotfiles-custom/functions/*.zsh(N); do source "$f"; done
-
-# Per-tool environment, one file each, sourced in filename order. See
-# system/env/ in the dotfiles repo.
-for f in "$DOTFILES_DIR"/system/env/*.zsh(N); do source "$f"; done
 
 # Last, so the prompt config wins over anything a tool init changed.
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.

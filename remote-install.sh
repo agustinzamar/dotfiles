@@ -3,8 +3,8 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/agustinzamar/dotfiles/main/remote-install.sh | bash
 #
-# Clones this repo to ~/dotfiles and runs the installer. system/.exports puts
-# the CLI on PATH from ~/dotfiles.
+# Clones this repo to ~/dotfiles and runs the installer. config/zsh/.zshrc puts
+# the CLI on PATH from $DOTFILES_DIR.
 
 set -Eeuo pipefail
 
