@@ -92,4 +92,43 @@ Ensure `composer.json` contains a `post-update-cmd` script that runs `boost:upda
 - Write in **ASD-STE100 Simplified Technical English**: one idea per sentence, active voice, present tense, approved words only, max ~20 words per sentence. No idioms, no synonyms for the same concept — reuse the same word.
 - Present information in **tables** whenever the content has 2+ items with shared attributes (options, files, tradeoffs, steps, results). Prose only when a table does not fit.
 - Use **emojis** as visual anchors: ✅ done / ❌ failed / ⚠️ warning / 📁 file / 🔧 command / 💡 note. One per line at most. Do not decorate.
-- Exception: code, commits, and PR bodies stay in normal technical English with no emojis.
+- Exception: code stays in normal technical English. Commits and PR bodies use ASD-STE100 English. All three use no emojis.
+
+## Git Commits and Pull Requests
+
+Write all commit messages and PR bodies in ASD-STE100 Simplified Technical English. Use no emojis.
+
+### Title format
+
+Use `<TICKET-KEY>: <Short descriptive title>` for the PR title and the commit subject.
+
+- The ticket key comes from the Jira issue, for example `PF-24`.
+- The title says what the change does. Use max 10 words.
+- Do not use a Conventional Commit prefix such as `feat:` or `fix:`.
+- Example: `PF-24: Match animals by physical tag first on import`
+
+### PR description template
+
+```markdown
+## Summary
+
+<One or two sentences. State what the change does and why.>
+
+## Changes
+
+| File | Change |
+| --- | --- |
+| `path/to/file.php` | <What changed in this file.> |
+
+## Testing
+
+| Check | Result |
+| --- | --- |
+| <Test command or suite> | <Result.> |
+
+## Notes
+
+<Optional. List known limits, follow-up work, or decisions the reviewer must know. Remove this section if it is empty.>
+```
+
+Keep the same section order. Remove a section only when it has no content.
