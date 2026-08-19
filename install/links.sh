@@ -20,6 +20,7 @@ all_links() {
 		yazi|config/yazi/theme.toml|$HOME/.config/yazi/theme.toml||terminal
 		linearmouse|config/linearmouse/linearmouse.json|$HOME/.config/linearmouse/linearmouse.json||desktop-linearmouse
 		aerospace|config/aerospace/aerospace.toml|$HOME/.config/aerospace/aerospace.toml||desktop-aerospace
+		sketchybar|config/sketchybar|$HOME/.config/sketchybar||desktop-sketchybar
 		npm|config/npm/.npmrc|$HOME/.npmrc||dev
 		vscode|config/vscode/settings.json|$HOME/Library/Application Support/Code/User/settings.json||vscode|code
 		vscode|config/vscode/keybindings.json|$HOME/Library/Application Support/Code/User/keybindings.json||vscode|code
