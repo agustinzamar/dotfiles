@@ -22,9 +22,7 @@
   "editor.fontSize": 18,
   "editor.lineHeight": 22,
   "editor.detectIndentation": false,
-  "editor.rulers": [
-    120
-  ],
+  "editor.rulers": [120],
   "editor.insertSpaces": true,
   "editor.fontFamily": "JetBrainsMono Nerd Font",
   "editor.fontLigatures": true,
@@ -58,11 +56,7 @@
   },
   "editor.trimAutoWhitespace": true,
   "editor.tabSize": 2,
-  "eslint.validate": [
-    "javascript",
-    "javascriptreact",
-    "json"
-  ],
+  "eslint.validate": ["javascript", "javascriptreact", "json"],
   "eslint.alwaysShowStatus": true,
   "javascript.updateImportsOnFileMove.enabled": "always",
   "javascript.referencesCodeLens.enabled": true,
@@ -86,9 +80,7 @@
   "[blade]": {
     "editor.defaultFormatter": "shufo.vscode-blade-formatter"
   },
-  "errorLens.excludeBySource": [
-    "eslint(no-undef)"
-  ],
+  "errorLens.excludeBySource": ["eslint(no-undef)"],
   "[astro]": {
     "editor.defaultFormatter": "astro-build.astro-vscode"
   },
@@ -138,9 +130,7 @@
   "git.autofetch": true,
   "git.enableCommitSigning": true,
   "window.zoomPerWindow": false,
-  "settingsSync.ignoredSettings": [
-    "-window.zoomLevel"
-  ],
+  "settingsSync.ignoredSettings": ["-window.zoomLevel"],
   "chat.editor.fontSize": 18,
   "chat.fontSize": 14,
   "terminal.integrated.fontLigatures.enabled": true,
