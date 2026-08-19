@@ -44,8 +44,9 @@ focus_pane_up = "ctrl+k"
 
 new_tab = "prefix+t"
 
+# Hyper chord so this does not steal ctrl+t from shells, editors, or Ghostty.
 [[keys.command]]
-key = "ctrl+t"
+key = "ctrl+shift+alt+cmd+t"
 type = "popup"
 command = "exec \"${SHELL:-sh}\""
 description = "open scratch terminal"
