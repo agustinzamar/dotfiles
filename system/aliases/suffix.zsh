@@ -1,5 +1,4 @@
 # Suffix aliases: open files with the right pager by extension
-# (zsh only — `alias -s` is a zsh feature)
 
 # JSON / YAML → jless (interactive JSON/YAML pager)
 alias -s json=jless
