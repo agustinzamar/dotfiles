@@ -10,8 +10,8 @@
 # --- Basic ---
 window-save-state = always
 macos-titlebar-style = native
-background-opacity = 0.95
-background-blur-radius = 20
+background-opacity = 0.90
+background-blur-radius = 30
 
 # --- Windows ---
 window-decoration = true
@@ -64,7 +64,7 @@ keybind = cmd+shift+right=text:\x1b[1;4F
 # └──────────────────────────────────────────────────────────────────────────────┘
 
 # --- Theme ---
-theme = "Catppuccin Frappe"
+theme = "Catppuccin Macchiato"
 
 # --- Font ---
 font-family = "JetBrainsMono Nerd Font"

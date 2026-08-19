@@ -12,7 +12,7 @@ all_links() {
 		p10k|config/p10k/.p10k.zsh|$HOME/.p10k.zsh||shell
 		ghostty|config/ghostty/config|$HOME/.config/ghostty/config||terminal
 		ghostty|config/ghostty/config|$HOME/Library/Application Support/Muxy/ghostty.conf||terminal
-		ghostty|config/ghostty/theme/catppuccin-frappe.conf|$HOME/.config/ghostty/themes/catppuccin-frappe.conf||terminal
+		ghostty|config/ghostty/theme/catppuccin-macchiato.conf|$HOME/.config/ghostty/themes/catppuccin-macchiato.conf||terminal
 		herdr|config/herdr/herder.toml|$HOME/.config/herdr/config.toml|app-writable|ai-herdr
 		tmux|config/tmux/tmux.conf|$HOME/.config/tmux/tmux.conf||terminal
 		yazi|config/yazi/yazi.toml|$HOME/.config/yazi/yazi.toml||terminal
