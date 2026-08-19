@@ -15,7 +15,7 @@ func Components() []Component {
 	return []Component{
 		{ID: "base", Label: "Base tools", Category: "Base", Default: true, Required: true, Commands: []string{"xcode-select --install", "brew install go"}},
 		{ID: "shell", Label: "Zsh and plugins", Category: "Shell", Default: true, Links: []string{"zsh", "p10k"}, Commands: []string{"brew install zsh fzf", "dot zsh"}},
-		{ID: "git", Label: "Git, SSH signing, Hunk and GitHub tools", Category: "Git", Default: true, Links: []string{"git", "lazygit", "hunk"}, Commands: []string{"brew install git gh lazygit git-delta hunk", "dot git"}},
+		{ID: "git", Label: "Git, SSH signing, Hunk and GitHub tools", Category: "Git", Default: true, Links: []string{"git", "lazygit", "hunk"}, Commands: []string{"brew install git gh lazygit hunk", "dot git"}},
 		{ID: "terminal", Label: "Terminal tools", Category: "Terminal", Default: true, Links: []string{"ghostty", "tmux", "yazi"}, Commands: []string{"brew install --cask ghostty", "brew install tmux yazi neovim"}},
 		{ID: "php", Label: "Composer, Herd and PHPStorm", Category: "PHP", Commands: []string{"brew install composer Herd", "brew install --cask phpstorm"}},
 		{ID: "service-mysql", Label: "MySQL", Category: "Services", Commands: []string{"brew install mysql"}},

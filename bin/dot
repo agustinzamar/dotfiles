@@ -131,7 +131,7 @@ sub_install() {
 
 sub_baseline() {
   log "Installing baseline tools"
-  run_step "Core command-line tools" installed brew install go zsh fzf git gh lazygit git-delta hunk tmux yazi neovim
+  run_step "Core command-line tools" installed brew install go zsh fzf git gh lazygit hunk tmux yazi neovim
   run_step "Ghostty" installed brew install --cask ghostty
   sub_zsh
   sub_git

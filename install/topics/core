@@ -44,7 +44,6 @@ brew "neovim"
 brew "git"
 brew "lazygit"
 brew "gh"
-brew "git-delta"
 brew "hunk"
 
 # --- Fonts ---
