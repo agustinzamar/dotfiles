@@ -20,6 +20,10 @@ brew "dockutil"
 brew "mole"
 cask "pearcleaner"
 
+# --- Command correction ---
+tap "timescam/tap"
+brew "pay-respects"
+
 # --- Multiplexers and terminals ---
 brew "tmux"
 brew "herdr"
