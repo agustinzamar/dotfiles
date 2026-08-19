@@ -9,8 +9,10 @@
 [commit]
 	gpgsign = true
 
-# credential.*.helper is set dynamically by `dot install git` via
-# `brew --prefix`/bin/gh, so it is intentionally absent here.
+[credential "https://github.com"]
+	helper = !/opt/homebrew/bin/gh auth git-credential
+[credential "https://gist.github.com"]
+	helper = !/opt/homebrew/bin/gh auth git-credential
 
 [core]
 	autocrlf = input
@@ -33,7 +35,3 @@
 
 [color]
 	ui = auto
-[credential "https://github.com"]
-	helper = !/opt/homebrew/bin/gh auth git-credential
-[credential "https://gist.github.com"]
-	helper = !/opt/homebrew/bin/gh auth git-credential
