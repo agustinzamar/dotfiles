@@ -38,9 +38,11 @@ all_links() {
 # cleans them up.
 optional_links() {
   cat <<-EOF
-		agents|ai/AGENTS.md|$HOME/.claude/CLAUDE.md|||ai
-		agents|ai/AGENTS.md|$HOME/.agents/AGENTS.md|||ai
-		agents|ai/AGENTS.md|$HOME/.config/opencode/AGENTS.md|||ai
+	agents|ai/AGENTS.md|$HOME/.claude/CLAUDE.md|||ai
+	agents|ai/AGENTS.md|$HOME/.agents/AGENTS.md|||ai
+	agents|ai/AGENTS.md|$HOME/.config/opencode/AGENTS.md|||ai
+	agents|ai/rules/general.md|$HOME/.agents/rules/general.md|||ai
+	agents|ai/rules/general.md|$HOME/.claude/rules/general.md|||ai
 	EOF
 }
 
