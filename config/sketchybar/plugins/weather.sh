@@ -1,4 +1,5 @@
 #!/usr/bin/env zsh
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 IP=$(curl -s https://ipinfo.io/ip)
 LOCATION_JSON=$(curl -s https://ipinfo.io/$IP/json)

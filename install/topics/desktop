@@ -9,6 +9,12 @@ cask "telegram"
 cask "whatsapp"
 cask "slack"
 
+# Tiling window manager + status bar (Catppuccin / gentleman style)
+tap "koekeishiya/formulae"
+brew "yabai"
+tap "FelixKratz/formulae"
+brew "sketchybar"
+
 # Quality of life
 cask "raycast"
 cask "finetune"

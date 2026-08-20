@@ -1,5 +1,9 @@
 #!/usr/bin/env zsh
 
+# Plugin scripts are spawned by sketchybar with a minimal environment; make
+# sure sketchybar / jq / yabai are resolvable from Homebrew.
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+
 SKETCHYBAR_CONFIG="$HOME/.config/sketchybar"
 
 # This is used to determine if a monitor is used

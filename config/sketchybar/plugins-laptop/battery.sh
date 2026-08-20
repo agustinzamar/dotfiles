@@ -1,4 +1,5 @@
 #!/usr/bin/env sh
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 # Battery is here bcause the ICON_COLOR doesn't play well with all background colors
 

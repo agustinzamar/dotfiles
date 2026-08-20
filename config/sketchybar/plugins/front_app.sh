@@ -1,4 +1,5 @@
 #!/usr/bin/env zsh
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 ICON_PADDING_RIGHT=5
 

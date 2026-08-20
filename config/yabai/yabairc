@@ -1,0 +1,72 @@
+#!/usr/bin/env sh
+
+# Ensure helper commands resolve from Homebrew when yabai runs as a service.
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+
+# =============================================================================
+# yabai configuration — Catppuccin / gentleman style
+#
+# Pairs with sketchybar (config/sketchybar). Works with SIP enabled; advanced
+# features (window opacity, no shadow, instant move, focus follows mouse) need
+# System Integrity Protection partially disabled:
+#   https://github.com/koekeishiya/yabai/wiki/Disabling-System-Integrity-Protection
+# The scripting-addition lines below are no-ops when SIP blocks them.
+# =============================================================================
+
+# Load the scripting addition (gracefully fails with SIP enabled).
+yabai -m signal --add event=dock_did_restart action="sudo yabai --load-sa" 2>/dev/null
+sudo yabai --load-sa 2>/dev/null
+
+# -----------------------------------------------------------------------------
+# Global layout
+# -----------------------------------------------------------------------------
+yabai -m config layout            bsp
+yabai -m config top_padding       12
+yabai -m config bottom_padding    12
+yabai -m config left_padding      12
+yabai -m config right_padding     12
+yabai -m config window_gap        10
+yabai -m config split_ratio       0.50
+yabai -m config split_type        auto
+yabai -m config auto_balance      off
+
+# Reserve space for sketchybar (height 32) at the top of every display.
+yabai -m config external_bar      all:32:0
+
+# Mouse
+yabai -m config mouse_follows_focus  off
+yabai -m config focus_follows_mouse  off
+yabai -m config mouse_modifier       fn
+yabai -m config mouse_action1        move
+yabai -m config mouse_action2        resize
+
+# -----------------------------------------------------------------------------
+# Window styling (Catppuccin macchiato)
+# -----------------------------------------------------------------------------
+yabai -m config window_opacity           on
+yabai -m config active_window_opacity    1.0
+yabai -m config normal_window_opacity    0.95
+yabai -m config window_shadow            float
+yabai -m config window_border            off
+yabai -m config active_window_border_color  0xff8aadf4
+yabai -m config normal_window_border_color  0xff41455a
+yabai -m config window_border_width     4
+yabai -m config window_border_radius    -1
+
+# -----------------------------------------------------------------------------
+# Rules
+# -----------------------------------------------------------------------------
+yabai -m rule --add app="^System Settings$" manage=off
+yabai -m rule --add app="^Calculator$" manage=off
+yabai -m rule --add app="^Finder$" title="^$" manage=off
+yabai -m rule --add app="^Spotify$" manage=off
+
+# -----------------------------------------------------------------------------
+# Sketchybar integration
+# -----------------------------------------------------------------------------
+yabai -m signal --add event=space_changed   action="sketchybar --trigger space_change"
+yabai -m signal --add event=window_created  action="sketchybar --trigger space_change"
+yabai -m signal --add event=window_destroyed action="sketchybar --trigger space_change"
+yabai -m signal --add event=window_focused  action="sketchybar --trigger space_change"
+
+echo "yabai configuration loaded"
