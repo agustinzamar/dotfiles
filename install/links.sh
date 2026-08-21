@@ -29,6 +29,7 @@ all_links() {
 		hunk|config/hunk/config.toml|$HOME/.config/hunk/config.toml||git|hunk
 		lazygit|config/lazygit/config.yml|$HOME/.config/lazygit/config.yml||git|lazygit
 		git|config/git/ignore|$HOME/.config/git/ignore||git|git
+		opencode|config/opencode/opencode.jsonc|$HOME/.config/opencode/opencode.jsonc||ai
 		claude|config/claude/statusline-command.sh|$HOME/.claude/statusline-command.sh||ai|claude
 	EOF
 }

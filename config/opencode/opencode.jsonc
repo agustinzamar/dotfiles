@@ -1,0 +1,52 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permission": {
+    "*": "allow"
+  },
+  "lsp": true,
+  "agent": {
+    "research": {
+      "description": "Read-only researcher. Reads, greps and searches. Eligible for background delegation.",
+      "mode": "subagent",
+      "permission": {
+        "edit": "deny",
+        "write": "deny",
+        "bash": {
+          "*": "deny"
+        }
+      }
+    },
+    "builder": {
+      "description": "Write-capable implementation subagent on the cheap model.",
+      "mode": "subagent",
+      "model": "opencode/deepseek-v4-flash-free",
+      "permission": {
+        "edit": "allow",
+        "write": "allow",
+        "bash": "allow"
+      }
+    }
+  },
+  "mcp": {
+    "atlassian": {
+      "type": "remote",
+      "url": "https://mcp.atlassian.com/v1/mcp/authv2",
+      "enabled": true
+    },
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "enabled": true,
+      "headers": {
+        "Authorization": "Bearer {env:CONTEXT7_API_KEY}"
+      }
+    }
+  },
+  "plugin": [
+    "opencode-anthropic-login-via-cli@latest",
+    "@tarquinen/opencode-dcp@latest",
+    "@dietrichgebert/ponytail@4.9.0",
+    "superpowers@git+https://github.com/obra/superpowers.git",
+    "opencode-pty"
+  ]
+}
