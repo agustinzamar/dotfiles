@@ -19,3 +19,9 @@ docs/superpowers/
 # Local Pi runtime state
 .atl/
 .pi/
+
+# Compiled installer binary (bun build --compile; built on demand)
+bin/dot-tui
+
+# Bun build cache artifacts
+*.bun-build

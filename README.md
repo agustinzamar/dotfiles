@@ -15,7 +15,7 @@ It falls back to a tarball when git is not there yet, which is the case before
 the Xcode command line tools are installed.
 
 That line runs whatever `main` serves at that moment. Open
-[`remote-install.sh`](remote-install.sh) before you pipe it — it is 37 lines —
+[`remote-install.sh`](remote-install.sh) before you pipe it — it is 67 lines —
 or skip the pipe entirely and clone, which does the same work:
 
 ```bash
@@ -91,7 +91,7 @@ change to a script, not like a change to a config value.
 | Command | What it does |
 | --- | --- |
 | `install` | Everything below, in order (`macos` covers `dock`) |
-| `tui` | Select baseline tools and individual optional apps in the Bubble Tea installer |
+| `tui` | Select baseline tools and individual optional apps in the terminal installer |
 | `install --profile PATH` | Apply a saved component profile without the TUI |
 | `link` | Repair links selected in `~/.config/dot/profile.json` |
 | `link --all` | Force-link every valid config explicitly |
@@ -111,16 +111,33 @@ dot link --dry-run
 dot install --dry-run --profile ~/.config/dot/profile.json
 ```
 
-The TUI selects Base, Shell, Git, and Terminal by default. Go is required and
-cannot be disabled. Optional apps are individual selections, so you can select
-Discord without selecting Slack. Press Enter to install selected missing apps,
-repair their selected config links, and return to the TUI. Press q to quit.
+The TUI selects Base, Shell, Git, and Terminal by default. Those four are
+required and cannot be disabled. Optional apps are individual selections, so
+you can select Discord without selecting Slack. Press Enter to install
+selected missing apps, repair their selected config links, and return to the
+TUI. Press q to quit.
 Successful work is not repeated during the same TUI session. Deselecting an
 installed app never uninstalls it or removes its config link. Selections persist
 in the machine-local profile at `~/.config/dot/profile.json`.
 
 A bare `make` is the one-shot first init (`dot install`). The Makefile also
 carries `make test`, `make check` and `make lint`, which CI runs.
+
+## The installer binary
+
+`dot tui` and `dot install --profile` run a compiled binary, `bin/dot-tui`.
+`bin/dot` resolves it in order:
+
+1. A prebuilt release binary. `remote-install.sh` downloads one for your arch
+during bootstrap; machines that already have the repo skip this step.
+2. Build from source with Bun — needs Bun at least at the version pinned in
+[`.bun-version`](.bun-version).
+3. Otherwise, guidance pointing back to the bootstrap one-liner above.
+
+Neither step requires a language toolchain at runtime. Contributors who want to
+build or test the installer locally can install Bun with
+`brew install oven-sh/bun/bun`; everyone else only ever meets the finished
+binary.
 
 ## Layout
 
