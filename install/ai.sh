@@ -142,7 +142,8 @@ ai_ensure_pnpm() {
 #
 # Agents whose CLI is missing are skipped; the rest share one manifest pass.
 ai_install() {
-  local kind="$1"; shift
+  local kind="$1"
+  shift
   local agent cli present=() lines item cmd failures=()
 
   for agent in "$@"; do
@@ -175,7 +176,7 @@ ai_install() {
     if "$DRY_RUN"; then
       echo "+ $cmd"
     else
-      eval "$cmd" < /dev/null || failures+=("$item")
+      eval "$cmd" </dev/null || failures+=("$item")
     fi
   done <<<"$lines"
 

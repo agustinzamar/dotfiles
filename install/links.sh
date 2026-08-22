@@ -64,19 +64,19 @@ optional_link_names() {
 
 # _walk_links <map-function> <action-function> [name-filter]
 _walk_links() {
-	local map="$1" action="$2" filter="${3:-}" name source target mode component requirement
-	while IFS='|' read -r name source target mode component requirement; do
-		[[ -n "$source" ]] || continue
-		[[ -z "$filter" || "$name" == "$filter" ]] || continue
-		if [[ "$action" == link_file && "${LINK_FORCE:-false}" != true && -n "$component" ]] && ! component_selected "$component"; then
-		[[ "${LINK_VERBOSE:-false}" == true ]] && echo "skipping $name: component $component is not selected" >&2
-			continue
-		fi
-		if [[ "$action" == link_file && "${LINK_FORCE:-false}" != true && -n "$requirement" ]] && ! is_executable "$requirement"; then
-		[[ "${LINK_VERBOSE:-false}" == true ]] && echo "skipping $name: missing requirement $requirement" >&2
-			continue
-		fi
-		"$action" "$source" "$target" "$mode"
+  local map="$1" action="$2" filter="${3:-}" name source target mode component requirement
+  while IFS='|' read -r name source target mode component requirement; do
+    [[ -n "$source" ]] || continue
+    [[ -z "$filter" || "$name" == "$filter" ]] || continue
+    if [[ "$action" == link_file && "${LINK_FORCE:-false}" != true && -n "$component" ]] && ! component_selected "$component"; then
+      [[ "${LINK_VERBOSE:-false}" == true ]] && echo "skipping $name: component $component is not selected" >&2
+      continue
+    fi
+    if [[ "$action" == link_file && "${LINK_FORCE:-false}" != true && -n "$requirement" ]] && ! is_executable "$requirement"; then
+      [[ "${LINK_VERBOSE:-false}" == true ]] && echo "skipping $name: missing requirement $requirement" >&2
+      continue
+    fi
+    "$action" "$source" "$target" "$mode"
   done < <("$map")
 }
 

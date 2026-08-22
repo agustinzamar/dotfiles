@@ -35,7 +35,6 @@ if [[ -d "/System/Library/CoreServices/Finder.app" ]]; then
   dockutil --no-restart --add "/System/Library/CoreServices/Finder.app" --position 1
 fi
 
-
 # if/fi rather than `&&`: sourced under `set -e`, a final missing app would
 # abort the whole run. Apps can be absent when a cask has yet to install.
 for dock_app in "${DOCK_APPS[@]}"; do

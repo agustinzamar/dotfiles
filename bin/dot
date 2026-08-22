@@ -334,7 +334,10 @@ sub_link() {
 
 run_profile_install() {
   local profile="$1"
-  is_executable go || { echo "Go is required for profile installation" >&2; return 1; }
+  is_executable go || {
+    echo "Go is required for profile installation" >&2
+    return 1
+  }
   local args=(-apply -profile "$profile")
   "$DRY_RUN" && args+=(-dry-run)
   run go run "$DOTFILES_DIR/cmd/dot-tui" "${args[@]}"
