@@ -12,7 +12,6 @@ all_links() {
 		p10k|config/p10k/.p10k.zsh|$HOME/.p10k.zsh||shell
 		ghostty|config/ghostty/config|$HOME/.config/ghostty/config||terminal
 		ghostty|config/ghostty/config|$HOME/Library/Application Support/Muxy/ghostty.conf||terminal
-		ghostty|config/ghostty/theme/catppuccin-macchiato.conf|$HOME/.config/ghostty/themes/catppuccin-macchiato.conf||terminal
 		herdr|config/herdr/herder.toml|$HOME/.config/herdr/config.toml|app-writable|ai-herdr
 		tmux|config/tmux/tmux.conf|$HOME/.config/tmux/tmux.conf||terminal
 		yazi|config/yazi/yazi.toml|$HOME/.config/yazi/yazi.toml||terminal
@@ -24,7 +23,6 @@ all_links() {
 		yabai|config/yabai|$HOME/.config/yabai||desktop-yabai
 		skhd|config/skhd|$HOME/.config/skhd||desktop-skhd
 		borders|config/borders/bordersrc|$HOME/.config/borders/bordersrc||desktop-borders
-		npm|config/npm/.npmrc|$HOME/.npmrc||dev
 		vscode|config/vscode/settings.json|$HOME/Library/Application Support/Code/User/settings.json||vscode|code
 		vscode|config/vscode/keybindings.json|$HOME/Library/Application Support/Code/User/keybindings.json||vscode|code
 		hunk|config/hunk/config.toml|$HOME/.config/hunk/config.toml||git|hunk

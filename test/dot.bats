@@ -139,7 +139,9 @@ setup() {
     grep -q "^sub_$(basename "$file")()" "$DOT" && continue
     while IFS= read -r line; do
       [[ -z "$line" || "$line" == \#* ]] && continue
-      [[ "$line" =~ ^(brew|cask)\ \"[^\"]+\"$ ]] || {
+      # Topics are Brewfiles, so `tap "user/repo"` directives are legal
+      # alongside brew/cask entries.
+          [[ "$line" =~ ^(tap\ \"[^/]+/[^\"]+\"|(brew|cask)\ \"[^\"]+\")$ ]] || {
         echo "${file#"$DOTFILES_DIR"/}: malformed line: $line"
         bad=1
       }
@@ -357,7 +359,8 @@ EOF
 @test "every tracked config file is wired into an install path" {
   # Consumed directly by their own install/*.sh, not through links.sh.
   local handled="config/git/config"
-  local known_gaps=""
+  # Installed via `herdr plugin link` (see herder.toml), not the dot map.
+  local known_gaps="config/herdr/workspace-layout"
 
   local sources
   sources=$(DOTFILES_DIR="$DOTFILES_DIR" bash -c '. "$0/install/links.sh"; all_links' "$DOTFILES_DIR" |
@@ -367,7 +370,10 @@ EOF
   while IFS= read -r file; do
     rel=${file#"$DOTFILES_DIR"/}
     [[ " $handled " == *" $rel "* ]] && continue
-    [[ " $known_gaps " == *" $rel "* ]] && continue
+        local gap
+        for gap in $known_gaps; do
+          [[ "$rel" == "$gap" || "$rel" == "$gap"/* ]] && continue 2
+        done
 
     covered=1
     check="$rel"
