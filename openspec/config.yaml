@@ -1,0 +1,58 @@
+# openspec/config.yaml — SDD project configuration for dotfiles
+schema: spec-driven
+
+context: |
+  Tech stack: Go 1.26 (charm.land/bubbletea/v2 TUI) + Bash CLI (`bin/dot`) + Homebrew Bundle.
+  Architecture: bash entrypoint CLI drives install/link flows; `internal/installer` holds
+  manifest, plan, profile, and TUI logic; `cmd/dot-tui` is the TUI binary. Shell assets in
+  `install/*.sh` and `system/defaults/*.sh`; app configs under `config/`.
+  Testing: `go test ./...` (unit) via `make go-test`; Bats integration tests over the real
+  `dot` CLI via `make test` / CI (`bats test`). CI gates: `make check`, `make lint`, `bats test`.
+  Style: shell scripts gated by shellcheck -x + shfmt -d; Go gated by go vet; .editorconfig present.
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+    - Installer changes MUST state impact on fresh-machine bootstrap (`bin/dot install`)
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+  apply:
+    guidelines:
+      - Follow existing code patterns (internal/installer layout, Makefile targets)
+      - Shell changes must pass `make check` and `make lint` before commit
+      - Go changes must pass `make go-test`
+    tdd: true
+    test_command: "make check && make lint && make go-test && make test"
+  verify:
+    test_command: "make check && make lint && make go-test && make test"
+    build_command: "go build ./..."
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas
+
+testing:
+  strict_tdd: true
+  detected: "2026-08-22"
+  test_runner:
+    unit: "go test ./... (make go-test)"
+    integration: "bats test/*.bats (make test / dot test)"
+  layers:
+    unit: { available: true, tool: "go test" }
+    integration: { available: true, tool: "bats-core" }
+    e2e: { available: false, tool: "" }
+  coverage:
+    available: true
+    command: "go test -cover ./..."
+    enforced_threshold: none
+  quality_tools:
+    linter:
+      { available: true, command: "shellcheck -x <scripts> && go vet ./..." }
+    type_checker: { available: true, command: "go vet ./..." }
+    formatter: { available: true, command: "shfmt -d <scripts>" }
