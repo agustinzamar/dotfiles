@@ -5,16 +5,8 @@
   },
   "lsp": true,
   "agent": {
-    "research": {
-      "description": "Read-only researcher. Reads, greps and searches. Eligible for background delegation.",
-      "mode": "subagent",
-      "permission": {
-        "edit": "deny",
-        "write": "deny",
-        "bash": {
-          "*": "deny"
-        }
-      }
+    "explore": {
+      "model": "opencode/hy3-free",
     },
     "builder": {
       "description": "Write-capable implementation subagent on the cheap model.",
@@ -48,5 +40,32 @@
     "@dietrichgebert/ponytail@4.9.0",
     "superpowers@git+https://github.com/obra/superpowers.git",
     "opencode-pty"
-  ]
+  ],
+  "small_model": "opencode/hy3-free",
+  "autoupdate": true,
+  "experimental": {
+    "batch_tool": true,
+    "continue_loop_on_deny": true,
+  },
+  "provider": {
+    "nvidia": {
+      "whitelist": [
+        "nvidia/z-ai/glm-5.2",
+        "nvidia/minimaxai/minimax-m3",
+        "nvidia/meta/muse-glimmer-30b",
+        "nvidia/deepseek-ai/deepseek-v4-flash"
+      ],
+    },
+    "kilo": {
+      "whitelist": [
+        "kilo-auto/free",
+        "tencent/hy3:free"
+      ]
+    },
+    "xai": {
+      "whitelist": [
+        "xai/grok-4.6"
+      ]
+    }
+  }
 }
