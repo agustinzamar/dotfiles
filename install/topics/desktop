@@ -12,6 +12,7 @@ cask "slack"
 # Tiling window manager + status bar (Catppuccin / gentleman style)
 tap "koekeishiya/formulae"
 brew "yabai"
+brew "skhd"
 tap "FelixKratz/formulae"
 brew "sketchybar"
 

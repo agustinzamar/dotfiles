@@ -21,24 +21,30 @@ sudo yabai --load-sa 2>/dev/null
 # Global layout
 # -----------------------------------------------------------------------------
 yabai -m config layout            bsp
-yabai -m config top_padding       12
+yabai -m config top_padding       0
 yabai -m config bottom_padding    12
 yabai -m config left_padding      12
 yabai -m config right_padding     12
 yabai -m config window_gap        10
 yabai -m config split_ratio       0.50
 yabai -m config split_type        auto
-yabai -m config auto_balance      off
+yabai -m config auto_balance      on
 
 # Reserve space for sketchybar (height 32) at the top of every display.
 yabai -m config external_bar      all:32:0
 
 # Mouse
-yabai -m config mouse_follows_focus  off
+yabai -m config mouse_follows_focus  on
 yabai -m config focus_follows_mouse  off
 yabai -m config mouse_modifier       fn
 yabai -m config mouse_action1        move
 yabai -m config mouse_action2        resize
+yabai -m config mouse_drop_action    swap
+
+# Extras
+yabai -m config window_animation_duration 0.0
+yabai -m config window_opacity_duration   0.2
+yabai -m config insert_feedback_color     0xff61afef
 
 # -----------------------------------------------------------------------------
 # Window styling (Catppuccin macchiato)
@@ -47,7 +53,7 @@ yabai -m config window_opacity           on
 yabai -m config active_window_opacity    1.0
 yabai -m config normal_window_opacity    0.95
 yabai -m config window_shadow            float
-yabai -m config window_border            off
+#yabai -m config window_border            off
 yabai -m config active_window_border_color  0xff8aadf4
 yabai -m config normal_window_border_color  0xff41455a
 yabai -m config window_border_width     4
@@ -60,6 +66,18 @@ yabai -m rule --add app="^System Settings$" manage=off
 yabai -m rule --add app="^Calculator$" manage=off
 yabai -m rule --add app="^Finder$" title="^$" manage=off
 yabai -m rule --add app="^Spotify$" manage=off
+yabai -m rule --add app="^Raycast$" manage=off
+yabai -m rule --add app="^Alfred$" manage=off
+yabai -m rule --add app="^1Password" manage=off
+
+# -----------------------------------------------------------------------------
+# Space labels
+# -----------------------------------------------------------------------------
+yabai -m space 1 --label social       2>/dev/null || true
+yabai -m space 2 --label work         2>/dev/null || true
+yabai -m space 3 --label development  2>/dev/null || true
+yabai -m space 4 --label browser      2>/dev/null || true
+yabai -m space 5 --label other        2>/dev/null || true
 
 # -----------------------------------------------------------------------------
 # Sketchybar integration
@@ -69,4 +87,13 @@ yabai -m signal --add event=window_created  action="sketchybar --trigger space_c
 yabai -m signal --add event=window_destroyed action="sketchybar --trigger space_change"
 yabai -m signal --add event=window_focused  action="sketchybar --trigger space_change"
 
+# Ghostty native tabs surface as separate windows through macOS' Accessibility API,
+# so yabai tiles each new tab and breaks the layout. Re-apply the bsp layout whenever
+# a Ghostty window appears or disappears to re-normalise the space (official workaround).
+yabai -m signal --add app='^Ghostty$' event=window_created action='yabai -m space --layout bsp'
+yabai -m signal --add app='^Ghostty$' event=window_destroyed action='yabai -m space --layout bsp'
+
 echo "yabai configuration loaded"
+
+# JankyBorders
+pgrep -q borders || "$HOME/.config/borders/bordersrc" &

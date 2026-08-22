@@ -22,6 +22,7 @@ all_links() {
 		aerospace|config/aerospace/aerospace.toml|$HOME/.config/aerospace/aerospace.toml||desktop-aerospace
 		sketchybar|config/sketchybar|$HOME/.config/sketchybar||desktop-sketchybar
 		yabai|config/yabai|$HOME/.config/yabai||desktop-yabai
+		skhd|config/skhd|$HOME/.config/skhd||desktop-skhd
 		borders|config/borders/bordersrc|$HOME/.config/borders/bordersrc||desktop-borders
 		npm|config/npm/.npmrc|$HOME/.npmrc||dev
 		vscode|config/vscode/settings.json|$HOME/Library/Application Support/Code/User/settings.json||vscode|code
