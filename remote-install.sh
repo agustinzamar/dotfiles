@@ -3,8 +3,8 @@
 #
 #   curl -fsSL https://raw.githubusercontent.com/agustinzamar/dotfiles/main/remote-install.sh | bash
 #
-# Clones this repo to ~/dotfiles and runs the installer. config/zsh/.zshrc puts
-# the CLI on PATH from $DOTFILES_DIR.
+# Clones this repo to ~/dotfiles, tries a prebuilt dot-tui release binary, and
+# runs the installer. config/zsh/.zshrc puts the CLI on PATH from $DOTFILES_DIR.
 
 set -Eeuo pipefail
 
@@ -31,6 +31,36 @@ else
   else
     echo "No git, curl or wget available. Aborting." >&2
     exit 1
+  fi
+fi
+
+# Best-effort prebuilt installer binary: any failure below is silent. bin/dot
+# resolves the TUI itself (build from source with Bun, else guidance), so a
+# missed download only costs a source build.
+tui_asset=""
+if [[ "$(uname -s)" == "Darwin" ]]; then
+  case "$(uname -m)" in
+    arm64) tui_asset="dot-tui-darwin-arm64" ;;
+    x86_64) tui_asset="dot-tui-darwin-amd64" ;;
+  esac
+fi
+
+if [[ -n "$tui_asset" && ! -x "$TARGET/bin/dot-tui" ]]; then
+  echo "==> Fetching prebuilt dot-tui ($tui_asset)"
+  if is_executable curl; then
+    curl -fsSL -o "$TARGET/bin/dot-tui" \
+      "$REPO_URL/releases/latest/download/$tui_asset" || rm -f "$TARGET/bin/dot-tui"
+  elif is_executable wget; then
+    wget -qO "$TARGET/bin/dot-tui" \
+      "$REPO_URL/releases/latest/download/$tui_asset" || rm -f "$TARGET/bin/dot-tui"
+  fi
+  if [[ -f "$TARGET/bin/dot-tui" ]]; then
+    chmod +x "$TARGET/bin/dot-tui" || rm -f "$TARGET/bin/dot-tui"
+    # Drop downloads that cannot run here (wrong arch, truncated transfer);
+    # the dry-run probe is side-effect free per the dot-cli-bootstrap flag
+    # contract, and bin/dot then falls through to its source-build resolver.
+    "$TARGET/bin/dot-tui" -profile "$TARGET/bin/.dot-tui-selfcheck" -dry-run \
+      </dev/null >/dev/null 2>&1 || rm -f "$TARGET/bin/dot-tui"
   fi
 fi
 

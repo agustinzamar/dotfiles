@@ -332,24 +332,54 @@ sub_link() {
   esac
 }
 
+# True when version $1 is at least version $2 (dot-separated numbers).
+version_at_least() {
+  [[ $(printf '%s\n' "$1" "$2" | sort -V | head -n1) == "$2" ]]
+}
+
+# Launch the dot-tui installer binary in the documented resolution order
+# (dot-cli-bootstrap spec):
+#   1. a prebuilt/local binary at bin/dot-tui — needs neither Go nor Bun;
+#   2. Bun >= the .bun-version pin: build the binary from source, then run it;
+#   3. otherwise print actionable bootstrap guidance and fail loudly.
+run_dot_tui() {
+  local bin="$DOTFILES_DIR/bin/dot-tui"
+  if [[ -x "$bin" ]]; then
+    exec "$bin" "$@"
+  fi
+
+  local required installed
+  required=$(<"$DOTFILES_DIR/.bun-version")
+  if installed=$(bun --version 2>/dev/null) && version_at_least "$installed" "$required"; then
+    echo "==> Building dot-tui (one-time)" >&2
+    if ! (
+      cd "$DOTFILES_DIR/tools/tui" &&
+        bun install --frozen-lockfile &&
+        bun build --compile --minify src/main.ts --outfile "$bin"
+    ); then
+      echo "dot-tui build failed." >&2
+      echo "Run the official bootstrap script (installs everything needed):" >&2
+      echo "  curl -fsSL https://raw.githubusercontent.com/agustinzamar/dotfiles/main/remote-install.sh | bash" >&2
+      return 1
+    fi
+    exec "$bin" "$@"
+  fi
+
+  echo "dot-tui binary missing and Bun >= $required not found." >&2
+  echo "Run the official bootstrap script (installs everything needed):" >&2
+  echo "  curl -fsSL https://raw.githubusercontent.com/agustinzamar/dotfiles/main/remote-install.sh | bash" >&2
+  return 1
+}
+
 run_profile_install() {
   local profile="$1"
-  is_executable go || {
-    echo "Go is required for profile installation" >&2
-    return 1
-  }
   local args=(-apply -profile "$profile")
   "$DRY_RUN" && args+=(-dry-run)
-  run go run "$DOTFILES_DIR/cmd/dot-tui" "${args[@]}"
+  run_dot_tui "${args[@]}"
 }
 
 sub_tui() {
-  if ! is_executable go; then run brew install go; fi
-  if "$DRY_RUN"; then
-    run go run "$DOTFILES_DIR/cmd/dot-tui"
-  else
-    go run "$DOTFILES_DIR/cmd/dot-tui"
-  fi
+  run_dot_tui "$@"
 }
 
 sub_unlink() {

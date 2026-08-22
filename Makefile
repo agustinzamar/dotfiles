@@ -13,7 +13,7 @@ SCRIPTS := bin/dot install/*.sh system/defaults/*.sh remote-install.sh
 # Everything else is `dot <command>` — this file only carries the first-init
 # entry point and the lint targets CI runs.
 # `install` and `test` are also directory names, so these must stay phony.
-.PHONY: install test check lint go-test
+.PHONY: install test check lint bun-test build-tui
 
 install:
 	$(DOT) install
@@ -23,11 +23,17 @@ test:
 
 check:
 	bash -n $(SCRIPTS)
-	go vet ./...
+	cd tools/tui && ./node_modules/.bin/tsc --noEmit
 
 lint:
 	shellcheck -x $(SCRIPTS)
 	shfmt -d $(SCRIPTS)
 
-go-test:
-	go test ./...
+bun-test:
+	cd tools/tui && bun test
+
+# Self-contained installer binary; gitignored, built on demand here or by
+# bin/dot's resolver when it is missing and Bun is available.
+build-tui:
+	cd $(DOTFILES_DIR)/tools/tui && bun install --frozen-lockfile \
+		&& bun build --compile --minify src/main.ts --outfile $(DOTFILES_DIR)/bin/dot-tui

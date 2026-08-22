@@ -15,9 +15,12 @@ jobs:
       - name: Install shell tooling
         run: brew install shellcheck shfmt bats-core
 
-      - uses: actions/setup-go@v6
+      - uses: oven-sh/setup-bun@v2
         with:
-          go-version-file: go.mod
+          bun-version-file: .bun-version
+
+      - name: Install TUI dependencies
+        run: cd tools/tui && bun install --frozen-lockfile
 
       - name: Check syntax
         run: make check
@@ -26,7 +29,10 @@ jobs:
         run: make lint
 
       - name: Test (shell)
-        run: bats test
+        run: make test
 
-      - name: Test (Go)
-        run: make go-test
+      - name: Test (TypeScript)
+        run: cd tools/tui && bun test
+
+      - name: Build smoke (dot-tui)
+        run: make build-tui
