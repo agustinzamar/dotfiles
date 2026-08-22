@@ -15,11 +15,18 @@ jobs:
       - name: Install shell tooling
         run: brew install shellcheck shfmt bats-core
 
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+
       - name: Check syntax
         run: make check
 
       - name: Lint
         run: make lint
 
-      - name: Test
+      - name: Test (shell)
         run: bats test
+
+      - name: Test (Go)
+        run: make go-test
