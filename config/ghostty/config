@@ -120,7 +120,7 @@ auto-update-channel = stable
 copy-on-select = clipboard
 cursor-style = bar
 cursor-click-to-move = true
-mouse-scroll-multiplier = precision:0.1
+mouse-scroll-multiplier = discrete:0.1
 scrollback-limit = 999999999
 
 # --- Clipboard ---
