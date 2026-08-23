@@ -6,7 +6,7 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 # =============================================================================
 # yabai configuration — Catppuccin / gentleman style
 #
-# Pairs with sketchybar (config/sketchybar). Works with SIP enabled; advanced
+# Works with SIP enabled; advanced
 # features (window opacity, no shadow, instant move, focus follows mouse) need
 # System Integrity Protection partially disabled:
 #   https://github.com/koekeishiya/yabai/wiki/Disabling-System-Integrity-Protection
@@ -21,7 +21,7 @@ sudo yabai --load-sa 2>/dev/null
 # Global layout
 # -----------------------------------------------------------------------------
 yabai -m config layout            bsp
-yabai -m config top_padding       0
+yabai -m config top_padding       12
 yabai -m config bottom_padding    12
 yabai -m config left_padding      12
 yabai -m config right_padding     12
@@ -30,8 +30,6 @@ yabai -m config split_ratio       0.50
 yabai -m config split_type        auto
 yabai -m config auto_balance      on
 
-# Reserve space for sketchybar (height 32) at the top of every display.
-yabai -m config external_bar      all:32:0
 
 # Mouse
 yabai -m config mouse_follows_focus  on
@@ -67,7 +65,6 @@ yabai -m rule --add app="^Calculator$" manage=off
 yabai -m rule --add app="^Finder$" title="^$" manage=off
 yabai -m rule --add app="^Spotify$" manage=off
 yabai -m rule --add app="^Raycast$" manage=off
-yabai -m rule --add app="^Alfred$" manage=off
 yabai -m rule --add app="^1Password" manage=off
 
 # -----------------------------------------------------------------------------
@@ -78,14 +75,6 @@ yabai -m space 2 --label work         2>/dev/null || true
 yabai -m space 3 --label development  2>/dev/null || true
 yabai -m space 4 --label browser      2>/dev/null || true
 yabai -m space 5 --label other        2>/dev/null || true
-
-# -----------------------------------------------------------------------------
-# Sketchybar integration
-# -----------------------------------------------------------------------------
-yabai -m signal --add event=space_changed   action="sketchybar --trigger space_change"
-yabai -m signal --add event=window_created  action="sketchybar --trigger space_change"
-yabai -m signal --add event=window_destroyed action="sketchybar --trigger space_change"
-yabai -m signal --add event=window_focused  action="sketchybar --trigger space_change"
 
 # Ghostty native tabs surface as separate windows through macOS' Accessibility API,
 # so yabai tiles each new tab and breaks the layout. Re-apply the bsp layout whenever
