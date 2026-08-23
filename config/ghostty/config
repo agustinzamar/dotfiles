@@ -8,13 +8,22 @@
 # └──────────────────────────────────────────────────────────────────────────────┘
 
 # --- Basic ---
+maximize = true
+fullscreen = non-native-visible-menu
 window-save-state = always
-macos-titlebar-style = native
-background-opacity = 0.90
+background-opacity = 0.95
 background-blur-radius = 30
 
+# --- MACOS ---
+macos-non-native-fullscreen = true
+macos-window-buttons = hidden
+macos-titlebar-style = hidden
+macos-titlebar-proxy-icon = hidden
+macos-dock-drop-behavior = window
+macos-option-as-alt = left
+
 # --- Windows ---
-window-decoration = true
+window-decoration = none
 window-padding-color = extend
 window-step-resize = false
 window-padding-balance = true
@@ -24,14 +33,15 @@ window-theme = system
 window-colorspace = display-p3
 
 # --- Splits ---
-unfocused-split-opacity = 0.5
+unfocused-split-opacity = 0.3
 
 # ┌──────────────────────────────────────────────────────────────────────────────┐
 # │                            INPUT / KEYBINDINGS                               │
 # └──────────────────────────────────────────────────────────────────────────────┘
 
+selection-word-chars = " /\t'\"│`|:,()[]{}<>$"
+
 # --- macOS Alt key fix ---
-macos-option-as-alt = left
 keybind = alt+left=unbind
 keybind = alt+right=unbind
 
@@ -69,7 +79,6 @@ font-thicken-strength = 100
 
 # --- Miscellaneous ---
 adjust-cell-height = 3
-# bold-is-bright = true
 
 # --- Base Colors ---
 background = #24273a
@@ -111,6 +120,8 @@ auto-update-channel = stable
 copy-on-select = clipboard
 cursor-style = bar
 cursor-click-to-move = true
+mouse-scroll-multiplier = precision:0.1
+scrollback-limit = 999999999
 
 # --- Clipboard ---
 clipboard-read = allow
@@ -121,5 +132,9 @@ clipboard-trim-trailing-spaces = true
 window-inherit-working-directory = true
 tab-inherit-working-directory = true
 
-# --- SSH ---
-term = xterm-256color
+# --- SHELL ---
+shell-integration = detect
+shell-integration-features = true
+
+# --- URLs --- 
+link-url = true
