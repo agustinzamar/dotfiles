@@ -19,3 +19,8 @@ docs/superpowers/
 # Local Pi runtime state
 .atl/
 .pi/
+.omo/
+
+# Local build artifacts (dot-tui binary + bun build output, no source yet)
+bin/dot-tui
+tools/tui/
