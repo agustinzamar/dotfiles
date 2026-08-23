@@ -1,3 +1,7 @@
-[mgr]
+# Catppuccin Macchiato flavor (installed via `ya pkg add yazi-rs/flavors:catppuccin-macchiato`)
+[flavor]
+dark = "catppuccin-macchiato"
+
+# tmTheme shipped by the flavor
 [syntect]
-theme = "Catppuccin Mocha"
+theme = "catppuccin-macchiato"
