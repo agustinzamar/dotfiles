@@ -32,6 +32,15 @@
       "headers": {
         "Authorization": "Bearer {env:CONTEXT7_API_KEY}"
       }
+    },
+    "codegraph": {
+      "type": "local",
+      "command": [
+        "codegraph",
+        "serve",
+        "--mcp"
+      ],
+      "enabled": true
     }
   },
   "plugin": [
