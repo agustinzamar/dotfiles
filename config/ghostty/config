@@ -8,17 +8,13 @@
 # └──────────────────────────────────────────────────────────────────────────────┘
 
 # --- Basic ---
-maximize = true
-fullscreen = non-native-visible-menu
-window-save-state = always
+maximize = false
+fullscreen = false
 background-opacity = 0.95
 background-blur-radius = 30
 
 # --- MACOS ---
-macos-non-native-fullscreen = true
-macos-window-buttons = hidden
-macos-titlebar-style = hidden
-macos-titlebar-proxy-icon = hidden
+macos-titlebar-style = native
 macos-dock-drop-behavior = window
 macos-option-as-alt = left
 
