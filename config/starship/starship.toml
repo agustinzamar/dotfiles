@@ -1,0 +1,110 @@
+# Starship prompt — replica of the previous Powerlevel10k (robbyrussell) setup.
+#
+# Line 1 left:  OS icon, [user@host over SSH], directory, git branch + status.
+# Line 1 right: command duration, Node.js, PHP, Laravel versions.
+# Line 2:       prompt arrow.
+
+add_newline = false
+
+# zsh draws RPROMPT on the last prompt line, so right_format would land the
+# versions on line 2. $fill pads line 1 out to the right edge instead.
+format = "$os$username$hostname$directory$git_branch$git_status$fill$cmd_duration$nodejs$php${custom.laravel}$line_break$character"
+
+[fill]
+symbol = " "
+
+# OS icon: Apple logo, bright blue.
+[os]
+disabled = false
+style = "bright-blue"
+format = "[$symbol]($style) "
+
+[os.symbols]
+Macos = ""
+
+# p10k blanked the context segment, so user@host only appeared as root or over
+# SSH. Same behaviour here.
+[username]
+show_always = false
+style_user = "yellow"
+style_root = "red"
+format = "[$user]($style)"
+
+[hostname]
+ssh_only = true
+style = "yellow"
+format = "[@$hostname]($style) "
+
+# Current directory: bold blue, last component only (was truncate_to_last with
+# an empty delimiter, so no leading ellipsis).
+[directory]
+style = "bold blue"
+truncation_length = 1
+truncation_symbol = ""
+truncate_to_repo = false
+
+# Git branch: cyan, branch icon.
+[git_branch]
+symbol = " "
+style = "cyan"
+format = "[$symbol$branch]($style)"
+
+# Git status: same glyphs, colours and order as the old my_git_formatter —
+# behind/ahead (141), conflicted (red), staged (70), modified (178),
+# untracked (244), stashed (214). Each group is space-separated and hidden
+# when its count is zero.
+[git_status]
+style = "cyan"
+format = "( [$ahead_behind](141))( [$conflicted](red))( [$staged](70))( [$modified](178))( [$deleted](178))( [$untracked](244))( [$stashed](214))"
+ahead = "⇡$count"
+behind = "⇣$count"
+diverged = "⇣${behind_count} ⇡${ahead_count}"
+conflicted = "!$count"
+staged = "+$count"
+modified = "-$count"
+deleted = "-$count"
+untracked = "?$count"
+stashed = "*$count"
+renamed = ""
+
+# Command duration: p10k default threshold was 3 seconds.
+[cmd_duration]
+min_time = 3000
+style = "yellow"
+format = " [$duration]($style)"
+
+# Language versions: project-only detection, icon before content, no "v"
+# prefix and no "via" label — same as the p10k segments.
+[nodejs]
+symbol = ""
+style = "#b7cc85"
+format = " [$symbol $version]($style)"
+version_format = "${raw}"
+detect_extensions = []
+detect_files = ["package.json", ".node-version", ".nvmrc"]
+detect_folders = ["node_modules"]
+
+[php]
+symbol = ""
+style = "#a074c4"
+format = " [$symbol $version]($style)"
+version_format = "${raw}"
+detect_extensions = []
+detect_files = ["composer.json", ".php-version"]
+detect_folders = []
+
+# No native laravel module in Starship, so read the version out of
+# composer.lock the way p10k did — cheaper than shelling out to `php artisan`.
+# ponytail: plain grep, switch to a native [laravel] module if one ships.
+[custom.laravel]
+command = "grep -A1 '\"name\": \"laravel/framework\"' composer.lock | grep -oE '[0-9]+\\.[0-9]+\\.[0-9]+' | head -1"
+when = "test -f artisan"
+symbol = ""
+style = "#f05340"
+format = " [$symbol $output]($style)"
+
+# Prompt symbol: bold arrow, green on success / red on failure.
+[character]
+success_symbol = "[➜ ](bold green)"
+error_symbol = "[➜ ](bold red)"
+vicmd_symbol = "[➜ ](bold green)"

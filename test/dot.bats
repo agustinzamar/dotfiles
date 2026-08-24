@@ -308,9 +308,9 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" == *"install/topics/core"* ]]
 
-  HOME="$(mktemp -d)" run "$DOT" link p10k --dry-run
+  HOME="$(mktemp -d)" run "$DOT" link starship --dry-run
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Linking p10k"* ]]
+  [[ "$output" == *"Linking starship"* ]]
 }
 
 @test "an unknown install target exits 1" {

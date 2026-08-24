@@ -1,10 +1,3 @@
-# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
-# Initialization code that may require console input (password prompts, [y/n]
-# confirmations, etc.) must go above this block; everything else may go below.
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-fi
-
 # Where this file really lives: ~/.zshrc is a symlink into the repo, so :A
 # resolves it and three :h hops land on the repo root. Nothing below has to
 # assume the clone sits at ~/dotfiles.
@@ -32,17 +25,13 @@ fpath=("$DOTFILES_DIR/system/completions" $fpath)
 # === Zinit (plugin manager) ===
 # Installed by `dot zsh`, never from here: a shell that clones from GitHub
 # before it can draw a prompt fails badly when the network does. Without it the
-# shell still works, minus the plugins and the theme.
+# shell still works, minus the plugins.
 ZINIT_HOME="${XDG_DATA_HOME:-${HOME}/.local/share}/zinit/zinit.git"
 if [[ ! -r "${ZINIT_HOME}/zinit.zsh" ]]; then
   print -u2 "zinit is missing — run \`dot zsh\` to install it"
   autoload -Uz compinit && compinit -C
 else
   source "${ZINIT_HOME}/zinit.zsh"
-
-  # Powerlevel10k (not turbo — needed for prompt)
-  zinit ice depth=1
-  zinit light romkatv/powerlevel10k
 
   # Oh My Zsh plugins (turbo, light mode)
   zinit wait lucid light-mode for \
@@ -166,8 +155,9 @@ for f in "${HOME}"/.dotfiles-custom/exports/*.zsh(N); do source "$f"; done
 for f in "${HOME}"/.dotfiles-custom/aliases/*.zsh(N) "${HOME}"/.dotfiles-custom/functions/*.zsh(N); do source "$f"; done
 
 # Last, so the prompt config wins over anything a tool init changed.
-# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+# Starship defaults to ~/.config/starship.toml; point it at the linked directory.
+export STARSHIP_CONFIG="$HOME/.config/starship/starship.toml"
+eval "$(starship init zsh)"
 
 # Yazi: force Kitty Graphics Protocol for image previews in Ghostty
 export YAZI_IMAGE_PROTOCOL=kitty
