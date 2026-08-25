@@ -30,6 +30,7 @@ brew "pi-coding-agent"
 
 cask "claude-code@latest"
 cask "codex"
+cask "t3-code"
 
 # --- Database and services ---
 brew "mysql"
