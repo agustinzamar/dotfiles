@@ -21,6 +21,12 @@ docs/superpowers/
 .pi/
 .omo/
 
-# Local build artifacts (dot-tui binary + bun build output, no source yet)
+# Compiled installer binary (bun build --compile; built on demand)
 bin/dot-tui
-tools/tui/
+
+# Bun build cache artifacts
+*.bun-build
+
+# Local TUI working dirs (deps are installed via `bun install --frozen-lockfile`)
+tools/tui/node_modules/
+tools/tui/tmp-probe/
