@@ -359,6 +359,9 @@ EOF
 @test "every tracked config file is wired into an install path" {
   # Consumed directly by their own install/*.sh, not through links.sh.
   local handled="config/git/config"
+  # Read straight from the repo by config/zsh/.zshrc (oh-my-posh init),
+  # deliberately not symlinked.
+  handled+=" config/ohmyposh/theme.omp.json"
   # Installed via `herdr plugin link` (see herder.toml), not the dot map.
   local known_gaps="config/herdr/workspace-layout"
 

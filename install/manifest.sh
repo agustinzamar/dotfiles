@@ -1,0 +1,204 @@
+#!/usr/bin/env bash
+# Manifest parser and installer-context emitter.
+#
+# This file is the SINGLE parser of the package manifests (install/topics/*)
+# for the TUI flow: `bin/dot` sources it and `install_context_json` writes the
+# versioned context JSON the TUI consumes via `--context <file>`. The topics
+# files themselves stay plain Brewfile-style data read verbatim by
+# `brew bundle` for headless installs — same bytes, no third copy.
+#
+# No jq: on a fresh Mac jq only exists after packages install, and the context
+# is emitted before any install. All JSON escaping is pure Bash.
+
+# Root used to locate install/topics. Derived from this file's location so the
+# emitter works standalone (tests) and when sourced from bin/dot.
+MANIFEST_ROOT=${MANIFEST_ROOT:-"$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"}
+MANIFEST_TOPIC_DIR=${MANIFEST_TOPIC_DIR:-"$MANIFEST_ROOT/install/topics"}
+
+# Link map source. Reuse the caller's copy when already loaded (bin/dot),
+# otherwise load it from this repo so the emitter works standalone.
+declare -F all_links >/dev/null 2>&1 || . "$MANIFEST_ROOT/install/links.sh"
+
+# Escape a string for use inside a JSON double-quoted value. Handles the
+# characters this data can actually contain: quotes, backslashes, tabs,
+# newlines, carriage returns.
+json_escape() {
+  local s=$1
+  s=${s//\\/\\\\}
+  s=${s//\"/\\\"}
+  s=${s//$'\t'/\\t}
+  s=${s//$'\n'/\\n}
+  s=${s//$'\r'/\\r}
+  printf '%s' "$s"
+}
+
+# Map a package id to its component area — the ids install/links.sh and
+# components.sh already use. Explicit table over inferred magic: one place to
+# review when a package or link token changes. Unknown ids fail (exit 1) so
+# the drift-guard test catches renames.
+area_for_package() {
+  case "$1" in
+    # Area tokens used directly as link components resolve to themselves.
+    base | shell | git | terminal | vscode | ai | ai-herdr | claude | dev | media | desktop | desktop-*) echo "$1" ;;
+    # --- Shell (locked block) ---
+    fzf | oh-my-posh | pay-respects | timescam/tap) echo "shell" ;;
+    # --- Git ---
+    gh | lazygit | hunk) echo "git" ;;
+    # --- Terminal / core CLI ---
+    zoxide | eza | fd | yazi | poppler | ripgrep | grip | watch | direnv | btop | procs | topgrade | dust | dockutil | mole | 7zip | bat | jq | jless | yq | unar | tmux | duti | ghostty | neovim | font-jetbrains-mono-nerd-font | duti-defaults | 'we"ird\name') echo "terminal" ;;
+    # --- VS Code ---
+    visual-studio-code | code) echo "vscode" ;;
+    # --- AI ---
+    opencode | anomalyco/tap/opencode | pi-coding-agent | claude-code@latest | codex | t3-code) echo "ai" ;;
+    herdr) echo "ai-herdr" ;;
+    # --- Dev ---
+    make | go | node | python@3.14 | pnpm | bun | npm-check-updates | pipx | rust | shellcheck | shfmt | bats-core | act | sshpass | phpstorm | actionlint | swiftformat | mysql | mysql-client | postgresql | redis | sqlite | herd | orbstack | openusage) echo "dev" ;;
+    # --- Desktop (subareas match links.sh component tokens) ---
+    linearmouse) echo "desktop-linearmouse" ;;
+    aerospace) echo "desktop-aerospace" ;;
+    sketchybar) echo "desktop-sketchybar" ;;
+    yabai) echo "desktop-yabai" ;;
+    skhd) echo "desktop-skhd" ;;
+    borders) echo "desktop-borders" ;;
+    pearcleaner | google-chrome | firefox | brave-browser | discord | telegram | whatsapp | slack | raycast | finetune | typewhisper | rectangle | localsend | hyperkey | alt-tab | chatgpt | koekeishiya/formulae | FelixKratz/formulae | FelixKratz/JankyBorders) echo "desktop" ;;
+    # --- Media ---
+    ffmpeg | ffmpegthumbnailer | imagemagick | webp | spotify | stremio | vlc | stupside/tap/castor) echo "media" ;;
+    *) return 1 ;;
+  esac
+}
+
+# Locked-block members: always installed, never toggleable in the TUI.
+manifest_is_locked() {
+  case "$1" in
+    fzf | git | gh | tmux) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# Former forced-baseline tools: pre-checked in the TUI, still toggleable.
+manifest_is_default() {
+  case "$1" in
+    lazygit | hunk | yazi | neovim | ghostty) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# Emit one TSV row (topic \t kind \t id) per installable unit.
+#
+# Regular topics: `brew "x"` / `cask "x"` / `tap "x"` lines; comments and
+# blanks ignored (same tolerance as read_package_file). The special-installer
+# topics `code` (VS Code extensions) and `duti` (default-file handlers) are
+# not brew data: each becomes one delegating row applied via `dot install`.
+package_rows() {
+  local file topic line id kind
+  for file in "$MANIFEST_TOPIC_DIR"/*; do
+    topic=$(basename "$file")
+    case "$topic" in
+      code | duti) continue ;;
+    esac
+    while IFS= read -r line; do
+      line=${line%%#*}
+      line=${line#"${line%%[![:space:]]*}"} line=${line%"${line##*[![:space:]]}"}
+      [[ -n "$line" ]] || continue
+      if [[ "$line" =~ ^(brew|cask|tap)[[:space:]]+\"(.+)\"$ ]]; then
+        kind=${BASH_REMATCH[1]}
+        id=${BASH_REMATCH[2]}
+        printf '%s\t%s\t%s\n' "$topic" "$kind" "$id"
+      fi
+    done <"$file"
+  done
+  # Special-installer topics: one delegating row each.
+  printf 'code\ttopic\tcode\n'
+  printf 'duti\ttopic\tduti-defaults\n'
+}
+
+# Emit the link map verbatim (all_links then optional_links). manifest.sh adds
+# no link data of its own — links.sh stays the single source.
+link_rows() {
+  all_links
+  optional_links
+}
+
+# One JSON package row object.
+_manifest_package_json() {
+  local topic=$1 kind=$2 id=$3 locked=false default=false
+  manifest_is_locked "$id" && locked=true
+  manifest_is_default "$id" && default=true
+  local area
+  area=$(area_for_package "$id") || {
+    echo "manifest: no area mapping for package '$id'" >&2
+    return 1
+  }
+  printf '{"id":"%s","topic":"%s","kind":"%s","area":"%s","locked":%s,"default":%s}' \
+    "$(json_escape "$id")" "$(json_escape "$topic")" "$(json_escape "$kind")" \
+    "$(json_escape "$area")" "$locked" "$default"
+}
+
+# Write the versioned installer context JSON to <file>.
+install_context_json() {
+  local out=$1
+  if [[ ! -d "$MANIFEST_TOPIC_DIR" ]]; then
+    echo "manifest: topics directory not readable: $MANIFEST_TOPIC_DIR" >&2
+    return 1
+  fi
+
+  local topic kind id pkg pkgs=()
+  while IFS=$'\t' read -r topic kind id; do
+    pkg=$(_manifest_package_json "$topic" "$kind" "$id") || return 1
+    pkgs+=("$pkg")
+  done < <(package_rows)
+
+  # Group link rows by name (multi-target names collapse into one entry),
+  # preserving first-seen order. Parallel arrays instead of associative
+  # arrays: /usr/bin/env bash may be macOS bash 3.2 on a fresh machine.
+  local names=() optional_flags=() components=() requirements=() rowblobs=()
+  local map map_name optional name source target mode component requirement i found
+  for map_name in all optional; do
+    if [[ "$map_name" == all ]]; then
+      map=all_links optional=false
+    else
+      map=optional_links optional=true
+    fi
+    while IFS='|' read -r name source target mode component requirement; do
+      [[ -n "$source" ]] || continue
+      found=-1
+      for i in "${!names[@]}"; do
+        [[ "${names[$i]}" == "$name" ]] && {
+          found=$i
+          break
+        }
+      done
+      if [[ "$found" -eq -1 ]]; then
+        names+=("$name")
+        optional_flags+=("$optional")
+        components+=("$component")
+        requirements+=("$requirement")
+        rowblobs+=("")
+        found=$((${#names[@]} - 1))
+      fi
+      rowblobs[found]+="${rowblobs[found]:+,}$(printf '{"source":"%s","target":"%s","mode":"%s"}' \
+        "$(json_escape "$source")" "$(json_escape "$target")" "$(json_escape "$mode")")"
+    done < <("$map")
+  done
+
+  local links=() name_json
+  for i in "${!names[@]}"; do
+    name_json=$(printf '{"name":"%s","optional":%s,"component":"%s","requirement":"%s","rows":[%s]}' \
+      "$(json_escape "${names[$i]}")" "${optional_flags[$i]}" \
+      "$(json_escape "${components[$i]}")" "$(json_escape "${requirements[$i]}")" \
+      "${rowblobs[$i]}")
+    links+=("$name_json")
+  done
+
+  {
+    printf '{"version":1,"locked":["base","shell"],"packages":[%s],"links":[%s]}' \
+      "$(
+        IFS=,
+        printf '%s' "${pkgs[*]}"
+      )" \
+      "$(
+        IFS=,
+        printf '%s' "${links[*]}"
+      )"
+  } >"$out"
+}
