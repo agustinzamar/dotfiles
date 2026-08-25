@@ -65,3 +65,29 @@
 | `make check` | clean (bash -n + tsc --noEmit) |
 | `make lint` | clean (shellcheck -x + shfmt -d) |
 | `bats test/` | 72 pass / 0 fail (regression) |
+
+## Work unit 3 — PR 3 + PR 4: dispatcher flip, removals, tooling/docs (Phase 3 + Phase 4)
+
+**Status: COMPLETE** · Branches: `feat/tui-default-install-pr3` → `b9c08fd`, `feat/tui-default-install-pr4` → `0cba977` (stacked) · Executor: delegated `sdd-apply` (provider timeout at 58 turns; dispatcher + removals + bats done, uncommitted) + parent inline completion (commit PR 3, then PR 4)
+
+### PR 3 — dispatcher flip + removals (commit `b9c08fd`)
+- `run_interactive_install` (ADR-5 exact order): TTY guard first → `sub_bootstrap` → ensure bun → resolve runtime → `install_context_json` (mktemp) → launch `--context` → exit mapping 0/10/other.
+- `run_dot_tui` refactored into `resolve_dot_tui` (echoes binary path) + launcher: the caller owns exit-code mapping and temp-context cleanup.
+- Headless `run_profile_install` now emits the context JSON and passes `--context` (TUI apply refuses without it). No TTY guard on purpose (scripts/CI).
+- `sub_tui`, tui help lines, `TOP_COMMANDS` entry removed; completion self-heals via `dot help`.
+- Coherence fix found by the delegate: oh-my-posh theme became a tracked link (`ohmyposh` in links.sh) read through the symlink — matches the new link step and retires the earlier `handled` workaround in dot.bats.
+- `remote-install.sh`: TTY vs headless documentation comment only.
+- 8 new bats (73-80): non-TTY bare install fails naming `--all`/`--profile`; headless profile works without TTY; `dot tui` is an unknown command; unlaunchable runtime fails naming headless flags; resolver forwards `--context`.
+
+### PR 4 — tooling truth + docs (commit `0cba977`)
+- `openspec/config.yaml` fully rewritten to Bun reality (no Go references anywhere; unit = bun test, integration = bats; gates `make check && make lint && make test`; build = `make build-tui`; strict-TDD gate re-pointed).
+- `README.md`: interactive default + headless flags, `dot tui` gone, two-step installer flow documented, installer-binary section updated to the resolver + context JSON.
+- Makefile verified already Bun-realigned post-merge (no go-test); no change needed.
+
+### Gate evidence (all green at `0cba977`)
+| Gate | Result |
+| --- | --- |
+| `make check` | clean (bash -n + tsc --noEmit) |
+| `make lint` | clean (shellcheck -x + shfmt -d) |
+| `cd tools/tui && bun test` | 124 pass / 0 fail |
+| `bats test/` | 80 pass / 0 fail (was 72; +8 new contract tests) |
