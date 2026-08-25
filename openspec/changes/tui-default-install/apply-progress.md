@@ -33,3 +33,35 @@
 - `zsh` has no package row (not a brew formula); shell setup is covered by the locked `Zinit/Zsh setup` pseudo-step planned for the TUI delta (PR 2).
 - `duti-defaults` (topic row) has no declared dependency on the brew `duti` row in the context schema; if PR 2's filter needs it, extend the packages schema in a v1-compatible way.
 - Taps (`timescam/tap`, `koekeishiya/formulae`, `FelixKratz/*`) are emitted as rows; plan.ts ordering (taps before formulas) is a PR 2 concern.
+
+## Work unit 2 — PR 2: TUI delta (Phase 2)
+
+**Status: COMPLETE** · Branch: `feat/tui-default-install-pr2` (stacked on `pr1`) · Commit: `d9263dd` · Executor: delegated `sdd-apply` (provider timeout at 69 turns mid-edit) + parent inline completion (finishing main.ts, fixing 8 stale/broken tests)
+
+### Delivered (all 8 Phase 2 tasks)
+
+- `src/context.ts` + tests: loads/validates context JSON v1 (`--context <path>`), rejects wrong/missing version, malformed rows.
+- `src/filter.test.ts`: table-driven ADR-3 rule — requirement hit/miss, locked-area activity, inactive area, empty selection, agents group always present.
+- `src/manifest.ts`: Go-era embedded catalog RETIRED; keeps toolRows/toolGroups/offeredLinks/activeProfileAreas/selectedPackages consuming context packages; lock-pseudo-steps (zsh-setup, git-signing) as informational rows.
+- `src/tui.tsx`: two-step flow — step 1 per-tool selector (🔒 locked pinned, per-row toggles, topic groups, code/duti rows), step 2 filtered links (unchecked) + opt-in agents; quit → exit 10, zero writes.
+- `src/profile.ts`: ADR-4 area-only profile; migration maps legacy granular ids onto areas; **area-id aggregates (desktop/media) pass through unchanged** so re-migration on every load is a no-op.
+- `src/plan.ts`: taps-first ordering, `executeWithProgress` gains `isCancelled` (short-circuit at next step boundary).
+- `src/main.ts`: one apply path for interactive + headless `-apply -profile`; mid-apply interruption prints ❌ completed-vs-pending and stops at the next step.
+- `runFlagMode` headless: consumes same context JSON + area profile; locked rows always selected; default-active areas (base/shell/git/terminal fallback) honored.
+
+### Parent-inline fixes after the provider timed out
+
+- tsc stale: manifest.test.ts rewritten for the new API (catalog test was obsolete); tui.test.tsx reducer calls gained the `context` arg.
+- plan.test.ts: tap fixtures marked `kind: "tap"` (kind-driven plan was right).
+- tui.test.tsx: locked-frame test compared before cursor had moved — fixed to capture after reaching fzf.
+- profile.migration: implementation was re-expanding area-id aggregates (desktop/media) on second run — isAreaId passthrough; two obsolete expansion tests replaced with the passthrough/stable test.
+- main.test.ts: mid-apply interruption test was malformed (op already in calls) — rewritten to assert EXIT_ERROR + next-step short-circuit, with the missing implementation added in main.ts/plan.ts; headless ghostty expectation corrected to default-active terminal fallback.
+
+### Gate evidence (all green at commit `d9263dd`)
+
+| Gate | Result |
+| --- | --- |
+| `cd tools/tui && bun test` | 124 pass / 0 fail |
+| `make check` | clean (bash -n + tsc --noEmit) |
+| `make lint` | clean (shellcheck -x + shfmt -d) |
+| `bats test/` | 72 pass / 0 fail (regression) |
