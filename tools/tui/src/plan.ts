@@ -1,20 +1,12 @@
-import { COMPONENTS, type Component } from "./manifest";
-import type { Profile } from "./profile";
+import type { ContextPackage } from "./context";
 
-// Types ported from internal/installer/plan.go (Task, Skip, Result) and
-// cmd/dot-tui/main.go (ComponentResult). Statuses are the exact strings the
-// specs pin: "installed" | "failed" | "skipped".
-
+// Types kept from the merged executor (installer-execute spec): a Task is one
+// operation; statuses are the exact strings the specs pin.
 export interface Task {
   componentId: string;
   label: string;
   operation: string;
   dependencies: string[];
-}
-
-export interface Skip {
-  componentId: string;
-  reason: string;
 }
 
 export interface Result {
@@ -39,35 +31,45 @@ export type Runner = (
 
 export type Progress = (task: Task) => void;
 
-// Environment detection is a PATH scan only — equivalent to Go's
-// exec.LookPath over this fixed command list. Commands are never executed
-// (installer-plan spec: "Detection reports presence without running tools").
-const DETECTED_COMMANDS = [
-  "brew",
-  "xcode-select",
-  "git",
-  "gh",
-  "code",
-  "php",
-  "composer",
-  "opencode",
-];
+/**
+ * One package row -> its brew command, or null for delegated topic rows.
+ * Taps and formulas share the row's first-seen order; planBrewCommands reorders
+ * taps ahead of formulas.
+ */
+export function brewCommandFor(packageRow: ContextPackage): string | null {
+  if (packageRow.kind === "tap") return `brew tap ${packageRow.id}`;
+  if (packageRow.kind === "brew") return `brew install ${packageRow.id}`;
+  if (packageRow.kind === "cask") return `brew install --cask ${packageRow.id}`;
+  return null; // kind "topic" is delegated to `dot install`, never planned here.
+}
 
-export function detectEnvironment(): Record<string, boolean> {
-  const commands: Record<string, boolean> = {};
-  // PATH is passed explicitly so callers (and tests) observe live mutations
-  // of process.env.PATH, matching Go's exec.LookPath behavior.
-  const path_ = process.env.PATH ?? "";
-  for (const name of DETECTED_COMMANDS) {
-    commands[name] = Bun.which(name, { PATH: path_ }) !== null;
+/**
+ * Maps confirmed package rows to ordered brew commands (ADR-1, task 2.8):
+ * all taps come FIRST so formulas from those taps resolve; tap order preserves
+ * context order; topic rows are never brew commands.
+ */
+export function planBrewCommands(
+  packages: ContextPackage[],
+  selected: ReadonlySet<string>,
+): string[] {
+  const taps: string[] = [];
+  const installs: string[] = [];
+  for (const p of packages) {
+    if (!selected.has(p.id)) continue;
+    const command = brewCommandFor(p);
+    if (command === null) continue;
+    if (p.kind === "tap") {
+      taps.push(command);
+    } else {
+      installs.push(command);
+    }
   }
-  return commands;
+  return [...taps, ...installs];
 }
 
 // Production runner ported from ShellRunner: sh -c with Homebrew update/hint
 // suppression inherited on top of the current environment, combined stream
-// capture (installer-execute spec: "Task runs via sh and captures combined
-// output"). A non-zero exit maps to err while output is preserved.
+// capture. A non-zero exit maps to err while output is preserved.
 export const shellRunner: Runner = async (operation, signal) => {
   const proc = Bun.spawn(["sh", "-c", operation], {
     env: {
@@ -91,91 +93,15 @@ export const shellRunner: Runner = async (operation, signal) => {
   return { output, err: new Error(`command exited with code ${exitCode}`) };
 };
 
-/**
- * DFS planner over an explicit component list — the test seam that lets
- * plan.test.ts exercise dependency ordering with synthetic fixtures (the real
- * manifest carries no Dependencies today). plan()/planWithApplied() delegate
- * here with the verbatim COMPONENTS catalog, mirroring Go's closure over
- * Components().
- */
-export function planFrom(
-  components: Component[],
-  profile: Profile,
-  envCommands: Record<string, boolean>,
-  applied?: Record<string, boolean>,
-): { tasks: Task[]; skips: Skip[] } {
-  // Depth-first ordering over manifest order: dependencies are visited before
-  // the dependent; visiting/visited guards keep each component to one pass
-  // (cycles and shared deps included), exactly as in plan.go.
-  const ordered: Component[] = [];
-  const visiting = new Set<string>();
-  const visited = new Set<string>();
-  const add = (component: Component): void => {
-    if (visited.has(component.id) || visiting.has(component.id)) {
-      return;
-    }
-    visiting.add(component.id);
-    for (const dependency of component.dependencies ?? []) {
-      for (const candidate of components) {
-        if (candidate.id === dependency) {
-          add(candidate);
-        }
-      }
-    }
-    visiting.delete(component.id);
-    visited.add(component.id);
-    ordered.push(component);
-  };
-  for (const component of components) {
-    if (
-      profile.components[component.id] &&
-      !(applied && applied[component.id])
-    ) {
-      add(component);
-    }
-  }
-
-  const tasks: Task[] = [];
-  const skips: Skip[] = [];
-  for (const component of ordered) {
-    for (const command of component.commands ?? []) {
-      if (command === "xcode-select --install" && envCommands["xcode-select"]) {
-        continue;
-      }
-      if (command.startsWith("brew ") && !envCommands["brew"]) {
-        skips.push({
-          componentId: component.id,
-          reason: "Homebrew is not installed",
-        });
-        break;
-      }
-      tasks.push({
-        componentId: component.id,
-        label: component.label,
-        operation: command,
-        dependencies: component.dependencies ?? [],
-      });
-    }
-  }
-  return { tasks, skips };
-}
-
-export function plan(
-  profile: Profile,
-  envCommands: Record<string, boolean>,
-  applied?: Record<string, boolean>,
-): { tasks: Task[]; skips: Skip[] } {
-  return planFrom(COMPONENTS, profile, envCommands, applied);
-}
-
-// Sequential executor ported from ExecuteWithProgress. Check order matches Go
-// exactly: blocked dependencies first, then cancellation, then progress fires
-// immediately before the runner is invoked.
+// Sequential executor ported from ExecuteWithProgress. Check order matches the
+// Go original exactly: blocked dependencies first, then cancellation, then
+// progress fires immediately before the runner is invoked.
 export async function executeWithProgress(
   tasks: Task[],
   run: Runner,
   signal?: AbortSignal,
   progress?: Progress,
+  isCancelled?: (task: Task) => boolean,
 ): Promise<Result[]> {
   const results: Result[] = [];
   const failed = new Set<string>();
@@ -198,11 +124,11 @@ export async function executeWithProgress(
       });
       continue;
     }
-    if (signal?.aborted) {
+    if (signal?.aborted || isCancelled?.(task)) {
       results.push({
         task,
         status: "skipped",
-        output: "cancelled",
+        output: isCancelled?.(task) ? "interrupted" : "cancelled",
         started,
         finished: new Date(),
       });
@@ -222,10 +148,9 @@ export async function executeWithProgress(
   return results;
 }
 
-// Per-component aggregation ported line-for-line from summarize() in
-// cmd/dot-tui/main.go: first-appearance order; a failed task resets prior
-// output and accumulates all failed outputs joined by newlines; a skip only
-// sticks when the component has not already failed.
+// Per-component aggregation ported from summarize(): first-appearance order; a
+// failed task resets prior output and accumulates all failed outputs joined by
+// newlines; a skip only sticks when the component has not already failed.
 export function summarize(results: Result[]): ComponentSummary[] {
   const components: ComponentSummary[] = [];
   const indexes = new Map<string, number>();

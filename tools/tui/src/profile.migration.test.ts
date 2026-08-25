@@ -1,3 +1,8 @@
+// Task 2.7 (RED first): legacy profile migration onto area ids (ADR-4).
+// Go-era profiles store 31 component ids; the area-level profile stores only
+// area ids (the unit components.sh gates on). Migration maps each legacy id (or
+// aggregate) to the area ids it must enable, so old headless profiles keep
+// reinstalling the same tools on the same links.
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -9,42 +14,8 @@ import {
   type Profile,
 } from "./profile";
 
-// Expected child lists come straight from the installer-profile spec
-// "Legacy Aggregate Migration" table — an independent source of truth, not a
-// copy of the implementation's table.
-const COMMUNICATION_CHILDREN = [
-  "communication-discord",
-  "communication-telegram",
-  "communication-whatsapp",
-  "communication-slack",
-];
-const DESKTOP_CHILDREN = [
-  "desktop-chrome",
-  "desktop-firefox",
-  "desktop-brave",
-  ...COMMUNICATION_CHILDREN,
-  "desktop-raycast",
-  "desktop-finetune",
-  "desktop-typewhisper",
-  "desktop-rectangle",
-  "desktop-aerospace",
-  "desktop-linearmouse",
-  "desktop-localsend",
-];
-const MEDIA_CHILDREN = [
-  "media-tools",
-  "media-spotify",
-  "media-stremio",
-  "media-vlc",
-  "media-castor",
-];
-const DATABASES_CHILDREN = [
-  "service-mysql",
-  "service-postgresql",
-  "service-redis",
-  "service-sqlite",
-];
-
+// Independent expectations, derived from the legacy semantics: the old
+// communication/desktop/media/databases aggregates map to area ids.
 const tempDirs: string[] = [];
 
 async function makeTempDir(): Promise<string> {
@@ -61,96 +32,80 @@ afterAll(async () => {
   }
 });
 
-function enabledChildren(profile: Profile, children: string[]): string[] {
-  return children.filter((id) => profile.components[id] === true);
-}
-
-describe("legacy aggregate migration", () => {
-  test("enabled communication expands to exactly its four children", () => {
+describe("legacy profile migration onto area ids", () => {
+  test("enabled communication expands to the desktop area", () => {
     const { profile, changed } = migrateProfileData({
       components: { communication: true },
     });
     expect(changed).toBe(true);
-    expect(enabledChildren(profile, COMMUNICATION_CHILDREN)).toEqual(
-      COMMUNICATION_CHILDREN,
-    );
-    // Nothing else was enabled and the aggregate key is gone.
-    const enabled = Object.keys(profile.components).filter(
-      (id) => profile.components[id],
-    );
-    expect(enabled).toEqual(COMMUNICATION_CHILDREN);
+    expect(profile.components["desktop"]).toBe(true);
+    expect(profile.components["communication-discord"]).toBeUndefined();
   });
 
-  test("enabled desktop expands to desktop plus communication children", () => {
+  test("area-id aggregates (desktop, media) pass through unchanged", () => {
+    // desktop/media are BOTH legacy aggregate names and valid area ids; a
+    // migrated profile stores the area id, so re-migration must not re-expand
+    // (the no-op invariant is what keeps every load stable).
     const { profile, changed } = migrateProfileData({
-      components: { desktop: true },
+      components: { desktop: true, media: false },
     });
-    expect(changed).toBe(true);
-    expect(enabledChildren(profile, DESKTOP_CHILDREN)).toEqual(
-      DESKTOP_CHILDREN,
-    );
-    const enabled = Object.keys(profile.components).filter(
-      (id) => profile.components[id],
-    );
-    expect(enabled.sort()).toEqual([...DESKTOP_CHILDREN].sort());
+    expect(changed).toBe(false);
+    expect(profile.components["desktop"]).toBe(true);
+    expect(profile.components["media"]).toBe(false);
+    expect(profile.components["desktop-aerospace"]).toBeUndefined();
+    expect(profile.components["media-vlc"]).toBeUndefined();
   });
 
-  test("enabled media expands to its five children", () => {
-    const { profile, changed } = migrateProfileData({
-      components: { media: true },
-    });
-    expect(changed).toBe(true);
-    expect(enabledChildren(profile, MEDIA_CHILDREN)).toEqual(MEDIA_CHILDREN);
-  });
-
-  test("enabled databases expands to its four services", () => {
+  test("enabled databases expands to the dev area", () => {
     const { profile, changed } = migrateProfileData({
       components: { databases: true },
     });
     expect(changed).toBe(true);
-    expect(enabledChildren(profile, DATABASES_CHILDREN)).toEqual(
-      DATABASES_CHILDREN,
-    );
+    expect(profile.components["dev"]).toBe(true);
   });
 
-  test("disabled aggregate enables nothing but is still removed", () => {
+  test("legacy child ids map onto their area ids one by one", () => {
+    const { profile, changed } = migrateProfileData({
+      components: {
+        "communication-discord": true,
+        "media-vlc": true,
+        "service-mysql": true,
+        "desktop-aerospace": true,
+        "ai-herdr": true,
+      },
+    });
+    expect(changed).toBe(true);
+    expect(profile.components["desktop"]).toBe(true);
+    expect(profile.components["media"]).toBe(true);
+    expect(profile.components["dev"]).toBe(true);
+    expect(profile.components["desktop-aerospace"]).toBe(true);
+    expect(profile.components["ai-herdr"]).toBe(true);
+    for (const legacy of [
+      "communication-discord",
+      "media-vlc",
+      "service-mysql",
+    ]) {
+      expect(profile.components[legacy]).toBeUndefined();
+    }
+  });
+
+  test("disabled legacy id enables nothing but is still removed", () => {
     const { profile, changed } = migrateProfileData({
       components: { databases: false },
     });
     expect(changed).toBe(true);
-    for (const id of DATABASES_CHILDREN) {
-      expect(profile.components[id]).toBeFalsy();
-    }
+    expect(profile.components["dev"]).toBeFalsy();
     expect(profile.components).not.toHaveProperty("databases");
   });
 
-  test("all four aggregates together mirror the Go fixture", () => {
+  test("identity ids (base, shell, git, terminal, vscode, ai) pass through", () => {
     const { profile, changed } = migrateProfileData({
-      components: {
-        base: true,
-        communication: true,
-        desktop: false,
-        media: true,
-        databases: true,
-      },
+      components: { base: true, vscode: true, ai: false },
     });
-    expect(changed).toBe(true);
-    for (const id of [
-      ...COMMUNICATION_CHILDREN,
-      ...MEDIA_CHILDREN,
-      ...DATABASES_CHILDREN,
-    ]) {
-      expect(profile.components[id]).toBe(true);
-    }
-    // False desktop must NOT have enabled any of its children.
-    for (const id of DESKTOP_CHILDREN) {
-      if (!COMMUNICATION_CHILDREN.includes(id)) {
-        expect(profile.components[id]).toBeFalsy();
-      }
-    }
-    for (const legacy of ["communication", "desktop", "media", "databases"]) {
-      expect(profile.components).not.toHaveProperty(legacy);
-    }
+    expect(changed).toBe(false);
+    expect(profile.components["base"]).toBe(true);
+    expect(profile.components["vscode"]).toBe(true);
+    expect(profile.components["ai"]).toBe(false);
   });
 
   test("second migration run is a no-op reporting no change", () => {
@@ -177,7 +132,8 @@ describe("load persists migrated data", () => {
       JSON.stringify({ components: { base: true, communication: true } }),
     );
     const loaded = await loadProfile(target);
-    expect(loaded.components["communication-discord"]).toBe(true);
+    expect(loaded.components["base"]).toBe(true);
+    expect(loaded.components["desktop"]).toBe(true);
     const saved = JSON.parse(await readFile(target, "utf8")) as Profile;
     expect(saved.components).not.toHaveProperty("communication");
     const reloaded = await loadProfile(target);
