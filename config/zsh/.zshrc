@@ -155,9 +155,9 @@ for f in "${HOME}"/.dotfiles-custom/exports/*.zsh(N); do source "$f"; done
 for f in "${HOME}"/.dotfiles-custom/aliases/*.zsh(N) "${HOME}"/.dotfiles-custom/functions/*.zsh(N); do source "$f"; done
 
 # Last, so the prompt config wins over anything a tool init changed.
-# Theme is read straight from the repo; no symlink needed. Starship and p10k
-# configs stay in the repo (config/starship/, config/p10k/) but are unused.
-eval "$(oh-my-posh init zsh --config "$DOTFILES_DIR/config/ohmyposh/theme.omp.json")"
+# Theme is symlinked by `dot link ohmyposh`. Starship and p10k configs stay
+# in the repo (config/starship/, config/p10k/) but are unused.
+eval "$(oh-my-posh init zsh --config "$HOME/.config/oh-my-posh/theme.omp.json")"
 
 # Yazi: force Kitty Graphics Protocol for image previews in Ghostty
 export YAZI_IMAGE_PROTOCOL=kitty

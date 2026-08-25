@@ -11,6 +11,7 @@ all_links() {
 		zsh|config/zsh/.zshrc|$HOME/.zshrc||shell
 		p10k|config/p10k/.p10k.zsh|$HOME/.p10k.zsh||shell
 		starship|config/starship|$HOME/.config/starship||shell
+		ohmyposh|config/ohmyposh/theme.omp.json|$HOME/.config/oh-my-posh/theme.omp.json||shell
 		ghostty|config/ghostty/config|$HOME/.config/ghostty/config||terminal
 		ghostty|config/ghostty/config|$HOME/Library/Application Support/Muxy/ghostty.conf||terminal
 		herdr|config/herdr/herder.toml|$HOME/.config/herdr/config.toml|app-writable|ai-herdr

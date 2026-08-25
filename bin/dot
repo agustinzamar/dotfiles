@@ -48,14 +48,13 @@ sub_help() {
   echo "   link             Symlink selected configs whose tools are available"
   echo "   link <name>      Symlink one config or group: $(link_names)"
   echo "   link --all       Symlink every config explicitly"
-  echo "   tui              Select and install components interactively"
   echo
   echo "Install (each also works as \`dot <name>\`, no \`install\` needed):"
-  echo "   install              Install core tools (Xcode, Homebrew, Go, shell and basic tools)"
-  echo "   install --profile PATH  Apply a saved component profile"
+  echo "   install              Open the interactive installer — requires a TTY"
+  echo "   install --all        Install every standard phase headlessly; AI stays opt-in"
+  echo "   install --profile PATH  Apply a saved component profile headlessly"
   echo "   install --dry-run --profile PATH  Preview a saved component profile"
   echo "   install <topic>      Install a topic: $(topic_names)"
-  echo "   install --all        Install all standard phases; AI stays opt-in"
   echo
   echo "AI extras (opt-in — no install phase runs these):"
   echo "   ai                   Install skills and plugins for every agent CLI found"
@@ -106,15 +105,8 @@ sub_install() {
       echo "'install $cmd' is gone — use \`dot $cmd\` directly (see \`dot link help\`)" >&2
       return 1
       ;;
-    "" | bootstrap)
-      sub_bootstrap
-      sub_baseline
-      if ! sub_link; then
-        echo "❌ Finished with failures: link" >&2
-        return 1
-      fi
-      log "Baseline installation complete"
-      return 0
+    "")
+      run_interactive_install
       ;;
     *)
       local target
@@ -127,6 +119,57 @@ sub_install() {
         echo "'$cmd' is not an install command or topic." >&2
         return 1
       fi
+      ;;
+  esac
+}
+
+# Interactive default for bare `dot install` (ADR-5). Order is fixed: TTY
+# guard FIRST (a piped curl run must die in milliseconds, before any
+# provisioning), then bootstrap, then the Bun runtime, then the context JSON,
+# then the TUI. Exit mapping: 0 → applied summary, 10 → aborted by the user
+# (nothing installed, nothing linked, exit 0), any other non-zero → propagate
+# loudly. Any runtime failure names the headless alternatives — never silent,
+# never falls back to the old baseline.
+run_interactive_install() {
+  if [[ ! -t 0 ]]; then
+    echo "stdin is not a TTY — use \`dot install --all\` or \`dot install --profile <path>\`" >&2
+    return 1
+  fi
+
+  sub_bootstrap
+
+  if ! is_executable bun; then
+    log "Installing bun"
+    run brew install bun
+  fi
+
+  local bin ctx exit_code=0
+  bin=$(resolve_dot_tui) || {
+    echo "TUI unavailable — use \`dot install --all\` or \`dot install --profile <path>\` for a headless install" >&2
+    return 1
+  }
+  ctx=$(mktemp) || return 1
+  install_context_json "$ctx" || {
+    rm -f "$ctx"
+    return 1
+  }
+
+  local args=(--context "$ctx")
+  "$DRY_RUN" && args+=(--dry-run)
+  "$bin" "${args[@]}" || exit_code=$?
+  rm -f "$ctx"
+
+  case "$exit_code" in
+    0)
+      log "Installation complete — selected components installed, configs linked"
+      ;;
+    10)
+      echo "aborted — nothing installed, nothing linked"
+      return 0
+      ;;
+    *)
+      echo "installer exited with status $exit_code" >&2
+      return "$exit_code"
       ;;
   esac
 }
@@ -344,10 +387,15 @@ version_at_least() {
 #   1. a prebuilt/local binary at bin/dot-tui — needs neither Go nor Bun;
 #   2. Bun >= the .bun-version pin: build the binary from source, then run it;
 #   3. otherwise print actionable bootstrap guidance and fail loudly.
-run_dot_tui() {
+# resolve_dot_tui echoes the resolved binary path (or fails loudly);
+# run_dot_tui launches it and returns its exit code so callers can map the
+# 0/10/error contract (never exec: the caller still owns the temp context
+# file and the exit-code mapping).
+resolve_dot_tui() {
   local bin="$DOTFILES_DIR/bin/dot-tui"
   if [[ -x "$bin" ]]; then
-    exec "$bin" "$@"
+    printf '%s\n' "$bin"
+    return 0
   fi
 
   local required installed
@@ -364,7 +412,8 @@ run_dot_tui() {
       echo "  curl -fsSL https://raw.githubusercontent.com/agustinzamar/dotfiles/main/remote-install.sh | bash" >&2
       return 1
     fi
-    exec "$bin" "$@"
+    printf '%s\n' "$bin"
+    return 0
   fi
 
   echo "dot-tui binary missing and Bun >= $required not found." >&2
@@ -373,15 +422,28 @@ run_dot_tui() {
   return 1
 }
 
-run_profile_install() {
-  local profile="$1"
-  local args=(-apply -profile "$profile")
-  "$DRY_RUN" && args+=(-dry-run)
-  run_dot_tui "${args[@]}"
+run_dot_tui() {
+  local bin
+  bin=$(resolve_dot_tui) || return 1
+  "$bin" "$@"
 }
 
-sub_tui() {
-  run_dot_tui "$@"
+# Headless profile install: same context JSON the interactive path emits
+# (the TUI refuses to run without it) plus -apply -profile. No TTY guard —
+# scripts and CI never have one, and the TUI's apply mode mounts no UI.
+run_profile_install() {
+  local profile="$1"
+  local ctx exit_code=0
+  ctx=$(mktemp) || return 1
+  install_context_json "$ctx" || {
+    rm -f "$ctx"
+    return 1
+  }
+  local args=(-apply -profile "$profile" --context "$ctx")
+  "$DRY_RUN" && args+=(--dry-run)
+  run_dot_tui "${args[@]}" || exit_code=$?
+  rm -f "$ctx"
+  return "$exit_code"
 }
 
 sub_unlink() {
@@ -493,7 +555,7 @@ sub_test() {
   bats "$DOTFILES_DIR"/test/*.bats
 }
 
-TOP_COMMANDS=" backup clean doctor edit help install link test tui unlink update "
+TOP_COMMANDS=" backup clean doctor edit help install link test unlink update "
 
 COMMAND_NAME=${1:-}
 case "$COMMAND_NAME" in

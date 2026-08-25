@@ -60,6 +60,27 @@ setup() {
   [[ "$output" != *"install ai"* ]]
 }
 
+# PR 3 flips the default entry point: bare `dot install` opens the interactive
+# installer. Help must say so, name both headless flags, and not mention the
+# removed `dot tui` (completion parses this output, so the no-tui assertion
+# is also a completion guarantee).
+@test "help documents the interactive default and headless flags, with no tui" {
+  run "$DOT" help
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"interactive"* ]]
+  [[ "$output" == *"--all"* ]]
+  [[ "$output" == *"--profile"* ]]
+  ! grep -qw tui <<<"$output"
+}
+
+# The install section wording must survive: `install` still needs its own
+# help line (sub-arg lines like `install --all` are not commands).
+@test "install keeps a top-level help line" {
+  run "$DOT" help
+  [ "$status" -eq 0 ]
+  grep -q '^   install  ' <<<"$output"
+}
+
 # The completion parses `dot help`, so a change to the help format silently
 # leaves it offering nothing. The 3-space minimum in the sed regex skips
 # sub-arg lines (`link <name>`, `install <topic>`, `install --all`) which have
@@ -82,12 +103,33 @@ setup() {
   [ -z "$duplicate" ]
 }
 
-@test "the completion is a zsh compdef for dot" {
-  local file="$DOTFILES_DIR/system/completions/_dot"
-  [ -f "$file" ]
-  head -1 "$file" | grep -q '^#compdef dot$'
-  zsh -n "$file"
-}
+    @test "the completion is a zsh compdef for dot" {
+      local file="$DOTFILES_DIR/system/completions/_dot"
+      [ -f "$file" ]
+      head -1 "$file" | grep -q '^#compdef dot$'
+      zsh -n "$file"
+    }
+
+    # `dot tui` is hard-removed, and the completion is parsed from `dot help`, so
+    # the parsed command set must exclude tui and stay exactly the advertised set.
+    @test "completion from help excludes tui and lists every advertised command" {
+      local parsed expected
+      parsed=$("$DOT" help | sed -n 's/^   \([a-z][a-z0-9-]*\)   *\(.*\)$/\1/p' | sort -u)
+      expected=$(printf '%s\n' ai doctor help install link test unlink update | sort -u)
+      ! grep -qw tui <<<"$parsed"
+      [ "$parsed" = "$expected" ]
+    }
+
+    # Guard: the headless full path must stay reachable and never open a UI —
+    # PR 3 only reroutes the bare case (this runs the whole phase loop, dry).
+    # The real PATH is required: install_git calls `brew --prefix`, so a brew-less
+    # PATH would fail the git phase for an unrelated reason.
+    @test "install --all dry-runs headlessly and never opens a UI" {
+      HOME="$(mktemp -d)" run "$DOT" install --all --dry-run
+      [ "$status" -eq 0 ]
+      [[ "$output" == *"Full install"* ]]
+      [[ "$output" != *"dot-tui"* ]]
+    }
 
 # The macos script calls `defaults write` and `sudo` directly instead of going
 # through `run`, so a dry run must stop short of sourcing it.
@@ -359,9 +401,6 @@ EOF
 @test "every tracked config file is wired into an install path" {
   # Consumed directly by their own install/*.sh, not through links.sh.
   local handled="config/git/config"
-  # Read straight from the repo by config/zsh/.zshrc (oh-my-posh init),
-  # deliberately not symlinked.
-  handled+=" config/ohmyposh/theme.omp.json"
   # Installed via `herdr plugin link` (see herder.toml), not the dot map.
   local known_gaps="config/herdr/workspace-layout"
 
