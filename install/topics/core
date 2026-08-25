@@ -3,7 +3,8 @@ brew "zoxide"
 brew "fzf"
 brew "eza"
 brew "fd"
-brew "yazi"  # Catppuccin Macchiato flavor: ya pkg add yazi-rs/flavors:catppuccin-macchiato
+# Catppuccin Macchiato flavor: ya pkg add yazi-rs/flavors:catppuccin-macchiato
+brew "yazi"
 brew "poppler"
 brew "ripgrep"
 brew "grip"
@@ -23,6 +24,9 @@ cask "pearcleaner"
 # --- Command correction ---
 tap "timescam/tap"
 brew "pay-respects"
+
+# --- Prompt ---
+brew "oh-my-posh"
 
 # --- Multiplexers and terminals ---
 brew "tmux"

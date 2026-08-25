@@ -1,0 +1,93 @@
+{
+  "$schema": "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/schema.json",
+  "version": 3,
+  "final_space": false,
+  "console_title_template": "{{ .Folder }}",
+  "blocks": [
+    {
+      "type": "prompt",
+      "alignment": "left",
+      "segments": [
+        {
+          "type": "session",
+          "style": "plain",
+          "foreground": "yellow",
+          "template": " {{ .UserName }}{{ if .SSHSession }}@{{ .HostName }}{{ end }}"
+        },
+        {
+          "type": "path",
+          "style": "plain",
+          "foreground": "blue",
+          "template": "  {{ .Path }}",
+          "options": {
+            "style": "full"
+          }
+        },
+        {
+          "type": "git",
+          "style": "plain",
+          "foreground": "cyan",
+          "template": "{{ if .HEAD }} {{ .HEAD }}{{ if gt .Behind 0 }}<#af87ff> ⇣{{ .Behind }}</>{{ end }}{{ if and (gt .Behind 0) (gt .Ahead 0) }}{{ end }}{{ if gt .Ahead 0 }}<#af87ff> ⇡{{ .Ahead }}</>{{ end }}{{ if gt .Working.Unmerged 0 }}<#ff0000> !{{ .Working.Unmerged }}</>{{ end }}{{ $staged := add .Staging.Added (add .Staging.Modified .Staging.Deleted) }}{{ if gt $staged 0 }}<#5faf5f> +{{ $staged }}</>{{ end }}{{ $dirty := add .Working.Modified .Working.Deleted }}{{ if gt $dirty 0 }}<#d7af5f> -{{ $dirty }}</>{{ end }}{{ if gt .Working.Untracked 0 }}<#808080> ?{{ .Working.Untracked }}</>{{ end }}{{ if gt .StashCount 0 }}<#ffaf00> *{{ .StashCount }}</>{{ end }}{{ end }}",
+          "options": {
+            "fetch_status": true,
+            "branch_icon": " ",
+            "branch_identical_icon": "",
+            "branch_ahead_icon": "",
+            "branch_behind_icon": "",
+            "branch_gone_icon": ""
+          }
+        }
+      ]
+    },
+    {
+      "type": "prompt",
+      "alignment": "right",
+      "segments": [
+        {
+          "type": "executiontime",
+          "style": "plain",
+          "foreground": "yellow",
+          "template": " {{ .FormattedMs }}",
+          "options": {
+            "threshold": 3000,
+            "style": "austin"
+          }
+        },
+        {
+          "type": "node",
+          "style": "plain",
+          "foreground": "#b7cc85",
+          "template": "{{ if .Full }}  {{ .Full }}{{ end }}",
+          "options": {
+            "display_mode": "files"
+          }
+        },
+        {
+          "type": "php",
+          "style": "plain",
+          "foreground": "#a074c4",
+          "template": "{{ if .Full }}  {{ .Full }}{{ end }}",
+          "options": {
+            "display_mode": "files"
+          }
+        }
+      ]
+    },
+    {
+      "type": "prompt",
+      "alignment": "left",
+      "newline": true,
+      "segments": [
+        {
+          "type": "text",
+          "style": "plain",
+          "foreground": "green",
+          "foreground_templates": [
+            "{{ if gt .Code 0 }}#ff0000{{ end }}"
+          ],
+          "template": "➜ "
+        }
+      ]
+    }
+  ]
+}
