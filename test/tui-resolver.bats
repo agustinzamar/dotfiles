@@ -30,13 +30,25 @@ setup() {
     mv "$TUI_BIN" "$SANDBOX/saved-dot-tui"
   fi
 
-  make_stub_binary() {
-    cat >"$TUI_BIN" <<'EOF'
+      make_stub_binary() {
+        cat >"$TUI_BIN" <<'EOF'
 #!/bin/sh
+case "$1" in
+  --version) printf '%s\n' 'dot-tui-context-v1'; exit 0 ;;
+esac
 printf 'TUI-STUB %s\n' "$*"
 EOF
-    chmod +x "$TUI_BIN"
-  }
+        chmod +x "$TUI_BIN"
+      }
+
+      # A foreign/stale binary that does NOT speak the version contract.
+      make_stale_binary() {
+        cat >"$TUI_BIN" <<'EOF'
+#!/bin/sh
+printf 'OLD-TUI-STUB %s\n' "$*"
+EOF
+        chmod +x "$TUI_BIN"
+      }
 
   # A fake `bun` whose version comes from $FAKE_BUN_VERSION. `bun install` is a
   # no-op; `bun build --compile ... --outfile X` writes an executable that
@@ -56,7 +68,7 @@ if [ "\$1" = "build" ]; then
     prev="\$a"
   done
   [ -n "\$out" ] || exit 1
-  printf '#!/bin/sh\nprintf '"'"'TUI-STUB %%s\\n'"'"' "\$*"\n' >"\$out"
+  printf '#!/bin/sh\ncase "$1" in\n--version) printf '"'"'%s\\n'"'"' "dot-tui-context-v1"; exit 0 ;;\nesac\nprintf '"'"'TUI-STUB %%s\\n'"'"' "\$*"\n' >"\$out"
   chmod +x "\$out"
   exit 0
 fi
@@ -170,4 +182,15 @@ teardown() {
   [ "$status" -ne 0 ]
   [[ "$output" == *"TUI unavailable"* ]]
   [[ "$output" == *"--all"* && "$output" == *"--profile"* ]]
+}
+# A stale prebuilt binary (built before the context delta, no version contract)
+# must be rebuilt rather than trusted: the checked-out repo's UI is the source
+# of truth, not whatever binary happened to be on disk.
+@test "stale prebuilt binary without the version marker is rebuilt" {
+  make_stale_binary
+  make_bun_stub "1.3.14"
+  run env PATH="$SANDBOX:$BASE_PATH" "$DOT" install --profile /tmp/p.json
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Building dot-tui"* ]]
+  [[ "$output" == *"TUI-STUB"* ]]
 }

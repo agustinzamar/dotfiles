@@ -73,7 +73,12 @@ export interface Flags {
 }
 
 export function parseFlags(argv: string[]): Flags {
-  const flags: Flags = { profile: "", apply: false, dryRun: false, context: "" };
+  const flags: Flags = {
+    profile: "",
+    apply: false,
+    dryRun: false,
+    context: "",
+  };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]!;
     const eq = arg.indexOf("=");
@@ -152,13 +157,18 @@ export function roundExitCode(finalState: TuiState | null): number {
  */
 export async function applyConfirmed(
   context: InstallContext,
-  selection: { selected: Record<string, boolean>; checked: Record<string, boolean> },
+  selection: {
+    selected: Record<string, boolean>;
+    checked: Record<string, boolean>;
+  },
   opts: ApplyConfirmedOptions,
 ): Promise<number> {
-  const report = opts.report ?? ((line: string, stderr?: boolean) => {
-    if (stderr) console.error(line);
-    else console.log(line);
-  });
+  const report =
+    opts.report ??
+    ((line: string, stderr?: boolean) => {
+      if (stderr) console.error(line);
+      else console.log(line);
+    });
 
   const selectedIds = new Set(
     Object.keys(selection.selected).filter((id) => selection.selected[id]),
@@ -200,24 +210,24 @@ export async function applyConfirmed(
       operation: `dot install ${p.topic}`,
     }));
   // taps before formulas, then locked pseudo-steps, then links, then specials.
-      const runSteps: ApplyStep[] = [
-        // Xcode CLT + Homebrew, installed only now that the user confirmed
-        // (never before the selector). PATH-independent: uses the absolute dot
-        // binary path, falling back to a bare `dot` on PATH.
-        {
-          id: "bootstrap",
-          label: "Bootstrap (Xcode CLT + Homebrew)",
-          operation:
-            (process.env.DOTFILES_DIR ?? "")
-              ? `${process.env.DOTFILES_DIR}/bin/dot bootstrap`
-              : "dot bootstrap",
-        },
-        ...tapSteps,
-        ...brewSteps,
-        ...pseudoSteps,
-        ...linkSteps,
-        ...specialSteps,
-      ];
+  const runSteps: ApplyStep[] = [
+    // Xcode CLT + Homebrew, installed only now that the user confirmed
+    // (never before the selector). PATH-independent: uses the absolute dot
+    // binary path, falling back to a bare `dot` on PATH.
+    {
+      id: "bootstrap",
+      label: "Bootstrap (Xcode CLT + Homebrew)",
+      operation:
+        (process.env.DOTFILES_DIR ?? "")
+          ? `${process.env.DOTFILES_DIR}/bin/dot bootstrap`
+          : "dot bootstrap",
+    },
+    ...tapSteps,
+    ...brewSteps,
+    ...pseudoSteps,
+    ...linkSteps,
+    ...specialSteps,
+  ];
 
   // Dry-run: plan only, zero filesystem writes, exit 0.
   if (opts.dryRun) {
@@ -238,7 +248,9 @@ export async function applyConfirmed(
     report(interruptionSummary([], plannedLabels), true);
     return EXIT_ERROR;
   }
-  const profile = { components: Object.fromEntries(areas.map((a) => [a, true])) };
+  const profile = {
+    components: Object.fromEntries(areas.map((a) => [a, true])),
+  };
   try {
     await saveProfile(opts.profilePath, profile);
     completed.push("profile");
@@ -247,23 +259,23 @@ export async function applyConfirmed(
     return EXIT_ERROR;
   }
 
-      // 2-5. Steps in fixed order. Tap/fail results and interruption are reported.
-      // Short-circuit: isCancelled checks the interrupt flag before each step,
-      // so a mid-apply interrupt stops at the next step boundary instead of
-      // running everything to completion.
-      const tasks: Task[] = runSteps.map((step) => ({
-        componentId: step.id,
-        label: step.label,
-        operation: step.operation,
-        dependencies: [],
-      }));
-      const executed = await executeWithProgress(
-        tasks,
-        opts.run,
-        opts.signal,
-        (task) => report(progressLine(task.label)),
-        () => interrupted(),
-      );
+  // 2-5. Steps in fixed order. Tap/fail results and interruption are reported.
+  // Short-circuit: isCancelled checks the interrupt flag before each step,
+  // so a mid-apply interrupt stops at the next step boundary instead of
+  // running everything to completion.
+  const tasks: Task[] = runSteps.map((step) => ({
+    componentId: step.id,
+    label: step.label,
+    operation: step.operation,
+    dependencies: [],
+  }));
+  const executed = await executeWithProgress(
+    tasks,
+    opts.run,
+    opts.signal,
+    (task) => report(progressLine(task.label)),
+    () => interrupted(),
+  );
   for (const result of executed) {
     if (result.status === "failed") {
       failed = true;
@@ -292,7 +304,10 @@ export async function applyConfirmed(
 /** Production wrapper: SIGINT mid-apply aborts the run and reports loudly. */
 export async function applyConfirmedLive(
   context: InstallContext,
-  selection: { selected: Record<string, boolean>; checked: Record<string, boolean> },
+  selection: {
+    selected: Record<string, boolean>;
+    checked: Record<string, boolean>;
+  },
   opts: ApplyConfirmedOptions,
 ): Promise<number> {
   const controller = new AbortController();
@@ -326,9 +341,12 @@ async function runDotLink(name: string): Promise<void> {
   const output = stdout + stderr;
   const exitCode = await proc.exited;
   if (exitCode !== 0) {
-    throw Object.assign(new Error(`dot link ${name} exited with code ${exitCode}`), {
-      output,
-    });
+    throw Object.assign(
+      new Error(`dot link ${name} exited with code ${exitCode}`),
+      {
+        output,
+      },
+    );
   }
 }
 
@@ -375,17 +393,23 @@ export async function runFlagMode(
   for (const p of context.packages) {
     selected[p.id] = p.locked || activeAreas.has(p.area);
   }
-  const selectedIds = new Set(Object.keys(selected).filter((id) => selected[id]));
+  const selectedIds = new Set(
+    Object.keys(selected).filter((id) => selected[id]),
+  );
   const checked: Record<string, boolean> = {};
   for (const link of offeredLinks(context, selectedIds).main) {
     checked[link.name] = true;
   }
 
-  return applyConfirmedLive(context, { selected, checked }, {
-    profilePath,
-    dryRun: !apply || dryRun,
-    ...io,
-  });
+  return applyConfirmedLive(
+    context,
+    { selected, checked },
+    {
+      profilePath,
+      dryRun: !apply || dryRun,
+      ...io,
+    },
+  );
 }
 
 // --- Interactive loop.
@@ -434,17 +458,36 @@ export async function runInteractive(
 
 // --- Entry (func main analog).
 
+// Binary-contract marker: dot_runtime_path in bin/dot shells out to
+// `dot-tui --version` and treats the prebuilt binary as current ONLY when it
+// prints exactly this. Any stale or foreign binary (e.g. one built before the
+// context-delta) fails the check and gets rebuilt from src, so a checked-out
+// repo can never silently run an outdated installer UI.
+export const TUI_VERSION = "dot-tui-context-v1";
+
 if (import.meta.main) {
-  const flags = parseFlags(process.argv.slice(2));
+  const raw = process.argv.slice(2);
+  if (raw.includes("--version")) {
+    console.log(TUI_VERSION);
+    process.exit(0);
+  }
+  const flags = parseFlags(raw);
   const exitCode =
     flags.profile === ""
       ? flags.context === ""
         ? await (() => {
-            console.error("missing --context FILE for the interactive installer");
+            console.error(
+              "missing --context FILE for the interactive installer",
+            );
             return EXIT_ERROR;
           })()
         : await runInteractive(flags.context, flags.dryRun)
-      : await runFlagMode(flags.profile, flags.context, flags.apply, flags.dryRun);
+      : await runFlagMode(
+          flags.profile,
+          flags.context,
+          flags.apply,
+          flags.dryRun,
+        );
   if (exitCode !== 0) {
     process.exit(exitCode);
   }

@@ -181,10 +181,14 @@ run_interactive_install() {
 # PATH-only (the bats suite does, so its fake-bun stubs stay deterministic).
 dot_runtime_path() {
   local bin="$DOTFILES_DIR/bin/dot-tui"
-  [[ -x "$bin" ]] && {
+  # Version-gated prebuilt: only trust a binary whose marker matches the
+  # current TUI contract. A stale/foreign binary (old pre-delta build) prints
+  # nothing or an old marker, so it falls through to a rebuild — a checked-out
+  # repo can never silently run an outdated installer UI.
+  if [[ -x "$bin" ]] && [[ "$("$bin" --version 2>/dev/null)" == "dot-tui-context-v1" ]]; then
     printf '%s\n' "$bin"
     return 0
-  }
+  fi
 
   local required installed bun_bin=""
   if [[ "${DOT_RUNTIME_BUN_LOOKUP:-}" != path ]]; then
