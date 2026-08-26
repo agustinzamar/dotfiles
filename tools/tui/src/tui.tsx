@@ -212,8 +212,7 @@ function reduceKey(
     case "space": {
       if (state.step === 1) {
         const entry = rows[state.cursor] as
-          | { kind: "tool"; row: ToolRow }
-          | undefined;
+          { kind: "tool"; row: ToolRow } | undefined;
         if (!entry || entry.row.locked) return state; // locked rows ignore the key
         return {
           ...state,
@@ -224,8 +223,7 @@ function reduceKey(
         };
       }
       const entry = rows[state.cursor] as
-        | { kind: "link"; link: ContextLink }
-        | undefined;
+        { kind: "link"; link: ContextLink } | undefined;
       if (!entry || entry.kind !== "link") return state;
       return toggleLink(state, entry.link.name);
     }

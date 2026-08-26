@@ -182,7 +182,9 @@ describe("ApplyScreen frame", () => {
     await delay(20);
     ui.error("❌ Interrupted during apply\ncompleted: none\npending: git");
     await delay(20);
-    expect(stripAnsi(app.lastFrame() ?? "")).toContain("Interrupted during apply");
+    expect(stripAnsi(app.lastFrame() ?? "")).toContain(
+      "Interrupted during apply",
+    );
     app.unmount();
   });
 

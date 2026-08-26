@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json.schemastore.org/prettierrc",
+  "printWidth": 80,
+  "useTabs": false,
+  "semi": true,
+  "singleQuote": false,
+  "trailingComma": "all",
+  "overrides": [
+    {
+      "files": ["tools/tui/src/**/*.{ts,tsx}"],
+      "options": { "parser": "typescript" }
+    },
+    {
+      "files": ["tools/tui/package.json", "*.json"],
+      "options": { "trailingComma": "none" }
+    }
+  ]
+}

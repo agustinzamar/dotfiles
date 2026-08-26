@@ -13,6 +13,7 @@
     "@types/bun": "^1.2.0",
     "@types/react": "^19.0.0",
     "ink-testing-library": "^4.0.0",
+    "prettier": "^3.9.6",
     "react-devtools-core": "^7.0.1",
     "typescript": "^5.7.0"
   }

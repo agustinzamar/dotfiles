@@ -22,10 +22,7 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
-function pkg(
-  id: string,
-  args: Partial<ContextPackage> = {},
-): ContextPackage {
+function pkg(id: string, args: Partial<ContextPackage> = {}): ContextPackage {
   return {
     id,
     topic: "core",
@@ -67,7 +64,10 @@ describe("planBrewCommands", () => {
       [pkg("fzf"), pkg("ghostty", { kind: "cask" })],
       new Set(["fzf", "ghostty"]),
     );
-    expect(commands).toEqual(["brew install fzf", "brew install --cask ghostty"]);
+    expect(commands).toEqual([
+      "brew install fzf",
+      "brew install --cask ghostty",
+    ]);
   });
 
   test("taps are ordered before all formulas regardless of row order", () => {
@@ -191,7 +191,12 @@ describe("execution", () => {
       undefined,
       (task) => log.push(`progress:${task.operation}`),
     );
-    expect(log).toEqual(["progress:first", "run:first", "progress:second", "run:second"]);
+    expect(log).toEqual([
+      "progress:first",
+      "run:first",
+      "progress:second",
+      "run:second",
+    ]);
   });
 
   test("cancellation records remaining tasks as skipped without running them", async () => {
@@ -222,8 +227,18 @@ describe("execution", () => {
 
   test("every task yields one result with captured output and timestamps", async () => {
     const tasks: Task[] = [
-      { componentId: "ok", label: "Ok", operation: "succeeds", dependencies: [] },
-      { componentId: "bad", label: "Bad", operation: "fails", dependencies: [] },
+      {
+        componentId: "ok",
+        label: "Ok",
+        operation: "succeeds",
+        dependencies: [],
+      },
+      {
+        componentId: "bad",
+        label: "Bad",
+        operation: "fails",
+        dependencies: [],
+      },
     ];
     const results = await executeWithProgress(tasks, async (operation) =>
       operation === "fails"

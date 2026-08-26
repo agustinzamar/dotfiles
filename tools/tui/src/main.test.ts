@@ -664,214 +664,212 @@ describe("applyConfirmed — one code path for interactive and headless", () => 
   });
 });
 
-    // -------------------------------------------------------------------------
-    // Work unit 9 — component-driven apply ui (@inkjs/ui Spinner/ProgressBar/
-    // StatusMessage/Badge). applyConfirmed keeps ONE logic path; the `ui` seam
-    // routes its output to the Ink apply screen instead of console lines.
-    // -------------------------------------------------------------------------
-    describe("applyConfirmed — component-driven ui seam (@inkjs/ui)", () => {
-      function captureUi(): {
-        ui: {
-          progress(label: string, done: number, total: number): void;
-          result(
-            status: "installed" | "failed" | "skipped",
-            label: string,
-            output: string,
-          ): void;
-          error(line: string): void;
-          finished(ok: boolean): void;
-        };
-        events: string[];
-      } {
-        const events: string[] = [];
-        const ui = {
-          progress(label: string, done: number, total: number) {
-            events.push(`progress:${done}/${total}:${label}`);
-          },
-          result(
-            status: "installed" | "failed" | "skipped",
-            label: string,
-            output: string,
-          ) {
-            events.push(`result:${status}:${label}:${output}`);
-          },
-          error(line: string) {
-            events.push(`error:${line.split("\n")[0]}`);
-          },
-          finished(ok: boolean) {
-            events.push(`finished:${ok}`);
-          },
-        };
-        return { ui, events };
-      }
+// -------------------------------------------------------------------------
+// Work unit 9 — component-driven apply ui (@inkjs/ui Spinner/ProgressBar/
+// StatusMessage/Badge). applyConfirmed keeps ONE logic path; the `ui` seam
+// routes its output to the Ink apply screen instead of console lines.
+// -------------------------------------------------------------------------
+describe("applyConfirmed — component-driven ui seam (@inkjs/ui)", () => {
+  function captureUi(): {
+    ui: {
+      progress(label: string, done: number, total: number): void;
+      result(
+        status: "installed" | "failed" | "skipped",
+        label: string,
+        output: string,
+      ): void;
+      error(line: string): void;
+      finished(ok: boolean): void;
+    };
+    events: string[];
+  } {
+    const events: string[] = [];
+    const ui = {
+      progress(label: string, done: number, total: number) {
+        events.push(`progress:${done}/${total}:${label}`);
+      },
+      result(
+        status: "installed" | "failed" | "skipped",
+        label: string,
+        output: string,
+      ) {
+        events.push(`result:${status}:${label}:${output}`);
+      },
+      error(line: string) {
+        events.push(`error:${line.split("\n")[0]}`);
+      },
+      finished(ok: boolean) {
+        events.push(`finished:${ok}`);
+      },
+    };
+    return { ui, events };
+  }
 
-      test("successful apply drives progress, results, then finished:true", async () => {
-        const dir = await makeTempDir();
-        const profilePath = path.join(dir, "profile.json");
-        const calls: string[] = [];
-        const { ui, events } = captureUi();
-        const exit = await applyConfirmed(
+  test("successful apply drives progress, results, then finished:true", async () => {
+    const dir = await makeTempDir();
+    const profilePath = path.join(dir, "profile.json");
+    const calls: string[] = [];
+    const { ui, events } = captureUi();
+    const exit = await applyConfirmed(
+      {
+        version: 1,
+        locked: ["base", "shell"],
+        packages: [
           {
-            version: 1,
-            locked: ["base", "shell"],
-            packages: [
-              {
-                id: "ghostty",
-                topic: "core",
-                kind: "cask",
-                area: "terminal",
-                locked: false,
-                default: true,
-              },
-            ],
-            links: [],
+            id: "ghostty",
+            topic: "core",
+            kind: "cask",
+            area: "terminal",
+            locked: false,
+            default: true,
           },
-          { selected: { ghostty: true }, checked: {} },
-          {
-            profilePath,
-            dryRun: false,
-            run: recordingRunner(calls),
-            linkRunner: async () => {},
-            ui,
-          },
-        );
-        expect(exit).toBe(EXIT_OK);
-        // Planned order: bootstrap, then brew steps (ghostty), then the
-        // always-run locked pseudo-steps (Zinit/Zsh setup, Git signing config).
-        expect(events[0]).toBe("progress:0/4:Bootstrap (Xcode CLT + Homebrew)");
-        expect(events[1]).toBe("progress:1/4:ghostty");
-        expect(events[2]).toBe("progress:2/4:Zinit/Zsh setup");
-        expect(events[3]).toBe("progress:3/4:Git signing config");
-        expect(events).toContain("result:installed:ghostty:ok");
-        expect(events[events.length - 1]).toBe("finished:true");
-      });
+        ],
+        links: [],
+      },
+      { selected: { ghostty: true }, checked: {} },
+      {
+        profilePath,
+        dryRun: false,
+        run: recordingRunner(calls),
+        linkRunner: async () => {},
+        ui,
+      },
+    );
+    expect(exit).toBe(EXIT_OK);
+    // Planned order: bootstrap, then brew steps (ghostty), then the
+    // always-run locked pseudo-steps (Zinit/Zsh setup, Git signing config).
+    expect(events[0]).toBe("progress:0/4:Bootstrap (Xcode CLT + Homebrew)");
+    expect(events[1]).toBe("progress:1/4:ghostty");
+    expect(events[2]).toBe("progress:2/4:Zinit/Zsh setup");
+    expect(events[3]).toBe("progress:3/4:Git signing config");
+    expect(events).toContain("result:installed:ghostty:ok");
+    expect(events[events.length - 1]).toBe("finished:true");
+  });
 
-      test("a failed brew step reports result:failed (with output) and finished:false", async () => {
-        const dir = await makeTempDir();
-        const profilePath = path.join(dir, "profile.json");
-        const { ui, events } = captureUi();
-        const exit = await applyConfirmed(
+  test("a failed brew step reports result:failed (with output) and finished:false", async () => {
+    const dir = await makeTempDir();
+    const profilePath = path.join(dir, "profile.json");
+    const { ui, events } = captureUi();
+    const exit = await applyConfirmed(
+      {
+        version: 1,
+        locked: ["base", "shell"],
+        packages: [
           {
-            version: 1,
-            locked: ["base", "shell"],
-            packages: [
-              {
-                id: "hunk",
-                topic: "git",
-                kind: "brew",
-                area: "git",
-                locked: false,
-                default: true,
-              },
-            ],
-            links: [],
+            id: "hunk",
+            topic: "git",
+            kind: "brew",
+            area: "git",
+            locked: false,
+            default: true,
           },
-          { selected: { hunk: true }, checked: {} },
-          {
-            profilePath,
-            dryRun: false,
-            run: recordingRunner([], () => ({
-              output: "boom",
-              err: new Error("exit 7"),
-            })),
-            linkRunner: async () => {},
-            ui,
-          },
-        );
-        expect(exit).toBe(EXIT_ERROR);
-        expect(events).toContain("result:failed:hunk:boom");
-        expect(events[events.length - 1]).toBe("finished:false");
-      });
+        ],
+        links: [],
+      },
+      { selected: { hunk: true }, checked: {} },
+      {
+        profilePath,
+        dryRun: false,
+        run: recordingRunner([], () => ({
+          output: "boom",
+          err: new Error("exit 7"),
+        })),
+        linkRunner: async () => {},
+        ui,
+      },
+    );
+    expect(exit).toBe(EXIT_ERROR);
+    expect(events).toContain("result:failed:hunk:boom");
+    expect(events[events.length - 1]).toBe("finished:false");
+  });
 
-      test("mid-apply interruption pushes the loud summary as an error event + finished:false", async () => {
-        const dir = await makeTempDir();
-        const profilePath = path.join(dir, "profile.json");
-        const calls: string[] = [];
-        let interrupted = false;
-        const { ui, events } = captureUi();
-        const exit = await applyConfirmed(
+  test("mid-apply interruption pushes the loud summary as an error event + finished:false", async () => {
+    const dir = await makeTempDir();
+    const profilePath = path.join(dir, "profile.json");
+    const calls: string[] = [];
+    let interrupted = false;
+    const { ui, events } = captureUi();
+    const exit = await applyConfirmed(
+      {
+        version: 1,
+        locked: ["base", "shell"],
+        packages: [
           {
-            version: 1,
-            locked: ["base", "shell"],
-            packages: [
-              {
-                id: "git",
-                topic: "core",
-                kind: "brew",
-                area: "git",
-                locked: true,
-                default: false,
-              },
-              {
-                id: "hunk",
-                topic: "git",
-                kind: "brew",
-                area: "git",
-                locked: false,
-                default: true,
-              },
-            ],
-            links: [],
+            id: "git",
+            topic: "core",
+            kind: "brew",
+            area: "git",
+            locked: true,
+            default: false,
           },
-          { selected: { hunk: true }, checked: {} },
           {
-            profilePath,
-            dryRun: false,
-            run: recordingRunner(calls, (op) => {
-              if (op === "brew install hunk") interrupted = true;
-              return { output: "ok" };
-            }),
-            linkRunner: async () => {},
-            interrupt: () => interrupted,
-            ui,
+            id: "hunk",
+            topic: "git",
+            kind: "brew",
+            area: "git",
+            locked: false,
+            default: true,
           },
-        );
-        expect(exit).toBe(EXIT_ERROR);
-        // The abort summary arrives through the ui as an error event, and the
-        // run finishes failed — loudly, exactly like the console path.
-        expect(events.some((e) => e.startsWith("error:❌ Interrupted"))).toBe(
-          true,
-        );
-        expect(events[events.length - 1]).toBe("finished:false");
-      });
+        ],
+        links: [],
+      },
+      { selected: { hunk: true }, checked: {} },
+      {
+        profilePath,
+        dryRun: false,
+        run: recordingRunner(calls, (op) => {
+          if (op === "brew install hunk") interrupted = true;
+          return { output: "ok" };
+        }),
+        linkRunner: async () => {},
+        interrupt: () => interrupted,
+        ui,
+      },
+    );
+    expect(exit).toBe(EXIT_ERROR);
+    // The abort summary arrives through the ui as an error event, and the
+    // run finishes failed — loudly, exactly like the console path.
+    expect(events.some((e) => e.startsWith("error:❌ Interrupted"))).toBe(true);
+    expect(events[events.length - 1]).toBe("finished:false");
+  });
 
-      test("dry-run ignores the ui seam entirely (plan stays plain lines)", async () => {
-        const dir = await makeTempDir();
-        const profilePath = path.join(dir, "profile.json");
-        const calls: string[] = [];
-        const { ui, events } = captureUi();
-        const exit = await applyConfirmed(
+  test("dry-run ignores the ui seam entirely (plan stays plain lines)", async () => {
+    const dir = await makeTempDir();
+    const profilePath = path.join(dir, "profile.json");
+    const calls: string[] = [];
+    const { ui, events } = captureUi();
+    const exit = await applyConfirmed(
+      {
+        version: 1,
+        locked: ["base", "shell"],
+        packages: [
           {
-            version: 1,
-            locked: ["base", "shell"],
-            packages: [
-              {
-                id: "ghostty",
-                topic: "core",
-                kind: "cask",
-                area: "terminal",
-                locked: false,
-                default: true,
-              },
-            ],
-            links: [],
+            id: "ghostty",
+            topic: "core",
+            kind: "cask",
+            area: "terminal",
+            locked: false,
+            default: true,
           },
-          { selected: { ghostty: true }, checked: {} },
-          {
-            profilePath,
-            dryRun: true,
-            run: recordingRunner(calls),
-            linkRunner: async () => {},
-            ui,
-          },
-        );
-        expect(exit).toBe(EXIT_OK);
-        expect(events).toEqual([]); // the ui seam is not mounted for dry-run
-        expect(calls).toEqual([]);
-      });
-    });
+        ],
+        links: [],
+      },
+      { selected: { ghostty: true }, checked: {} },
+      {
+        profilePath,
+        dryRun: true,
+        run: recordingRunner(calls),
+        linkRunner: async () => {},
+        ui,
+      },
+    );
+    expect(exit).toBe(EXIT_OK);
+    expect(events).toEqual([]); // the ui seam is not mounted for dry-run
+    expect(calls).toEqual([]);
+  });
+});
 
-    describe("runFlagMode — headless -apply -profile (no UI mounts)", () => {
+describe("runFlagMode — headless -apply -profile (no UI mounts)", () => {
   test("missing --context fails loudly instead of guessing", async () => {
     const dir = await makeTempDir();
     const profilePath = path.join(dir, "profile.json");

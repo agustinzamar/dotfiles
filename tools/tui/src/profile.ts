@@ -110,16 +110,16 @@ export function migrateProfileData(profile: Profile): {
   requireComponentsObject(profile);
   const out: Record<string, boolean> = {};
   let changed = false;
-      for (const [id, enabled] of Object.entries(profile.components)) {
-        if (isAreaId(id)) {
-          // Already a valid area id: pass through unchanged so a second run on
-          // a migrated profile is a no-op (desktop/media are both area ids AND
-          // legacy aggregate names).
-          out[id] = enabled;
-          continue;
-        }
-        const areas = LEGACY_COMPONENT_AREAS[id];
-        if (areas) {
+  for (const [id, enabled] of Object.entries(profile.components)) {
+    if (isAreaId(id)) {
+      // Already a valid area id: pass through unchanged so a second run on
+      // a migrated profile is a no-op (desktop/media are both area ids AND
+      // legacy aggregate names).
+      out[id] = enabled;
+      continue;
+    }
+    const areas = LEGACY_COMPONENT_AREAS[id];
+    if (areas) {
       if (enabled) {
         for (const area of areas) {
           if (out[area] !== true) {

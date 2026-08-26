@@ -16,7 +16,9 @@ const row = (source: string, target: string, mode = ""): LinkRow => ({
   mode,
 });
 
-const link = (partial: Partial<ContextLink> & { name: string }): ContextLink => ({
+const link = (
+  partial: Partial<ContextLink> & { name: string },
+): ContextLink => ({
   optional: false,
   component: "",
   requirement: "",
@@ -58,7 +60,11 @@ function fixtureContext(): InstallContext {
       link({ name: "zsh", component: "shell" }),
       link({ name: "p10k", component: "shell" }),
       // Area-gated links, no requirement.
-      link({ name: "ghostty", component: "terminal", rows: [row("a", "b"), row("a", "c")] }),
+      link({
+        name: "ghostty",
+        component: "terminal",
+        rows: [row("a", "b"), row("a", "c")],
+      }),
       link({ name: "tmux", component: "terminal" }),
       link({ name: "opencode", component: "ai" }),
       // Requirement-gated links.
@@ -69,7 +75,12 @@ function fixtureContext(): InstallContext {
       // confirmed selections (documented ADR-3 deviation, spec-aligned).
       link({ name: "git-ignore", component: "git", requirement: "git" }),
       // Optional group: independent of selections.
-      link({ name: "agents", optional: true, component: "ai", rows: [row("a", "b"), row("a", "c")] }),
+      link({
+        name: "agents",
+        optional: true,
+        component: "ai",
+        rows: [row("a", "b"), row("a", "c")],
+      }),
       link({ name: "claude", optional: true, component: "ai" }),
     ],
   };
@@ -145,13 +156,20 @@ describe("ADR-3 filter rule (table-driven)", () => {
 
   test("locked rows never count as confirmed selections for either rule", () => {
     // A selection containing ONLY locked rows is indistinguishable from empty.
-    const lockedOnly = offeredLinks(fixtureContext(), new Set(["fzf", "git", "tmux"]));
+    const lockedOnly = offeredLinks(
+      fixtureContext(),
+      new Set(["fzf", "git", "tmux"]),
+    );
     const empty = offeredLinks(fixtureContext(), new Set());
     expect(names(lockedOnly.main)).toEqual(names(empty.main));
   });
 
   test("optional agents group is always present, unchecked, independent of selections", () => {
-    for (const selected of [new Set<string>(), new Set(["ghostty"]), new Set(["code"])]) {
+    for (const selected of [
+      new Set<string>(),
+      new Set(["ghostty"]),
+      new Set(["code"]),
+    ]) {
       const { agents } = offeredLinks(fixtureContext(), selected);
       expect(names(agents)).toEqual(["agents", "claude"]);
     }

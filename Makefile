@@ -13,7 +13,7 @@ SCRIPTS := bin/dot install/*.sh system/defaults/*.sh remote-install.sh
 # Everything else is `dot <command>` — this file only carries the first-init
 # entry point and the lint targets CI runs.
 # `install` and `test` are also directory names, so these must stay phony.
-.PHONY: install test check lint bun-test build-tui
+.PHONY: install test check lint format bun-test build-tui
 
 install:
 	$(DOT) install
@@ -26,8 +26,15 @@ check:
 	cd tools/tui && ./node_modules/.bin/tsc --noEmit
 
 lint:
+	cd tools/tui && bunx prettier --check src
 	shellcheck -x $(SCRIPTS)
 	shfmt -d $(SCRIPTS)
+
+# Canonical formatting for the repo: Prettier for TS/TSX (tools/tui/src) +
+# shfmt for shell. `make lint`/CI enforce this; run `make format` to write it.
+format:
+	cd tools/tui && bunx prettier --write src
+	shfmt -w $(SCRIPTS)
 
 bun-test:
 	cd tools/tui && bun test

@@ -5,7 +5,14 @@
 // missing profiles never break `dot link` gating. Legacy Go-era component ids
 // migrate onto their area ids so old headless profiles keep working.
 import { afterAll, describe, expect, test } from "bun:test";
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { defaultProfile, loadProfile, saveProfile } from "./profile";
@@ -124,7 +131,9 @@ describe("profile validation on save", () => {
     const dir = await makeTempDir();
     const target = path.join(dir, "profile.json");
     const bad = { components: { nope: true } } as never;
-    expect(saveProfile(target, bad)).rejects.toThrow(/unknown component "nope"/);
+    expect(saveProfile(target, bad)).rejects.toThrow(
+      /unknown component "nope"/,
+    );
     expect(readdir(dir)).resolves.toEqual([]);
   });
 
@@ -188,6 +197,8 @@ describe("atomic save with trailing newline (unchanged behavior)", () => {
     await writeFile(path.join(sub, "sentinel.txt"), "keep me");
     const target = path.join(sub, "profile.json");
     await saveProfile(target, defaultProfile());
-    expect(await readFile(path.join(sub, "sentinel.txt"), "utf8")).toBe("keep me");
+    expect(await readFile(path.join(sub, "sentinel.txt"), "utf8")).toBe(
+      "keep me",
+    );
   });
 });

@@ -357,4 +357,3 @@ Ink normalizes a bare `\x1b[0m` into attribute-specific closes (`\x1b[39m` color
 - Dep budget held: only `@inkjs/ui@^2.0.0` added (+ its transitive chalk/cli-spinners/deepmerge/figures via bun.lock).
 - The apply UI is interactive-only by design; if the owner later wants the headless path styled too, the `ui` seam is the seam — pass a UI render only when stdout is a TTY, never by default (spec: headless MUST NOT mount a UI).
 - Uncommitted pre-existing working-tree formatting changes in `tools/tui/src/tui.tsx` + `tools/tui/src/manifest.test.ts` were preserved untouched and are NOT part of this branch's commits.
-    
