@@ -1,32 +1,32 @@
-// Ink port of internal/installer/tui.go (ADR-2): one useReducer mirrors the Go
-// Model struct field-for-field, pure view functions emit the same raw ANSI
-// strings the Go View() produced, rendered through <Text>.
+// Two-step installer flow (design §2): Step 1 is a per-tool selector with the
+// locked essentials pinned at top (🔒, never toggleable), visual topic
+// grouping, strictly per-row toggles and the special code/duti rows included.
+// Step 2 lists the ADR-3-filtered config links (all unchecked, multi-target
+// names as ONE row) followed by the opt-in AI-agents group (unchecked).
+// Quitting anywhere before confirm submits nothing — main.ts maps that to
+// exit 10 with zero filesystem writes. Views stay pure-string Ink text.
 import { Text, useApp, useInput, useStdout } from "ink";
 import { useEffect, useReducer, useRef } from "react";
-import { COMPONENTS, type Component } from "./manifest";
-import type { Profile } from "./profile";
+import type { ContextLink, ContextPackage, InstallContext } from "./context";
+import {
+  offeredLinks,
+  toolRows,
+  toolRowsGrouped,
+  type LinkGrouping,
+  type ToolRow,
+} from "./manifest";
 
-export const ansiReset = "\x1b[0m";
-export const ansiBold = "\x1b[1m";
-export const ansiDim = "\x1b[2m";
-export const ansiGreen = "\x1b[32m";
-export const ansiCyan = "\x1b[36m";
-export const ansiYellow = "\x1b[33m";
-export const ansiReverse = "\x1b[7m";
+export const LOCK_MARK = "🔒";
 
-export type Pane = "categories" | "components";
-
-/** Field-for-field mirror of the Go Model struct (width/height included). */
 export interface TuiState {
-  pane: Pane;
-  catCursor: number;
+  step: 1 | 2;
   cursor: number;
+  /** Per-tool row selections (package ids + locked pseudo-step ids). */
   selected: Record<string, boolean>;
-  applied: Record<string, boolean>;
-  query: string;
-  searching: boolean;
-  review: boolean;
-  reviewTop: number;
+  /** Confirmed link names (step 2), toggled as one unit per multi-target name. */
+  checked: Record<string, boolean>;
+  /** Step-2 extra-install rows (code, duti-defaults), gated by step-1 picks. */
+  special: Record<string, boolean>;
   submitted: boolean;
   width: number;
   height: number;
@@ -34,473 +34,286 @@ export interface TuiState {
 
 export type Action =
   | { type: "resize"; width: number; height: number }
-  | { type: "key"; key: string; text?: string };
+  | { type: "key"; key: string };
 
-export function categoryOrder(components: Component[]): string[] {
-  const seen = new Set<string>();
-  const order: string[] = [];
-  for (const component of components) {
-    if (!seen.has(component.category)) {
-      seen.add(component.category);
-      order.push(component.category);
-    }
-  }
-  return order;
-}
-
-/** Ports NewModel(): defaults selected, empty applied set. */
+/** Seeds every locked/default row checked, every other row unchecked. */
 export function initialState(
-  components: Component[] = COMPONENTS,
-  applied: Record<string, boolean> = {},
+  context: InstallContext,
+  initialSelected: Record<string, boolean> = {},
 ): TuiState {
   const selected: Record<string, boolean> = {};
-  for (const component of components) {
-    selected[component.id] = component.default || component.required;
+  for (const row of toolRows(context)) {
+    selected[row.id] = row.locked || row.default || row.installed === true;
   }
   return {
-    pane: "categories",
-    catCursor: 0,
+    step: 1,
     cursor: 0,
-    selected,
-    applied: { ...applied },
-    query: "",
-    searching: false,
-    review: false,
-    reviewTop: 0,
+    selected: { ...selected, ...initialSelected },
+    checked: {},
+    special: {},
     submitted: false,
-    width: 0,
-    height: 0,
+    // 80x24 dingbat defaults keep the pure views readable before the App
+    // dispatches the real terminal size on mount.
+    width: 80,
+    height: 24,
   };
 }
 
-export function activeCategory(
+/**
+ * Step-2 link listing: offered main links, then the opt-in agents group.
+ * Locked rows stay in the selection map but offeredLinks ignores them, so only
+ * confirmed toggleable rows light up areas (ADR-3).
+ */
+export function linkRowsForStep(
+  context: InstallContext,
   state: TuiState,
-  components: Component[],
-): string {
-  const categories = categoryOrder(components);
-  if (categories.length === 0) return "";
-  const catCursor = Math.min(
-    Math.max(state.catCursor, 0),
-    categories.length - 1,
+): LinkGrouping {
+  const selected = new Set(
+    Object.keys(state.selected).filter((id) => state.selected[id]),
   );
-  return categories[catCursor] ?? "";
+  return offeredLinks(context, selected);
 }
 
-/** Component indices visible in the right pane: every match while searching,
- *  otherwise the full grouped list. */
-export function visibleIndices(
+/** Toggles one link name (all its targets together). */
+export function toggleLink(state: TuiState, name: string): TuiState {
+  return {
+    ...state,
+    checked: { ...state.checked, [name]: !state.checked[name] },
+  };
+}
+
+/**
+ * Step-2 extra-install rows (kind "topic": VS Code extensions, duti default
+ * file handlers). Offered only when their prerequisite was picked in step 1:
+ * code iff visual-studio-code is selected, duti-defaults iff the duti
+ * formula is selected. Never part of step 1.
+ */
+export function specialRowsForStep(
+  context: InstallContext,
   state: TuiState,
-  components: Component[],
-): number[] {
-  const query = state.query.toLowerCase();
-  const indices: number[] = [];
-  for (let index = 0; index < components.length; index++) {
-    const component = components[index]!;
-    if (state.searching) {
-      if (
-        query === "" ||
-        component.label.toLowerCase().includes(query) ||
-        component.category.toLowerCase().includes(query)
-      ) {
-        indices.push(index);
+): ContextPackage[] {
+  return context.packages.filter((p) => {
+    if (p.kind !== "topic") return false;
+    if (p.id === "code") return state.selected["visual-studio-code"] === true;
+    if (p.id === "duti-defaults") return state.selected["duti"] === true;
+    return false;
+  });
+}
+
+export function toggleSpecial(state: TuiState, id: string): TuiState {
+  return {
+    ...state,
+    special: { ...state.special, [id]: !state.special[id] },
+  };
+}
+
+function selectedMark(selected: boolean): string {
+  return selected ? "[x]" : "[ ]";
+}
+
+/** Pure string view for Step 1 (per-tool selector). */
+export function toolView(state: TuiState, context: InstallContext): string {
+  // Grouped order, not raw toolRows: same-category rows are guaranteed
+  // contiguous here, so the adjacency-based header check below never repeats
+  // a category (reduceKey below indexes this SAME order for the cursor).
+  const rows = toolRowsGrouped(context);
+  const lines: string[] = [" dot installer  step 1/2: choose tools ", ""];
+  let cursorRow = 0;
+  for (let i = 0; i < rows.length; i++) {
+    if (i === state.cursor) cursorRow = lines.length;
+    const row = rows[i]!;
+    if (
+      row.category !== "locked" &&
+      i > 0 &&
+      rows[i - 1]!.category !== row.category
+    ) {
+      lines.push(` [${row.category}]`);
+      if (i < state.cursor) cursorRow++;
+    }
+    const cursorMark = i === state.cursor ? ">" : " ";
+    const lock = row.locked ? `${LOCK_MARK} ` : "  ";
+    lines.push(
+      `${cursorMark} ${lock}${selectedMark(state.selected[row.id] === true)} ${row.label}`,
+    );
+  }
+  return (
+    viewportOf(lines, cursorRow, state.height) +
+    "\n\nspace toggle  enter next  q quit"
+  );
+}
+
+function linkRowLine(
+  link: ContextLink,
+  cursor: boolean,
+  checked: boolean,
+): string {
+  const cursorMark = cursor ? ">" : " ";
+  const targets = link.rows.length > 1 ? ` (${link.rows.length} targets)` : "";
+  return `${cursorMark} ${selectedMark(checked)} ${link.name}${targets}`;
+}
+
+/** Pure string view for Step 2 (filtered links + opt-in agents). */
+/** Ordered step-2 rows: offered links, opt-in agents, gated extra installs. */
+export function stepTwoRows(
+  context: InstallContext,
+  state: TuiState,
+): Array<
+  { kind: "link"; link: ContextLink } | { kind: "special"; pkg: ContextPackage }
+> {
+  const { main, agents } = linkRowsForStep(context, state);
+  const specials = specialRowsForStep(context, state);
+  return [
+    ...main.map((link) => ({ kind: "link" as const, link })),
+    ...agents.map((link) => ({ kind: "link" as const, link })),
+    ...specials.map((pkg) => ({ kind: "special" as const, pkg })),
+  ];
+}
+
+export function linkView(state: TuiState, context: InstallContext): string {
+  const rows = stepTwoRows(context, state);
+  const lines: string[] = [
+    state.special && Object.keys(state.special).length > 0
+      ? " dot installer  step 2/2: link configs + extras "
+      : " dot installer  step 2/2: link configs ",
+    "",
+  ];
+  let cursorRow = 0;
+  let linkIdx = 0;
+  for (let i = 0; i < rows.length; i++) {
+    if (i === state.cursor) cursorRow = lines.length;
+    const row = rows[i]!;
+    if (row.kind === "link") {
+      const link = row.link;
+      if (linkIdx === linkRowsForStep(context, state).main.length) {
+        lines.push(" opt-in AI agents (unchecked)");
+        if (i <= state.cursor) cursorRow++;
       }
-      continue;
+      linkIdx++;
+      lines.push(
+        linkRowLine(
+          link,
+          i === state.cursor,
+          state.checked[link.name] === true,
+        ),
+      );
+    } else {
+      if (i > 0 && rows[i - 1]!.kind === "link") {
+        lines.push(" extra installs (from step-1 picks)");
+        if (i <= state.cursor) cursorRow++;
+      }
+      lines.push(
+        `${i === state.cursor ? ">" : " "} ${selectedMark(state.special[row.pkg.id] === true)} ${row.pkg.label ?? row.pkg.id}`,
+      );
     }
-    indices.push(index);
   }
-  return indices;
+  return (
+    viewportOf(lines, cursorRow, state.height) +
+    "\n\nspace toggle  enter apply  q quit"
+  );
 }
 
-/** Index of the first component in the category, or 0 when absent. */
-export function firstIndexInCategory(
-  components: Component[],
-  category: string,
-): number {
-  for (let i = 0; i < components.length; i++) {
-    if (components[i]!.category === category) return i;
-  }
-  return 0;
+/** Keeps the cursor row visible in a small terminal (footer stays last). */
+function viewportOf(
+  lines: string[],
+  cursorRow: number,
+  height: number,
+): string {
+  const viewport = Math.max(height - 3, 3);
+  const start = Math.max(
+    0,
+    Math.min(
+      cursorRow - Math.floor(viewport / 2),
+      Math.max(lines.length - viewport, 0),
+    ),
+  );
+  const end = Math.min(start + viewport, lines.length);
+  return (
+    (start > 0 ? "↑ more\n" : "") +
+    lines.slice(start, end).join("\n") +
+    (end < lines.length ? "\n↓ more" : "")
+  );
 }
 
-export function clampViewport(
-  cursor: number,
-  viewport: number,
-  total: number,
-): number {
-  if (total <= viewport) return 0;
-  let start = cursor - Math.floor(viewport / 2);
-  if (start < 0) start = 0;
-  if (start + viewport > total) start = total - viewport;
-  return start;
-}
-
-export function counts(
+export function reducer(
   state: TuiState,
-  components: Component[],
-): { selected: number; installed: number; pending: number } {
-  let selected = 0;
-  let installed = 0;
-  let pending = 0;
-  for (const component of components) {
-    if (state.applied[component.id]) {
-      installed++;
-      continue;
-    }
-    if (state.selected[component.id]) {
-      selected++;
-      if (!component.required) pending++;
-    }
-  }
-  return { selected, installed, pending };
-}
-
-/** Rows of the review screen: "[Category]" headers plus indented labels,
- *  covering exactly the selected-not-applied components. */
-export function reviewRows(state: TuiState, components: Component[]): string[] {
-  const rows: string[] = [];
-  let lastCategory = "";
-  for (const component of components) {
-    if (!state.selected[component.id] || state.applied[component.id]) continue;
-    if (component.category !== lastCategory) {
-      rows.push("[" + component.category + "]");
-      lastCategory = component.category;
-    }
-    rows.push("   " + component.label);
-  }
-  return rows;
-}
-
-export function stateMark(state: TuiState, component: Component): string {
-  if (state.applied[component.id]) return ansiGreen + "✓" + ansiReset;
-  if (state.selected[component.id]) return ansiYellow + "x" + ansiReset;
-  return " ";
-}
-
-/** Sets every non-required component of the category (ports selectCategory). */
-export function selectCategory(
-  components: Component[],
-  selected: Record<string, boolean>,
-  category: string,
-  enabled: boolean,
-): Record<string, boolean> {
-  const next = { ...selected };
-  for (const component of components) {
-    if (component.category === category && !component.required) {
-      next[component.id] = enabled;
-    }
-  }
-  return next;
-}
-
-export function reducer(state: TuiState, action: Action): TuiState {
+  action: Action,
+  context: InstallContext,
+): TuiState {
   switch (action.type) {
     case "resize":
       return { ...state, width: action.width, height: action.height };
     case "key":
-      return reduceKey(state, action);
+      return reduceKey(state, action.key, context);
   }
 }
 
-// Ports Update()'s "a"/"n" branch: toggles every ordinary component of the
-// active category (categories pane) or of the cursor component's category.
-function categoryToggle(state: TuiState, enabled: boolean): TuiState {
-  const indices = visibleIndices(state, COMPONENTS);
-  if (indices.length === 0) return state;
-  const category =
-    state.pane === "categories"
-      ? activeCategory(state, COMPONENTS)
-      : COMPONENTS[indices[state.cursor]!]!.category;
-  return {
-    ...state,
-    selected: selectCategory(COMPONENTS, state.selected, category, enabled),
-  };
-}
-
-// Mirrors Update()'s precedence: review first, then search mode, then the main
-// switch. Quit ("q"/"ctrl+c") is owned by the App component (tea.Quit analog).
 function reduceKey(
   state: TuiState,
-  action: Extract<Action, { type: "key" }>,
+  name: string,
+  context: InstallContext,
 ): TuiState {
-  const name = action.key;
-
-  if (state.review) {
-    switch (name) {
-      case "enter":
-      case "y":
-        // App exits (tea.Quit) once submitted flips true.
-        return { ...state, submitted: true, review: false };
-      case "esc":
-        return { ...state, review: false };
-      case "up":
-        return state.reviewTop > 0
-          ? { ...state, reviewTop: state.reviewTop - 1 }
-          : state;
-      case "down":
-        return { ...state, reviewTop: state.reviewTop + 1 };
-      default:
-        return state;
-    }
-  }
-
-  if (state.searching) {
-    if (name === "esc" || name === "enter")
-      return { ...state, searching: false };
-    if (name === "backspace") {
-      if (state.query === "") return state;
-      return { ...state, query: state.query.slice(0, -1), cursor: 0 };
-    }
-    if (name === "text") {
-      const text = action.text ?? "";
-      // Spec: a/n/space are no-ops while the visible set is empty.
-      if (
-        visibleIndices(state, COMPONENTS).length === 0 &&
-        (text === "a" || text === "n")
-      ) {
-        return state;
-      }
-      return { ...state, query: state.query + text, cursor: 0 };
-    }
-    return state;
-  }
+  const rows: Array<
+    | { kind: "tool"; row: ToolRow }
+    | { kind: "link"; link: ContextLink }
+    | { kind: "special"; pkg: ContextPackage }
+  > =
+    state.step === 1
+      ? toolRowsGrouped(context).map((row) => ({ kind: "tool" as const, row }))
+      : stepTwoRows(context, state);
 
   switch (name) {
-    case "/":
-      return { ...state, searching: true };
-    case "tab":
-    case "left":
-    case "right":
+    case "up":
+      return { ...state, cursor: Math.max(0, state.cursor - 1) };
+    case "down":
       return {
         ...state,
-        pane: state.pane === "categories" ? "components" : "categories",
+        cursor: Math.max(0, Math.min(rows.length - 1, state.cursor + 1)),
       };
-    case "enter": {
-      if (visibleIndices(state, COMPONENTS).length === 0) return state;
-      return { ...state, review: true, reviewTop: 0 };
-    }
-    case "up":
-    case "down": {
-      if (state.pane === "categories") {
-        const categories = categoryOrder(COMPONENTS);
-        let catCursor = state.catCursor;
-        if (name === "up" && catCursor > 0) catCursor--;
-        if (name === "down" && catCursor < categories.length - 1) catCursor++;
-        const jumped: TuiState = { ...state, catCursor };
-        return {
-          ...jumped,
-          cursor: firstIndexInCategory(
-            COMPONENTS,
-            activeCategory(jumped, COMPONENTS),
-          ),
-        };
-      }
-      const indices = visibleIndices(state, COMPONENTS);
-      if (indices.length === 0) return state;
-      let cursor = state.cursor;
-      if (name === "up" && cursor > 0) cursor--;
-      if (name === "down" && cursor < indices.length - 1) cursor++;
-      return { ...state, cursor };
-    }
-    case "a":
-      return categoryToggle(state, true);
-    case "n":
-      return categoryToggle(state, false);
-    case "text": {
-      // Ink delivers printable runes as text; route the ones that are
-      // commands in the Go key.String() vocabulary onto their handlers.
-      if (action.text === "/") return { ...state, searching: true };
-      if (action.text === "a") return categoryToggle(state, true);
-      if (action.text === "n") return categoryToggle(state, false);
-      return state;
-    }
     case "space": {
-      const indices = visibleIndices(state, COMPONENTS);
-      if (indices.length === 0) return state;
-      const component = COMPONENTS[indices[state.cursor]!]!;
-      if (!component.required && !state.applied[component.id]) {
+      if (state.step === 1) {
+        const entry = rows[state.cursor] as
+          | { kind: "tool"; row: ToolRow }
+          | undefined;
+        if (!entry || entry.row.locked) return state; // locked rows ignore the key
         return {
           ...state,
           selected: {
             ...state.selected,
-            [component.id]: !state.selected[component.id],
+            [entry.row.id]: !state.selected[entry.row.id],
           },
         };
       }
-      return state;
+      const entry = rows[state.cursor] as
+        | { kind: "link"; link: ContextLink }
+        | { kind: "special"; pkg: ContextPackage }
+        | undefined;
+      if (!entry) return state;
+      if (entry.kind === "link") return toggleLink(state, entry.link.name);
+      return toggleSpecial(state, entry.pkg.id);
     }
+    case "enter":
+      if (state.step === 1) {
+        return { ...state, step: 2, cursor: 0 };
+      }
+      // Confirm: merge step-2 extra installs into the tool selections so
+      // main.ts applies code/duti-defaults exactly like any chosen tool.
+      return {
+        ...state,
+        submitted: true,
+        selected: {
+          ...state.selected,
+          ...Object.fromEntries(
+            Object.entries(state.special).filter(([, v]) => v),
+          ),
+        },
+      };
     default:
       return state;
   }
 }
 
-/** Copies the live selection into a Profile (ports Model.Profile()). */
-export function profileOf(state: TuiState): Profile {
-  return { components: { ...state.selected } };
-}
-
-function padRight(text: string, width: number): string {
-  let padded = text;
-  while (padded.length < width) padded += " ";
-  return padded;
-}
-
-function categoryRows(state: TuiState, components: Component[]): string[] {
-  const active = activeCategory(state, components);
-  return categoryOrder(components).map((category) => {
-    const mark = category === active ? ">" : " ";
-    return mark + " " + category;
-  });
-}
-
-function componentRows(
-  state: TuiState,
-  components: Component[],
-): { rows: string[]; cursorRow: number } {
-  const indices = visibleIndices(state, components);
-  if (indices.length === 0) {
-    return {
-      rows: [ansiDim + "No matches for " + state.query + ansiReset],
-      cursorRow: 0,
-    };
-  }
-  const rows: string[] = [];
-  let lastCategory = "";
-  let cursorRow = 0;
-  for (let i = 0; i < indices.length; i++) {
-    const component = components[indices[i]!]!;
-    if (component.category !== lastCategory) {
-      rows.push(ansiDim + "[" + component.category + "]" + ansiReset);
-      lastCategory = component.category;
-    }
-    if (i === state.cursor) cursorRow = rows.length;
-    const cursor = i === state.cursor ? ">" : " ";
-    rows.push(
-      cursor + " " + stateMark(state, component) + " " + component.label,
-    );
-  }
-  return { rows, cursorRow };
-}
-
-/** Ports Model.selectionView(): sidebar + viewport + status + footer. */
-export function selectionView(
-  state: TuiState,
-  components: Component[] = COMPONENTS,
-): string {
-  const { installed, pending } = counts(state, components);
-
-  const cats = categoryRows(state, components);
-  let sidebarWidth = 0;
-  for (const row of cats) {
-    if (row.length > sidebarWidth) sidebarWidth = row.length;
-  }
-
-  const { rows: compRows, cursorRow } = componentRows(state, components);
-  const bodyHeight = Math.max(state.height - 4, 1);
-
-  let header = ansiBold + " dot installer " + ansiReset;
-  if (state.searching) {
-    header += ansiDim + " search: " + state.query + "_" + ansiReset;
-  } else {
-    header += ansiDim + "(tab pane  / search)" + ansiReset;
-  }
-
-  const status =
-    " " +
-    ansiGreen +
-    "✓ installed " +
-    String(installed) +
-    ansiReset +
-    "  " +
-    ansiYellow +
-    "selected " +
-    String(pending) +
-    ansiReset;
-
-  const lines: string[] = [header, ""];
-
-  const compStart = clampViewport(cursorRow, bodyHeight, compRows.length);
-  let compEnd = compStart + bodyHeight;
-  if (compEnd > compRows.length) compEnd = compRows.length;
-
-  const moreTop = compStart > 0;
-  const moreBottom = compEnd < compRows.length;
-  const lastRow = bodyHeight - 1;
-  for (let row = 0; row < bodyHeight; row++) {
-    let left = "";
-    if (!state.searching) {
-      left = row < cats.length ? cats[row]! : "";
-      left = padRight(left, sidebarWidth);
-      if (state.pane === "categories" && row === state.catCursor) {
-        left = ansiReverse + left + ansiReset;
-      }
-    }
-    let right = "";
-    if (compStart + row < compEnd) right = compRows[compStart + row]!;
-    if (row === 0 && moreTop) right = ansiDim + "↑ more" + ansiReset;
-    if (row === lastRow && moreBottom) right = ansiDim + "↓ more" + ansiReset;
-    lines.push(left + "  " + right);
-  }
-
-  const help =
-    ansiDim + "space toggle  a all  n none  enter review  q quit" + ansiReset;
-  lines.push(status, help);
-  return lines.join("\n");
-}
-
-/** Ports Model.reviewView(). */
-export function reviewView(
-  state: TuiState,
-  components: Component[] = COMPONENTS,
-): string {
-  const rows = reviewRows(state, components);
-  const available = Math.max(state.height - 5, 1);
-  let start = state.reviewTop;
-  if (start + available > rows.length) {
-    start = rows.length - available;
-    if (start < 0) start = 0;
-  }
-  let end = start + available;
-  if (end > rows.length) end = rows.length;
-
-  const { installed, pending } = counts(state, components);
-  const lines: string[] = [
-    ansiBold +
-      " Review plan " +
-      ansiReset +
-      " (" +
-      ansiGreen +
-      "✓ installed " +
-      String(installed) +
-      ansiReset +
-      ", " +
-      ansiYellow +
-      "to install " +
-      String(pending) +
-      ansiReset +
-      ")",
-    "",
-  ];
-
-  if (rows.length === 0) {
-    lines.push(
-      ansiDim +
-        "Nothing to install — everything is already applied." +
-        ansiReset,
-    );
-  } else {
-    if (start > 0) lines.push(ansiDim + "↑ more" + ansiReset);
-    for (let i = start; i < end; i++) lines.push(rows[i]!);
-    if (end < rows.length) lines.push(ansiDim + "↓ more" + ansiReset);
-  }
-
-  lines.push("");
-  lines.push(ansiDim + "enter apply  esc back  q quit" + ansiReset);
-  return lines.join("\n");
-}
-
 export interface MappedKey {
   key: string;
-  text?: string;
 }
 
 interface InkKeyFlags {
@@ -517,56 +330,45 @@ interface InkKeyFlags {
   meta?: boolean;
 }
 
-/** Normalizes Ink's (input, key) pair onto the Go key.String() vocabulary. */
+/** Normalizes Ink's (input, key) pair onto the app key vocabulary. */
 export function mapInkKey(input: string, key: InkKeyFlags): MappedKey | null {
   if (key.upArrow) return { key: "up" };
   if (key.downArrow) return { key: "down" };
-  if (key.leftArrow) return { key: "left" };
-  if (key.rightArrow) return { key: "right" };
   if (key.return) return { key: "enter" };
   if (key.escape) return { key: "esc" };
-  if (key.tab) return { key: "tab" };
   if (key.backspace || key.delete) return { key: "backspace" };
   if (input === " ") return { key: "space" };
   if (key.ctrl && input === "c") return { key: "ctrl+c" };
-  // "q" is a control key in the app vocabulary (tea.Quit analog); App owns the
-  // mode-dependent handling (quit outside search, literal insert inside).
   if (input === "q" && !key.ctrl && !key.meta) return { key: "q" };
-  if (input.length > 0 && !key.ctrl && !key.meta)
-    return { key: "text", text: input };
   return null;
 }
 
 export interface AppProps {
-  /** Seeds the applied set (main.ts passes the previous round's results). */
-  initialApplied?: Record<string, boolean>;
-  /** Test seam: seeds extra selections (Go tests assigned model.selected). */
+  context: InstallContext;
+  /** Test seam: seeds extra selections. */
   initialSelected?: Record<string, boolean>;
   /** Test seam: deterministic terminal size instead of the real stdout. */
   fixedSize?: { width: number; height: number };
-  /** Loop-owner seam (main.ts): receives the final state on submission,
-   *  immediately before exit() — the tea.Program return-value analog. */
+  /** main.ts: receives the final state on submission, immediately before exit. */
   onSubmit?: (state: TuiState) => void;
 }
 
 export function App({
-  initialApplied = {},
+  context,
   initialSelected,
   fixedSize,
   onSubmit,
 }: AppProps): React.ReactElement {
-  const [state, dispatch] = useReducer(reducer, undefined, () => {
-    const base = initialState(COMPONENTS, initialApplied);
-    return initialSelected
-      ? { ...base, selected: { ...base.selected, ...initialSelected } }
-      : base;
-  });
+  const [state, dispatch] = useReducer(
+    (s: TuiState, a: Action) => reducer(s, a, context),
+    undefined,
+    () => initialState(context, initialSelected),
+  );
   const stateRef = useRef(state);
   stateRef.current = state;
   const { exit } = useApp();
   const { stdout } = useStdout();
 
-  // tea.WindowSizeMsg equivalent: seed real dimensions and follow resizes.
   useEffect(() => {
     if (fixedSize) {
       dispatch({
@@ -595,39 +397,28 @@ export function App({
     };
   }, [fixedSize, stdout]);
 
-  // tea.Quit equivalent after submit; main.ts reads the submitted
-  // selection through onSubmit (the finalModel return of tea.NewProgram).
   useEffect(() => {
     if (state.submitted) {
       onSubmit?.(stateRef.current);
       exit();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.submitted, exit]);
 
   useInput((input, key) => {
     const mapped = mapInkKey(input, key);
     if (!mapped) return;
-    // Go returned tea.Quit for q/ctrl+c outside search mode (both panes and
-    // review); everything else flows through the reducer.
-    if (
-      !stateRef.current.searching &&
-      (mapped.key === "q" || mapped.key === "ctrl+c")
-    ) {
+    if (mapped.key === "q" || mapped.key === "ctrl+c") {
+      // Quit before confirm: submits nothing (main maps to exit 10, zero writes).
       exit();
       return;
     }
-    // Go's searching branch appends key.Text, so a literal "q" must reach it
-    // as text even though mapInkKey classifies it as a named key.
-    if (stateRef.current.searching && mapped.key === "q") {
-      dispatch({ type: "key", key: "text", text: "q" });
-      return;
-    }
-    dispatch({
-      type: "key",
-      key: mapped.key,
-      ...(mapped.text === undefined ? {} : { text: mapped.text }),
-    });
+    dispatch({ type: "key", key: mapped.key });
   });
 
-  return <Text>{state.review ? reviewView(state) : selectionView(state)}</Text>;
+  return (
+    <Text>
+      {state.step === 1 ? toolView(state, context) : linkView(state, context)}
+    </Text>
+  );
 }

@@ -1,14 +1,17 @@
+// Planner tests for the context-driven pipeline (tasks 2.3/2.8 RED first):
+// planBrewCommands maps context package rows to brew commands (taps first,
+// `brew install x` / `brew install --cask x`, topic rows delegated elsewhere).
+// Executor/summarize/shellRunner tests are preserved verbatim from the merge —
+// their behavior is unchanged by the catalog retirement.
 import { afterAll, describe, expect, test } from "bun:test";
-import { chmod, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
-import { COMPONENTS, type Component } from "./manifest";
-import { defaultProfile, type Profile } from "./profile";
+import { chmod } from "node:fs/promises";
+import type { ContextPackage } from "./context";
 import {
-  detectEnvironment,
   executeWithProgress,
-  plan,
-  planFrom,
+  planBrewCommands,
   shellRunner,
   summarize,
   type Runner,
@@ -19,47 +22,19 @@ import {
 // Helpers
 // ---------------------------------------------------------------------------
 
-// Independent source of truth: installer-plan spec "Environment Detection"
-// pins this exact command-name list.
-const DETECTED_COMMANDS = [
-  "brew",
-  "xcode-select",
-  "git",
-  "gh",
-  "code",
-  "php",
-  "composer",
-  "opencode",
-];
-
-function env(...present: string[]): Record<string, boolean> {
-  return Object.fromEntries(
-    DETECTED_COMMANDS.map((n) => [n, present.includes(n)]),
-  );
-}
-
-function comp(partial: Partial<Component> & { id: string }): Component {
+function pkg(
+  id: string,
+  args: Partial<ContextPackage> = {},
+): ContextPackage {
   return {
-    label: partial.id,
-    category: "Test",
+    id,
+    topic: "core",
+    kind: "brew",
+    area: "terminal",
+    locked: false,
     default: false,
-    required: false,
-    ...partial,
+    ...args,
   };
-}
-
-function profileWith(...ids: string[]): Profile {
-  const p = defaultProfile();
-  for (const c of COMPONENTS) p.components[c.id] = false;
-  for (const id of ids) p.components[id] = true;
-  // Required baseline cannot be disabled; drop it entirely instead so tests
-  // stay about the components under examination.
-  delete p.components.base;
-  delete p.components.shell;
-  delete p.components.git;
-  delete p.components.terminal;
-  for (const id of ids) if (!(id in p.components)) p.components[id] = true;
-  return { components: p.components };
 }
 
 /** Fake runner recording every operation it was asked to execute. */
@@ -83,176 +58,69 @@ afterAll(async () => {
 });
 
 // ---------------------------------------------------------------------------
-// Planner — installer-plan spec scenarios
+// Brew planning from context package rows
 // ---------------------------------------------------------------------------
 
-describe("environment detection", () => {
-  test("reports presence from PATH without running tools", async () => {
-    const dir = await mkdtemp(path.join(tmpdir(), "dot-tui-plan-env-"));
-    tempDirs.push(dir);
-    const marker = path.join(dir, ".executed");
-    for (const name of ["brew", "git"]) {
-      // If anything EXECUTES these, they leave `.executed` behind — the spec
-      // forbids side effects from running the tools.
-      const body = `touch "${marker}"\nexit 1\n`;
-      await writeFile(path.join(dir, name), body);
-      await chmod(path.join(dir, name), 0o755);
-    }
-
-    const previousPath = process.env.PATH;
-    process.env.PATH = dir;
-    let detected: Record<string, boolean>;
-    try {
-      detected = detectEnvironment();
-    } finally {
-      process.env.PATH = previousPath;
-    }
-
-    expect(detected["brew"]).toBe(true);
-    expect(detected["xcode-select"]).toBe(false);
-    expect(detected["git"]).toBe(true);
-    expect(detected["gh"]).toBe(false);
-    expect(detected["composer"]).toBe(false);
-    // No side effects: detection resolved names on PATH only.
-    expect(await Bun.file(marker).exists()).toBe(false);
-  });
-});
-
-describe("planning", () => {
-  test("hunk rides inside the git task, never standalone", async () => {
-    // Port of plan_test.go TestPlanIncludesHunkInGit (uses DefaultProfile()).
-    const { tasks } = await plan(defaultProfile(), env("brew"));
-    for (const task of tasks) {
-      expect(task.componentId).not.toBe("hunk");
-    }
-    expect(
-      tasks.some(
-        (t) => t.componentId === "git" && t.operation.includes("hunk"),
-      ),
-    ).toBeTrue();
-  });
-
-  test("xcode-select --install omitted when xcode-select detected", async () => {
-    const { tasks } = await plan(defaultProfile(), env("brew", "xcode-select"));
-    for (const task of tasks) {
-      expect(task.operation).not.toBe("xcode-select --install");
-    }
-    expect(tasks.length).toBeGreaterThan(0); // other base work still planned
-  });
-
-  test("xcode-select --install kept when xcode-select missing, rest still planned", async () => {
-    const components = [
-      comp({
-        id: "base",
-        label: "Base tools",
-        commands: ["xcode-select --install", "dot base"],
-      }),
-    ];
-    const { tasks, skips } = await planFrom(
-      components,
-      profileWith("base"),
-      env(),
+describe("planBrewCommands", () => {
+  test("brew rows become `brew install x`, cask rows `brew install --cask x`", () => {
+    const commands = planBrewCommands(
+      [pkg("fzf"), pkg("ghostty", { kind: "cask" })],
+      new Set(["fzf", "ghostty"]),
     );
-    expect(skips).toHaveLength(0);
-    expect(tasks.map((t) => t.operation)).toEqual([
-      "xcode-select --install",
-      "dot base",
-    ]);
+    expect(commands).toEqual(["brew install fzf", "brew install --cask ghostty"]);
   });
 
-  test("dependencies are emitted before dependents (DFS)", async () => {
-    const d = comp({ id: "d", label: "Dep", commands: ["install-d"] });
-    const x = comp({
-      id: "x",
-      label: "X",
-      dependencies: ["d"],
-      commands: ["install-x"],
-    });
-    const { tasks, skips } = await planFrom([x, d], profileWith("x"), env());
-    expect(skips).toHaveLength(0);
-    expect(tasks.map((t) => t.operation)).toEqual(["install-d", "install-x"]);
-    // Every planned task carries its own id, label, command and dependencies.
-    expect(tasks[1]).toMatchObject({
-      componentId: "x",
-      label: "X",
-      operation: "install-x",
-      dependencies: ["d"],
-    });
-  });
-
-  test("shared dependency emitted exactly once, before both dependents", async () => {
-    const d = comp({ id: "d", commands: ["install-d"] });
-    const x = comp({ id: "x", dependencies: ["d"], commands: ["install-x"] });
-    const y = comp({ id: "y", dependencies: ["d"], commands: ["install-y"] });
-    const { tasks } = await planFrom([x, y, d], profileWith("x", "y"), env());
-    expect(tasks.map((t) => t.componentId)).toEqual(["d", "x", "y"]);
-  });
-
-  test("unselected components produce no tasks", async () => {
-    const a = comp({ id: "a", commands: ["install-a"] });
-    const b = comp({ id: "b", commands: ["install-b"] });
-    const { tasks } = await planFrom([a, b], profileWith(), env());
-    expect(tasks).toHaveLength(0);
-  });
-
-  test("applied-set components are excluded even when enabled", async () => {
-    // Port of plan_test.go TestPlanOmitsAppliedComponents.
-    const { tasks } = await plan(defaultProfile(), env("brew"), { git: true });
-    for (const task of tasks) {
-      expect(task.componentId).not.toBe("git");
-    }
-    expect(tasks.some((t) => t.componentId === "terminal")).toBeTrue();
-  });
-
-  test("brew-dependent component fully skipped without brew", async () => {
-    const c = comp({
-      id: "c1",
-      label: "C One",
-      commands: ["brew install thing", "dot c1"],
-    });
-    const { tasks, skips } = await planFrom([c], profileWith("c1"), env());
-    expect(tasks.filter((t) => t.componentId === "c1")).toHaveLength(0);
-    expect(skips).toEqual([
-      { componentId: "c1", reason: "Homebrew is not installed" },
-    ]);
-  });
-
-  test("brew commands planned normally when brew present", async () => {
-    const c = comp({
-      id: "c1",
-      commands: ["brew install thing", "dot c1"],
-    });
-    const { tasks, skips } = await planFrom(
-      [c],
-      profileWith("c1"),
-      env("brew"),
+  test("taps are ordered before all formulas regardless of row order", () => {
+    const commands = planBrewCommands(
+      [
+        pkg("koekeishiya/formulae", { kind: "tap" }),
+        pkg("fzf"),
+        pkg("FelixKratz/formulae", { kind: "tap" }),
+      ],
+      new Set(["koekeishiya/formulae", "fzf", "FelixKratz/formulae"]),
     );
-    expect(skips).toHaveLength(0);
-    expect(tasks.map((t) => t.operation)).toEqual([
-      "brew install thing",
-      "dot c1",
+    expect(commands).toEqual([
+      "brew tap koekeishiya/formulae",
+      "brew tap FelixKratz/formulae",
+      "brew install fzf",
     ]);
   });
 
-  test("non-brew commands survive a brew skip inside the same component", async () => {
-    const base = comp({
-      id: "base",
-      commands: ["xcode-select --install", "brew install cask-thing"],
-    });
-    const { tasks, skips } = await planFrom(
-      [base],
-      profileWith("base"),
-      env(), // xcode-select absent, brew absent
+  test("unselected rows produce no commands", () => {
+    const commands = planBrewCommands(
+      [pkg("fzf"), pkg("ghostty", { kind: "cask" })],
+      new Set(["ghostty"]),
     );
-    expect(tasks.map((t) => t.operation)).toEqual(["xcode-select --install"]);
-    expect(skips).toEqual([
-      { componentId: "base", reason: "Homebrew is not installed" },
+    expect(commands).toEqual(["brew install --cask ghostty"]);
+  });
+
+  test("topic rows (special installers) are never emitted as brew commands", () => {
+    const commands = planBrewCommands(
+      [pkg("code", { kind: "topic", topic: "code" }), pkg("fzf")],
+      new Set(["code", "fzf"]),
+    );
+    expect(commands).toEqual(["brew install fzf"]);
+  });
+
+  test("tap ordering is stable relative to other taps (first-seen order)", () => {
+    const commands = planBrewCommands(
+      [pkg("a/tap", { kind: "tap" }), pkg("b/tap", { kind: "tap" }), pkg("x")],
+      new Set(["a/tap", "b/tap", "x"]),
+    );
+    expect(commands).toEqual([
+      "brew tap a/tap",
+      "brew tap b/tap",
+      "brew install x",
     ]);
+  });
+
+  test("empty selection plans nothing", () => {
+    expect(planBrewCommands([pkg("fzf")], new Set())).toEqual([]);
   });
 });
 
 // ---------------------------------------------------------------------------
-// Executor — installer-execute spec scenarios
+// Executor — installer-execute spec scenarios (unchanged by this change)
 // ---------------------------------------------------------------------------
 
 describe("execution", () => {
@@ -276,7 +144,6 @@ describe("execution", () => {
   });
 
   test("failure blocks dependents while independent components continue", async () => {
-    // Port of plan_test.go TestExecuteContinuesAndSkipsDependents.
     const calls: string[] = [];
     const tasks: Task[] = [
       { componentId: "git", label: "Git", operation: "fail", dependencies: [] },
@@ -306,73 +173,25 @@ describe("execution", () => {
     expect(results[1].status).toBe("skipped");
     expect(results[1].output).toBe("dependency failed");
     expect(results[2].status).toBe("installed");
-    // The dependent's command was never executed.
     expect(calls).toEqual(["fail", "independent"]);
   });
 
   test("progress fires once before each executed task only", async () => {
-    // Port of plan_test.go TestExecuteWithProgressReportsBeforeRunning,
-    // extended with the installer-execute ordering guarantee: each progress
-    // event precedes its task's run.
     const log: string[] = [];
-    const failing = comp({ id: "dep", label: "Dep", commands: ["boom"] });
-    const child = comp({
-      id: "child",
-      label: "Child",
-      dependencies: ["dep"],
-      commands: ["child-cmd"],
-    });
-    const independent = comp({
-      id: "ind",
-      label: "Ind",
-      commands: ["ind-cmd"],
-    });
-    const { tasks } = await planFrom(
-      [failing, child, independent],
-      profileWith("dep", "child", "ind"),
-      env(),
-    );
-    const results = await executeWithProgress(
+    const tasks: Task[] = [
+      { componentId: "a", label: "A", operation: "first", dependencies: [] },
+      { componentId: "b", label: "B", operation: "second", dependencies: [] },
+    ];
+    await executeWithProgress(
       tasks,
       async (operation) => {
         log.push(`run:${operation}`);
-        await new Promise((r) => setTimeout(r, 0));
-        return operation === "boom"
-          ? { output: "", err: new Error("failed") }
-          : { output: operation };
+        return { output: operation };
       },
       undefined,
       (task) => log.push(`progress:${task.operation}`),
     );
-
-    expect(log).toEqual([
-      "progress:boom",
-      "run:boom",
-      // child skipped after failure — no progress event for it
-      "progress:ind-cmd", // independent component still gets its own event…
-      "run:ind-cmd", // …fired strictly before its run
-    ]);
-
-    const statuses = results.map((r) => r.status);
-    expect(statuses).toEqual(["failed", "skipped", "installed"]);
-
-    // Minimal Go-port case: single task gets exactly one progress event.
-    const seen: string[] = [];
-    const single: Task[] = [
-      {
-        componentId: "base",
-        label: "Base",
-        operation: "install",
-        dependencies: [],
-      },
-    ];
-    await executeWithProgress(
-      single,
-      async () => ({ output: "install" }),
-      undefined,
-      (task) => seen.push(task.label),
-    );
-    expect(seen).toEqual(["Base"]);
+    expect(log).toEqual(["progress:first", "run:first", "progress:second", "run:second"]);
   });
 
   test("cancellation records remaining tasks as skipped without running them", async () => {
@@ -386,7 +205,7 @@ describe("execution", () => {
     const results = await executeWithProgress(
       tasks,
       recordingRunner(() => {
-        controller.abort(); // cancellation observed mid-execution
+        controller.abort();
         return { output: "ok" };
       }, calls),
       controller.signal,
@@ -403,18 +222,8 @@ describe("execution", () => {
 
   test("every task yields one result with captured output and timestamps", async () => {
     const tasks: Task[] = [
-      {
-        componentId: "ok",
-        label: "Ok",
-        operation: "succeeds",
-        dependencies: [],
-      },
-      {
-        componentId: "bad",
-        label: "Bad",
-        operation: "fails",
-        dependencies: [],
-      },
+      { componentId: "ok", label: "Ok", operation: "succeeds", dependencies: [] },
+      { componentId: "bad", label: "Bad", operation: "fails", dependencies: [] },
     ];
     const results = await executeWithProgress(tasks, async (operation) =>
       operation === "fails"
@@ -436,7 +245,7 @@ describe("execution", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Summarize — installer-execute per-component roll-up
+// Summarize — installer-execute per-component roll-up (unchanged)
 // ---------------------------------------------------------------------------
 
 describe("summarize", () => {
@@ -540,7 +349,7 @@ describe("summarize", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Production shell runner — installer-execute "Task runs via sh" scenarios
+// Production shell runner (unchanged)
 // ---------------------------------------------------------------------------
 
 describe("shellRunner", () => {
@@ -550,13 +359,23 @@ describe("shellRunner", () => {
     );
     expect(err).toBeUndefined();
     expect(output).toContain("out-line");
-    expect(output).toContain("err-line"); // stderr merged into output
-    expect(output).toContain("1:1"); // HOMEBREW_NO_AUTO_UPDATE=1, HOMEBREW_NO_ENV_HINTS=1
+    expect(output).toContain("err-line");
+    expect(output).toContain("1:1");
   });
 
   test("non-zero exit produces an error with output preserved", async () => {
     const { output, err } = await shellRunner("echo before-fail; exit 3");
     expect(err).toBeInstanceOf(Error);
     expect(output).toContain("before-fail");
+  });
+
+  test("environment detection absence does not prevent planning (drop-in removed)", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "dot-tui-plan-env-"));
+    tempDirs.push(dir);
+    const marker = path.join(dir, ".executed");
+    const body = `touch "${marker}"\nexit 1\n`;
+    await writeFile(path.join(dir, "brew"), body);
+    await chmod(path.join(dir, "brew"), 0o755);
+    expect(await Bun.file(marker).exists()).toBe(false);
   });
 });

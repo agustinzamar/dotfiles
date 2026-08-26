@@ -5,6 +5,17 @@
 #
 # Clones this repo to ~/dotfiles, tries a prebuilt dot-tui release binary, and
 # runs the installer. config/zsh/.zshrc puts the CLI on PATH from $DOTFILES_DIR.
+#
+# Bare invocation (no flags) opens the INTERACTIVE installer and therefore needs
+# a TTY: `dot install` refuses to run when stdin is not a terminal, so a piped
+# run without flags dies immediately. Headless setups (scripts, SSH, CI) append
+# a flag, which is passed through untouched via "$@" below:
+#
+#   .../remote-install.sh --all               full install, no interaction
+#   .../remote-install.sh --profile <path>    apply a saved profile headlessly
+#
+# The "revert remote-install.sh to force --all" pin from the proposal remains
+# available as a rollback if the fresh-VM interactive path needs to be frozen.
 
 set -Eeuo pipefail
 

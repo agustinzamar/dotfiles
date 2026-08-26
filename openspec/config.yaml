@@ -2,13 +2,15 @@
 schema: spec-driven
 
 context: |
-  Tech stack: Go 1.26 (charm.land/bubbletea/v2 TUI) + Bash CLI (`bin/dot`) + Homebrew Bundle.
-  Architecture: bash entrypoint CLI drives install/link flows; `internal/installer` holds
-  manifest, plan, profile, and TUI logic; `cmd/dot-tui` is the TUI binary. Shell assets in
-  `install/*.sh` and `system/defaults/*.sh`; app configs under `config/`.
-  Testing: `go test ./...` (unit) via `make go-test`; Bats integration tests over the real
-  `dot` CLI via `make test` / CI (`bats test`). CI gates: `make check`, `make lint`, `bats test`.
-  Style: shell scripts gated by shellcheck -x + shfmt -d; Go gated by go vet; .editorconfig present.
+  Tech stack: Bash CLI (`bin/dot`) + Bun/TS Ink TUI (`tools/tui/`) + Homebrew Bundle.
+  Architecture: bash entrypoint CLI drives install/link flows; `install/manifest.sh` is the
+  single package manifest parser emitting the versioned installer-context JSON consumed by
+  the TUI (`tools/tui/src/`, Bun + Ink; binary built to `bin/dot-tui` by `make build-tui`).
+  Bare `dot install` opens the interactive TUI; `--all` / `--profile <name>` stay headless.
+  Shell assets in `install/*.sh` and `system/defaults/*.sh`; app configs under `config/`.
+  Testing: `bun test` (unit, tools/tui) via `make bun-test`; Bats integration tests over the
+  real `dot` CLI via `make test` / CI (`bats test`). CI gates: `make check`, `make lint`.
+  Style: shell scripts gated by shellcheck -x + shfmt -d; TS gated by tsc --noEmit; .editorconfig present.
 
 rules:
   proposal:
@@ -25,14 +27,14 @@ rules:
     - Keep tasks completable in one session
   apply:
     guidelines:
-      - Follow existing code patterns (internal/installer layout, Makefile targets)
+      - Follow existing code patterns (bin/dot + install/*.sh layout, tools/tui/src, Makefile targets)
       - Shell changes must pass `make check` and `make lint` before commit
-      - Go changes must pass `make go-test`
+      - TUI changes must pass `cd tools/tui && bun test` before commit
     tdd: true
-    test_command: "make check && make lint && make go-test && make test"
+    test_command: "make check && make lint && make test"
   verify:
-    test_command: "make check && make lint && make go-test && make test"
-    build_command: "go build ./..."
+    test_command: "make check && make lint && make test"
+    build_command: "make build-tui"
     coverage_threshold: 0
   archive:
     - Warn before merging destructive deltas
@@ -41,18 +43,17 @@ testing:
   strict_tdd: true
   detected: "2026-08-22"
   test_runner:
-    unit: "go test ./... (make go-test)"
+    unit: "bun test (make bun-test)"
     integration: "bats test/*.bats (make test / dot test)"
   layers:
-    unit: { available: true, tool: "go test" }
+    unit: { available: true, tool: "bun test" }
     integration: { available: true, tool: "bats-core" }
     e2e: { available: false, tool: "" }
   coverage:
-    available: true
-    command: "go test -cover ./..."
+    available: false
+    command: ""
     enforced_threshold: none
   quality_tools:
-    linter:
-      { available: true, command: "shellcheck -x <scripts> && go vet ./..." }
-    type_checker: { available: true, command: "go vet ./..." }
+    linter: { available: true, command: "shellcheck -x <scripts>" }
+    type_checker: { available: true, command: "tsc --noEmit -p tools/tui" }
     formatter: { available: true, command: "shfmt -d <scripts>" }

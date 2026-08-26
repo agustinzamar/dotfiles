@@ -1,53 +1,76 @@
+// Area-level profile writer/loader (ADR-4). The profile stores
+// .components[areaId] == true for active area ids only — the same unit
+// install/components.sh gates on via component_selected(). Link choices are
+// never persisted. Missing files and absent fields fall back to
+// component_default_selected (base|shell|git|terminal true), so stale or
+// missing profiles never break `dot link` gating. Legacy Go-era component ids
+// migrate onto their area ids so old headless profiles keep working.
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import * as path from "node:path";
-import { COMPONENTS } from "./manifest";
 
 export interface Profile {
   components: Record<string, boolean>;
 }
 
-// Copied verbatim from internal/installer/profile.go (legacyComponentIDs).
-// The desktop aggregate deliberately includes the communication children.
-const legacyComponentIDs: Record<string, string[]> = {
-  communication: [
-    "communication-discord",
-    "communication-telegram",
-    "communication-whatsapp",
-    "communication-slack",
-  ],
-  desktop: [
-    "desktop-chrome",
-    "desktop-firefox",
-    "desktop-brave",
-    "communication-discord",
-    "communication-telegram",
-    "communication-whatsapp",
-    "communication-slack",
-    "desktop-raycast",
-    "desktop-finetune",
-    "desktop-typewhisper",
-    "desktop-rectangle",
-    "desktop-aerospace",
-    "desktop-linearmouse",
-    "desktop-localsend",
-  ],
-  media: [
-    "media-tools",
-    "media-spotify",
-    "media-stremio",
-    "media-vlc",
-    "media-castor",
-  ],
-  databases: [
-    "service-mysql",
-    "service-postgresql",
-    "service-redis",
-    "service-sqlite",
-  ],
-};
+// Area ids install/components.sh and install/links.sh already use (mirrors
+// install/manifest.sh area_for_package's fixed ids plus desktop-* subareas).
+const FIXED_AREAS = [
+  "base",
+  "shell",
+  "git",
+  "terminal",
+  "vscode",
+  "ai",
+  "ai-herdr",
+  "claude",
+  "dev",
+  "media",
+  "desktop",
+];
 
-const catalogIds = new Set(COMPONENTS.map((c) => c.id));
+// component_default_selected in install/components.sh.
+const DEFAULT_AREAS = new Set(["base", "shell", "git", "terminal"]);
+
+function isAreaId(id: string): boolean {
+  return FIXED_AREAS.includes(id) || id.startsWith("desktop-");
+}
+
+// Legacy Go-era component id (or aggregate) -> area ids to enable. Derived
+// from the old catalog: communication/desktop children were desktop casks,
+// media children were media casks, databases services were dev formulas, and
+// the desktop aggregate also carried the subarea configs. Ids that are already
+// valid area ids (base, shell, git, terminal, vscode, ai, ai-herdr,
+// desktop-aerospace, desktop-linearmouse) are NOT listed: they pass through
+// unchanged so migration stays a no-op on already-migrated profiles.
+const LEGACY_COMPONENT_AREAS: Record<string, readonly string[]> = {
+  php: ["dev"],
+  "service-mysql": ["dev"],
+  "service-postgresql": ["dev"],
+  "service-redis": ["dev"],
+  "service-sqlite": ["dev"],
+  "communication-discord": ["desktop"],
+  "communication-telegram": ["desktop"],
+  "communication-whatsapp": ["desktop"],
+  "communication-slack": ["desktop"],
+  "desktop-chrome": ["desktop"],
+  "desktop-firefox": ["desktop"],
+  "desktop-brave": ["desktop"],
+  "desktop-raycast": ["desktop"],
+  "desktop-finetune": ["desktop"],
+  "desktop-typewhisper": ["desktop"],
+  "desktop-rectangle": ["desktop"],
+  "desktop-localsend": ["desktop"],
+  "media-tools": ["media"],
+  "media-spotify": ["media"],
+  "media-stremio": ["media"],
+  "media-vlc": ["media"],
+  "media-castor": ["media"],
+  communication: ["desktop"],
+  desktop: ["desktop", "desktop-aerospace", "desktop-linearmouse"],
+  media: ["media"],
+  databases: ["dev"],
+};
 
 function requireComponentsObject(value: unknown): asserts value is Profile {
   if (
@@ -62,48 +85,54 @@ function requireComponentsObject(value: unknown): asserts value is Profile {
   }
 }
 
-// Port of Go's LoadProfileData: hand-rolled validation, no zod (ADR-7).
 function validateProfile(profile: Profile): void {
   for (const id of Object.keys(profile.components)) {
-    if (!catalogIds.has(id)) {
+    if (!isAreaId(id)) {
       throw new Error(`invalid profile: unknown component "${id}"`);
-    }
-  }
-  for (const component of COMPONENTS) {
-    if (component.required && !profile.components[component.id]) {
-      throw new Error(
-        `invalid profile: required component "${component.id}" is disabled`,
-      );
     }
   }
 }
 
 export function defaultProfile(): Profile {
   const components: Record<string, boolean> = {};
-  for (const component of COMPONENTS) {
-    components[component.id] = component.default || component.required;
+  for (const id of FIXED_AREAS) {
+    components[id] = DEFAULT_AREAS.has(id);
   }
   return { components };
 }
 
+/** Maps a legacy Go-era profile onto area ids. Area ids pass through; a second
+ *  run on an already-migrated profile reports no change. */
 export function migrateProfileData(profile: Profile): {
   profile: Profile;
   changed: boolean;
 } {
   requireComponentsObject(profile);
-  const out = { ...profile.components };
+  const out: Record<string, boolean> = {};
   let changed = false;
-  for (const [legacyId, childIds] of Object.entries(legacyComponentIDs)) {
-    if (!Object.hasOwn(out, legacyId)) {
-      continue;
-    }
-    if (out[legacyId]) {
-      for (const childId of childIds) {
-        out[childId] = true;
+      for (const [id, enabled] of Object.entries(profile.components)) {
+        if (isAreaId(id)) {
+          // Already a valid area id: pass through unchanged so a second run on
+          // a migrated profile is a no-op (desktop/media are both area ids AND
+          // legacy aggregate names).
+          out[id] = enabled;
+          continue;
+        }
+        const areas = LEGACY_COMPONENT_AREAS[id];
+        if (areas) {
+      if (enabled) {
+        for (const area of areas) {
+          if (out[area] !== true) {
+            out[area] = true;
+            changed = true;
+          }
+        }
+      } else {
+        changed = true; // the legacy key itself never survives
       }
+    } else {
+      out[id] = enabled;
     }
-    delete out[legacyId];
-    changed = true;
   }
   return { profile: { components: out }, changed };
 }
@@ -133,23 +162,22 @@ export async function loadProfile(path_: string): Promise<Profile> {
   let migrated: boolean;
   ({ profile, changed: migrated } = migrateProfileData(profile));
 
-  // Reject unknown ids AFTER migration, matching Go's LoadProfile order:
-  // legacy aggregates are legal in files but not after expansion.
+  // Reject unknown ids AFTER migration, matching the legacy LoadProfile order.
   for (const id of Object.keys(profile.components)) {
-    if (!catalogIds.has(id)) {
+    if (!isAreaId(id)) {
       throw new Error(`invalid profile: unknown component "${id}"`);
     }
   }
 
-  // Fill missing ids as false, in manifest order, for deterministic output.
+  // Fill missing fields with component_default_selected (absent fields MAY fall
+  // back to defaults; stale profiles must not break other commands).
   const normalized: Record<string, boolean> = {};
-  for (const component of COMPONENTS) {
-    normalized[component.id] = profile.components[component.id] ?? false;
+  for (const id of FIXED_AREAS) {
+    normalized[id] = profile.components[id] ?? DEFAULT_AREAS.has(id);
   }
-  // Force required components enabled regardless of file contents.
-  for (const component of COMPONENTS) {
-    if (component.required) {
-      normalized[component.id] = true;
+  for (const id of Object.keys(profile.components)) {
+    if (!FIXED_AREAS.includes(id)) {
+      normalized[id] = profile.components[id];
     }
   }
   profile = { components: normalized };
@@ -172,7 +200,7 @@ export async function saveProfile(
   await mkdir(dir, { recursive: true });
 
   // Temp file MUST live in the target directory so the same-directory rename
-  // is atomic on macOS/APFS (ADR-7).
+  // is atomic on macOS/APFS.
   const tmp = path.join(dir, `.profile-${process.pid}-${randomUUID()}`);
   try {
     await writeFile(tmp, data, "utf8");

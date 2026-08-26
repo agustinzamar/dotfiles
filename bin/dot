@@ -26,6 +26,8 @@ set -- ${args[@]+"${args[@]}"}
 . "$DOTFILES_DIR/install/components.sh"
 # shellcheck source=../install/links.sh
 . "$DOTFILES_DIR/install/links.sh"
+# shellcheck source=../install/manifest.sh
+. "$DOTFILES_DIR/install/manifest.sh"
 # shellcheck source=../install/git.sh
 . "$DOTFILES_DIR/install/git.sh"
 # shellcheck source=../install/ai.sh
@@ -46,14 +48,13 @@ sub_help() {
   echo "   link             Symlink selected configs whose tools are available"
   echo "   link <name>      Symlink one config or group: $(link_names)"
   echo "   link --all       Symlink every config explicitly"
-  echo "   tui              Select and install components interactively"
   echo
   echo "Install (each also works as \`dot <name>\`, no \`install\` needed):"
-  echo "   install              Install core tools (Xcode, Homebrew, Go, shell and basic tools)"
-  echo "   install --profile PATH  Apply a saved component profile"
+  echo "   install              Open the interactive installer — requires a TTY"
+  echo "   install --all        Install every standard phase headlessly; AI stays opt-in"
+  echo "   install --profile PATH  Apply a saved component profile headlessly"
   echo "   install --dry-run --profile PATH  Preview a saved component profile"
   echo "   install <topic>      Install a topic: $(topic_names)"
-  echo "   install --all        Install all standard phases; AI stays opt-in"
   echo
   echo "AI extras (opt-in — no install phase runs these):"
   echo "   ai                   Install skills and plugins for every agent CLI found"
@@ -104,15 +105,8 @@ sub_install() {
       echo "'install $cmd' is gone — use \`dot $cmd\` directly (see \`dot link help\`)" >&2
       return 1
       ;;
-    "" | bootstrap)
-      sub_bootstrap
-      sub_baseline
-      if ! sub_link; then
-        echo "❌ Finished with failures: link" >&2
-        return 1
-      fi
-      log "Baseline installation complete"
-      return 0
+    "")
+      run_interactive_install
       ;;
     *)
       local target
@@ -127,6 +121,109 @@ sub_install() {
       fi
       ;;
   esac
+}
+
+# Interactive default for bare `dot install` (user decision: TUI first, then
+# bootstrap on confirm). Order: TTY guard FIRST (piped curl dies in ms), then
+# only the installer's own runtime — a prebuilt bin/dot-tui needs nothing, so
+# on the normal path nothing is provisioned before the selector. Xcode CLT /
+# Homebrew / bun are installed by the `dot bootstrap` step the TUI runs at the
+# START of its apply phase (post-confirm), never before the user chooses.
+# Exit mapping: 0 → applied summary, 10 → aborted (nothing installed/linked),
+# any other non-zero → propagate loudly. PATH is normalized so the TUI's brew
+# steps and subprocesses see the known package-manager locations even when the
+# launching shell runs a bare macOS GUI PATH.
+run_interactive_install() {
+  if [[ ! -t 0 ]]; then
+    echo "stdin is not a TTY — use \`dot install --all\` or \`dot install --profile <path>\`" >&2
+    return 1
+  fi
+
+  # Known Homebrew/bun locations, prepended: GUI-launched terminals and the
+  # TUI's `sh -c` steps inherit this and can actually find brew/bun. Applied
+  # AFTER resolving the runtime so the resolver sees the caller's environment.
+  local bin ctx exit_code=0
+  bin=$(dot_runtime_path) || {
+    echo "TUI unavailable — use \`dot install --all\` or \`dot install --profile <path>\` for a headless install" >&2
+    return 1
+  }
+  export PATH="$HOME/.bun/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+  ctx=$(mktemp) || return 1
+  install_context_json "$ctx" || {
+    rm -f "$ctx"
+    return 1
+  }
+
+  local args=(--context "$ctx")
+  "$DRY_RUN" && args+=(--dry-run)
+  "$bin" "${args[@]}" || exit_code=$?
+  rm -f "$ctx"
+
+  case "$exit_code" in
+    0)
+      log "Installation complete — selected components installed, configs linked"
+      ;;
+    10)
+      echo "aborted — nothing installed, nothing linked"
+      return 0
+      ;;
+    *)
+      echo "installer exited with status $exit_code" >&2
+      return "$exit_code"
+      ;;
+  esac
+}
+
+# Resolve the TUI binary (prebuilt or one-time build) without provisioning a
+# package manager. Lookup order for bun: PATH honors the environment and any
+# stubs, then known Homebrew/~/.bun locations catch GUI-launched terminals
+# that never put those dirs on PATH. Set DOT_RUNTIME_BUN_LOOKUP=path to force
+# PATH-only (the bats suite does, so its fake-bun stubs stay deterministic).
+dot_runtime_path() {
+  local bin="$DOTFILES_DIR/bin/dot-tui"
+  # Version-gated prebuilt: only trust a binary whose marker matches the
+  # current TUI contract. A stale/foreign binary (old pre-delta build) prints
+  # nothing or an old marker, so it falls through to a rebuild — a checked-out
+  # repo can never silently run an outdated installer UI.
+  if [[ -x "$bin" ]] && [[ "$("$bin" --version 2>/dev/null)" == "dot-tui-context-v2" ]]; then
+    printf '%s\n' "$bin"
+    return 0
+  fi
+
+  local required installed bun_bin=""
+  if [[ "${DOT_RUNTIME_BUN_LOOKUP:-}" != path ]]; then
+    for candidate in "$HOME/.bun/bin/bun" /opt/homebrew/bin/bun /usr/local/bin/bun; do
+      [[ -x "$candidate" ]] && bun_bin=$candidate
+    done
+  fi
+  if [[ -z "$bun_bin" ]]; then
+    bun_bin=$(command -v bun 2>/dev/null || true)
+  fi
+  [[ -n "$bun_bin" ]] || {
+    echo "dot-tui binary missing and Bun required to build it is not installed." >&2
+    echo "Run the official bootstrap script (installs everything needed):" >&2
+    echo "  curl -fsSL https://raw.githubusercontent.com/agustinzamar/dotfiles/main/remote-install.sh | bash" >&2
+    return 1
+  }
+
+  required=$(<"$DOTFILES_DIR/.bun-version")
+  installed=$("$bun_bin" --version 2>/dev/null) || return 1
+  if ! version_at_least "$installed" "$required"; then
+    echo "dot-tui binary missing and Bun >= $required not found (found $installed)." >&2
+    echo "Run the official bootstrap script (installs everything needed):" >&2
+    echo "  curl -fsSL https://raw.githubusercontent.com/agustinzamar/dotfiles/main/remote-install.sh | bash" >&2
+    return 1
+  fi
+  echo "==> Building dot-tui (one-time)" >&2
+  (
+    cd "$DOTFILES_DIR/tools/tui" &&
+      "$bun_bin" install --frozen-lockfile &&
+      "$bun_bin" build --compile --minify src/main.ts --outfile "$bin"
+  ) || {
+    echo "dot-tui build failed." >&2
+    return 1
+  }
+  printf '%s\n' "$bin"
 }
 
 sub_baseline() {
@@ -205,20 +302,32 @@ install_topic() {
 }
 
 sub_bootstrap() {
-  log "Installing Xcode"
-  if xcode-select -p >/dev/null 2>&1; then
+  log "Bootstrap: Xcode CLT + Homebrew (idempotent)"
+
+  # Known-path checks, never PATH-dependent: a GUI-launched terminal on macOS
+  # starts with /usr/bin:/bin:/usr/sbin:/sbin, so `type brew`/`xcode-select`
+  # can miss installs that are actually present and trigger a reinstall.
+  local xc=/usr/bin/xcode-select brew_bin=""
+  for candidate in /opt/homebrew/bin/brew /usr/local/bin/brew; do
+    [[ -x "$candidate" ]] && brew_bin=$candidate
+  done
+
+  if "$xc" -p >/dev/null 2>&1; then
     echo '✅ Xcode already installed'
+  elif "$DRY_RUN"; then
+    echo '+ install Xcode CLT'
   else
-    run xcode-select --install
+    run "$xc" --install
   fi
 
-  log "Installing Homebrew"
-  if is_executable brew; then
-    echo '✅ Homebrew already installed'
+  if [[ -n "$brew_bin" ]]; then
+    echo "✅ Homebrew already installed ($brew_bin)"
   elif "$DRY_RUN"; then
     echo '+ install Homebrew'
   else
     /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    brew_bin=/opt/homebrew/bin/brew
+    [[ -x "$brew_bin" ]] || brew_bin=/usr/local/bin/brew
   fi
 }
 
@@ -342,44 +451,38 @@ version_at_least() {
 #   1. a prebuilt/local binary at bin/dot-tui — needs neither Go nor Bun;
 #   2. Bun >= the .bun-version pin: build the binary from source, then run it;
 #   3. otherwise print actionable bootstrap guidance and fail loudly.
-run_dot_tui() {
-  local bin="$DOTFILES_DIR/bin/dot-tui"
-  if [[ -x "$bin" ]]; then
-    exec "$bin" "$@"
-  fi
-
-  local required installed
-  required=$(<"$DOTFILES_DIR/.bun-version")
-  if installed=$(bun --version 2>/dev/null) && version_at_least "$installed" "$required"; then
-    echo "==> Building dot-tui (one-time)" >&2
-    if ! (
-      cd "$DOTFILES_DIR/tools/tui" &&
-        bun install --frozen-lockfile &&
-        bun build --compile --minify src/main.ts --outfile "$bin"
-    ); then
-      echo "dot-tui build failed." >&2
-      echo "Run the official bootstrap script (installs everything needed):" >&2
-      echo "  curl -fsSL https://raw.githubusercontent.com/agustinzamar/dotfiles/main/remote-install.sh | bash" >&2
-      return 1
-    fi
-    exec "$bin" "$@"
-  fi
-
-  echo "dot-tui binary missing and Bun >= $required not found." >&2
-  echo "Run the official bootstrap script (installs everything needed):" >&2
-  echo "  curl -fsSL https://raw.githubusercontent.com/agustinzamar/dotfiles/main/remote-install.sh | bash" >&2
-  return 1
+# resolve_dot_tui echoes the resolved binary path (or fails loudly);
+# run_dot_tui launches it and returns its exit code so callers can map the
+# 0/10/error contract (never exec: the caller still owns the temp context
+# file and the exit-code mapping).
+resolve_dot_tui() {
+  # Single resolver (PATH-independent; see dot_runtime_path). Headless
+  # --profile builds use the same prebuilt-or-build lookup as interactive.
+  dot_runtime_path
 }
 
+run_dot_tui() {
+  local bin
+  bin=$(resolve_dot_tui) || return 1
+  "$bin" "$@"
+}
+
+# Headless profile install: same context JSON the interactive path emits
+# (the TUI refuses to run without it) plus -apply -profile. No TTY guard —
+# scripts and CI never have one, and the TUI's apply mode mounts no UI.
 run_profile_install() {
   local profile="$1"
-  local args=(-apply -profile "$profile")
-  "$DRY_RUN" && args+=(-dry-run)
-  run_dot_tui "${args[@]}"
-}
-
-sub_tui() {
-  run_dot_tui "$@"
+  local ctx exit_code=0
+  ctx=$(mktemp) || return 1
+  install_context_json "$ctx" || {
+    rm -f "$ctx"
+    return 1
+  }
+  local args=(-apply -profile "$profile" --context "$ctx")
+  "$DRY_RUN" && args+=(--dry-run)
+  run_dot_tui "${args[@]}" || exit_code=$?
+  rm -f "$ctx"
+  return "$exit_code"
 }
 
 sub_unlink() {
@@ -491,12 +594,20 @@ sub_test() {
   bats "$DOTFILES_DIR"/test/*.bats
 }
 
-TOP_COMMANDS=" backup clean doctor edit help install link test tui unlink update "
+TOP_COMMANDS=" backup clean doctor edit help install link test unlink update "
 
 COMMAND_NAME=${1:-}
 case "$COMMAND_NAME" in
   "" | -h | --help | help)
     sub_help
+    ;;
+  # Hidden: the TUI runs `dot bootstrap` as the first step of its apply phase
+  # so Xcode CLT + Homebrew are installed only after the user confirms a
+  # selection (never before the selector appears). Intentionally not in
+  # TOP_COMMANDS / help.
+  bootstrap)
+    shift
+    sub_bootstrap "$@"
     ;;
   *)
     shift

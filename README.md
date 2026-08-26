@@ -28,6 +28,19 @@ bin/dot install
 once the shell configs are linked and the shell has been restarted. A bare
 `make` runs the full install.
 
+Bare `dot install` (and bare `make`) opens the **interactive installer** and
+needs a TTY. Scripted or CI installs, or piping the one-liner without flags,
+should use the headless paths instead — bare `dot install` under non-TTY stdin
+fails fast and says so:
+
+```bash
+dot install --all          # headless: every standard phase (AI stays opt-in)
+dot install --profile dev  # headless: apply a saved profile
+```
+
+On a truly fresh machine the installer bootstraps what it needs (Xcode CLT,
+Homebrew, then Bun if the prebuilt binary is missing) before opening.
+
 ## Topics
 
 Packages are grouped into topics under `install/topics/`. Each file is a
@@ -90,8 +103,8 @@ change to a script, not like a change to a config value.
 
 | Command | What it does |
 | --- | --- |
-| `install` | Everything below, in order (`macos` covers `dock`) |
-| `tui` | Select baseline tools and individual optional apps in the terminal installer |
+| `install` | Opens the interactive installer (tools, then config links) — requires a TTY |
+| `install --all` | Install every standard phase headlessly (AI stays opt-in) |
 | `install --profile PATH` | Apply a saved component profile without the TUI |
 | `link` | Repair links selected in `~/.config/dot/profile.json` |
 | `link --all` | Force-link every valid config explicitly |
@@ -111,33 +124,39 @@ dot link --dry-run
 dot install --dry-run --profile ~/.config/dot/profile.json
 ```
 
-The TUI selects Base, Shell, Git, and Terminal by default. Those four are
-required and cannot be disabled. Optional apps are individual selections, so
-you can select Discord without selecting Slack. Press Enter to install
-selected missing apps, repair their selected config links, and return to the
-TUI. Press q to quit.
-Successful work is not repeated during the same TUI session. Deselecting an
-installed app never uninstalls it or removes its config link. Selections persist
-in the machine-local profile at `~/.config/dot/profile.json`.
+### The installer (two steps)
+
+The installer has two steps. **Step 1** lists every package as its own row,
+grouped visually by topic: a locked essentials block is pinned at the top
+(shell + git setup, `fzf`/`git`/`gh`/`tmux`) and is always installed; the rest
+are individually toggleable, with the former baseline tools
+(`lazygit`, `hunk`, `yazi`, `neovim`, Ghostty) pre-checked. **Step 2** offers
+exactly the config links that belong to the tools you selected, all unchecked,
+plus a final opt-in `agents` group. Press Enter to install the selected tools,
+link the checked configs, and finish. Press `q` anywhere before confirming to
+abort — nothing is installed and nothing is linked.
+
+The profile at `~/.config/dot/profile.json` stores the selected *areas*
+(what `dot link` / `dot update` gate on); link choices are applied once and are
+not persisted. Successful work is not repeated during the same session, and
+deselecting an installed app never uninstalls it or removes its config link.
 
 A bare `make` is the one-shot first init (`dot install`). The Makefile also
 carries `make test`, `make check` and `make lint`, which CI runs.
 
 ## The installer binary
 
-`dot tui` and `dot install --profile` run a compiled binary, `bin/dot-tui`.
-`bin/dot` resolves it in order:
+The interactive installer and `dot install --profile` run a compiled binary,
+`bin/dot-tui`. The prebuilt binary is used if present; otherwise `bin/dot`
+builds it from source with Bun at least at the version pinned in
+[`.bun-version`](.bun-version), or prints guidance pointing back to the
+bootstrap one-liner above. Neither path requires a language toolchain at
+runtime. The TUI reads its package list from `install/manifest.sh`'s emitted
+context JSON — the same files the headless topics install and `dot link` use,
+so interactive and scripted installs cannot diverge.
 
-1. A prebuilt release binary. `remote-install.sh` downloads one for your arch
-during bootstrap; machines that already have the repo skip this step.
-2. Build from source with Bun — needs Bun at least at the version pinned in
-[`.bun-version`](.bun-version).
-3. Otherwise, guidance pointing back to the bootstrap one-liner above.
-
-Neither step requires a language toolchain at runtime. Contributors who want to
-build or test the installer locally can install Bun with
-`brew install oven-sh/bun/bun`; everyone else only ever meets the finished
-binary.
+Contributors who want to build or test the installer locally can install Bun
+with `brew install bun` and run `make build-tui` / `make bun-test`.
 
 ## Layout
 

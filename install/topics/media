@@ -1,7 +1,8 @@
 # --- Encoding, images, and playback ---
+# unar lives in install/topics/core (next to 7zip, same Archives category) --
+# do not re-declare it here, brew bundle would just install it twice.
 brew "ffmpeg"
 brew "ffmpegthumbnailer"
-brew "unar"
 brew "imagemagick"
 brew "webp"
 
