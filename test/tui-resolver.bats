@@ -34,7 +34,7 @@ setup() {
         cat >"$TUI_BIN" <<'EOF'
 #!/bin/sh
 case "$1" in
-  --version) printf '%s\n' 'dot-tui-context-v4'; exit 0 ;;
+  --version) printf '%s\n' 'dot-tui-context-v5'; exit 0 ;;
 esac
 printf 'TUI-STUB %s\n' "$*"
 EOF
@@ -68,7 +68,7 @@ if [ "\$1" = "build" ]; then
     prev="\$a"
   done
   [ -n "\$out" ] || exit 1
-  printf '#!/bin/sh\ncase "$1" in\n--version) printf '"'"'%s\\n'"'"' "dot-tui-context-v4"; exit 0 ;;\nesac\nprintf '"'"'TUI-STUB %%s\\n'"'"' "\$*"\n' >"\$out"
+  printf '#!/bin/sh\ncase "$1" in\n--version) printf '"'"'%s\\n'"'"' "dot-tui-context-v5"; exit 0 ;;\nesac\nprintf '"'"'TUI-STUB %%s\\n'"'"' "\$*"\n' >"\$out"
   chmod +x "\$out"
   exit 0
 fi

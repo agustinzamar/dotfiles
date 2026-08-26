@@ -173,14 +173,14 @@ pruned (ADR-4).
 Four marker sites, per design §7 (the `main.test.ts` pin is the necessary 4th,
 test-side mirror of the runtime trio — without it `bun test` fails on first run).
 
-### 3.1 RED — Bump the unit pin first
+- [x] 3.1 RED — Bump the unit pin first
 
 In `tools/tui/src/main.test.ts` (~L174) change to
 `expect(TUI_VERSION).toBe("dot-tui-context-v5")`. Acceptance: `bun test` RED on the
 TUI_VERSION contract before any runtime site moves (strict-TDD ordering; design §7
 interpretation note). <!-- sdd-owner: implementation -->
 
-### 3.2 GREEN — Bump the three runtime/resolver sites together
+- [x] 3.2 GREEN — Bump the three runtime/resolver sites together
 
 Update in one change: `tools/tui/src/main.ts` (~L568) `TUI_VERSION` const →
 `"dot-tui-context-v5"`; `bin/dot` (~L188) resolver comparison expected marker → v5;
@@ -189,14 +189,14 @@ Acceptance: delta spec "Version-marker rebuild contract" scenario "Stale binary
 triggers rebuild"; `bun test` green; source marker == resolver expectation == stub
 answers. <!-- sdd-owner: implementation -->
 
-### 3.3 Rebuild + resolver verification
+- [x] 3.3 Rebuild + resolver verification
 
 Run `make build-tui`; verify `bin/dot-tui --version` prints `dot-tui-context-v5`; run
 the bats resolver suite and confirm the stale-rebuild scenario still exercises the
 rebuild path (v4-answer stub → rebuild → v5 report). Acceptance: rebuilt binary reports
 the v5 marker and the resolver does not spuriously rebuild when markers match. <!-- sdd-owner: implementation -->
 
-### 3.4 Final gates — full config gate
+- [x] 3.4 Final gates — full config gate
 
 Run `cd tools/tui && bun test`, `tsc --noEmit -p tools/tui`, `bats test/` (resolver
 suite green with v5 stubs), `make lint`, then the full gate

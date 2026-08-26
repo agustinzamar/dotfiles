@@ -135,3 +135,9 @@ onSubmit([])`; options deep-change resets to defaults (memoized per step, ADR-6)
   `useInput` (covered by the untouched mid-apply interruption tests in
   `main.test.ts`); during steps 1/2 raw mode is on, so `ctrl+c` routes to the
   App quit handler → exit 10.
+
+## Phase 3 — TUI_VERSION v5 markers, rebuild, final gates
+
+- main.test.ts unit pin bumped first (RED), then main.ts const + bin/dot resolver + tui-resolver.bats stubs (GREEN); 5/5 sites v5, 0 v4.
+- `make build-tui` -> `bin/dot-tui --version` => `dot-tui-context-v5`.
+- Gates: bun 158/158, tsc clean, prettier clean, batcheck/lint clean, bats 86/86.

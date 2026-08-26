@@ -171,7 +171,7 @@ function recordingRunner(
 
 describe("TUI_VERSION binary contract", () => {
   test("matches the marker dot_runtime_path in bin/dot gates on", () => {
-    expect(TUI_VERSION).toBe("dot-tui-context-v4");
+    expect(TUI_VERSION).toBe("dot-tui-context-v5");
   });
 });
 
