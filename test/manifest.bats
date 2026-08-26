@@ -247,3 +247,41 @@ EOF
   [ "$(jq -r '[.packages[] | select(.id == "t3-code")][0].installed' <<<"$json")" == "true" ]
   rm -f "$ctx"
 }
+
+@test "real tree: git/services/linters/prompt categories exist; no package falls back to a raw lowercase topic name" {
+  local ctx json
+  ctx="$(mktemp)"
+  MANIFEST_BREW=/opt/homebrew/bin/brew install_context_json "$ctx"
+  json="$(cat "$ctx")"
+  [ "$(jq -r '[.packages[] | select(.id == "lazygit")][0].category' <<<"$json")" == "Git" ]
+  [ "$(jq -r '[.packages[] | select(.id == "hunk")][0].category' <<<"$json")" == "Git" ]
+  [ "$(jq -r '[.packages[] | select(.id == "herd")][0].category' <<<"$json")" == "Services" ]
+  [ "$(jq -r '[.packages[] | select(.id == "orbstack")][0].category' <<<"$json")" == "Services" ]
+  [ "$(jq -r '[.packages[] | select(.id == "shellcheck")][0].category' <<<"$json")" == "Linters" ]
+  [ "$(jq -r '[.packages[] | select(.id == "shfmt")][0].category' <<<"$json")" == "Linters" ]
+  [ "$(jq -r '[.packages[] | select(.id == "actionlint")][0].category' <<<"$json")" == "Linters" ]
+  [ "$(jq -r '[.packages[] | select(.id == "swiftformat")][0].category' <<<"$json")" == "Linters" ]
+  [ "$(jq -r '[.packages[] | select(.id == "oh-my-posh")][0].category' <<<"$json")" == "Prompt" ]
+  [ "$(jq -r '[.packages[] | select(.id == "poppler")][0].category' <<<"$json")" == "Filesystem" ]
+  [ "$(jq -r '[.packages[] | select(.id == "dockutil")][0].category' <<<"$json")" == "Utilities" ]
+  # No toggleable package (kind brew/cask/tap) may ever fall back to a raw
+  # lowercase topic name (core/desktop/dev/media) — every real package gets
+  # an explicit category, so the selector never mixes cased headers with
+  # raw fallback ones.
+      local orphans
+      orphans="$(jq -r '[.packages[] | select(.kind != "topic") | select(.category == .topic and (.category | test("^[a-z]+$")))] | map(.id) | join(",")' <<<"$json")"
+      if [ -n "$orphans" ]; then
+        echo "uncategorized packages fell back to a raw topic name: $orphans" >&2
+      fi
+      [ -z "$orphans" ]
+      rm -f "$ctx"
+}
+
+@test "real tree: unar is declared once, not duplicated across topics" {
+  local ctx json
+  ctx="$(mktemp)"
+  MANIFEST_BREW=/opt/homebrew/bin/brew install_context_json "$ctx"
+  json="$(cat "$ctx")"
+  [ "$(jq -r '[.packages[] | select(.id == "unar")] | length' <<<"$json")" == "1" ]
+  rm -f "$ctx"
+}

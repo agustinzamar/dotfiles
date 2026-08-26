@@ -177,23 +177,31 @@ manifest_category() {
     # --- Tweakers (input, window and bar tweaks) ---
     linearmouse | finetune | rectangle | hyperkey | alt-tab | typewhisper) echo "Tweakers" ;;
     # --- Utilities ---
-    raycast | localsend | mole | pearcleaner | topgrade) echo "Utilities" ;;
+    raycast | localsend | mole | pearcleaner | topgrade | dockutil | duti) echo "Utilities" ;;
     # --- Archives ---
     7zip | unar) echo "Archives" ;;
     # --- Monitoring ---
     btop | procs | watch) echo "Monitoring" ;;
-    # --- Filesystem navigation ---
-    eza | fd | dust | yazi) echo "Filesystem" ;;
-    # --- Shell (prompt, nav, env) ---
-    zoxide | oh-my-posh | pay-respects | direnv | timescam/tap) echo "Shell" ;;
+    # --- Filesystem navigation (poppler previews yazi's PDFs) ---
+    eza | fd | dust | yazi | poppler) echo "Filesystem" ;;
+    # --- Shell (nav, env, correction, fuzzy search) ---
+    zoxide | pay-respects | direnv | timescam/tap | fzf) echo "Shell" ;;
+    # --- Prompt (starship/p10k land here too, once they're real packages) ---
+    oh-my-posh) echo "Prompt" ;;
     # --- Text and search ---
     ripgrep | bat | jq | jless | yq | grip) echo "Text" ;;
-    # --- Terminals and fonts ---
-    ghostty | font-jetbrains-mono-nerd-font) echo "Terminals" ;;
+    # --- Terminals, multiplexers and fonts ---
+    ghostty | tmux | font-jetbrains-mono-nerd-font) echo "Terminals" ;;
+    # --- Git and GitHub ---
+    git | gh | lazygit | hunk) echo "Git" ;;
     # --- Editors and IDEs ---
     neovim | visual-studio-code | phpstorm) echo "Editors" ;;
-    # --- Dev toolchains, services and container runtimes ---
-    make | go | node | python@3.14 | pnpm | bun | npm-check-updates | pipx | rust | shellcheck | shfmt | bats-core | act | sshpass | actionlint | swiftformat | orbstack) echo "Dev" ;;
+    # --- Dev languages, runtimes and CLI tools ---
+    make | go | node | python@3.14 | pnpm | bun | npm-check-updates | pipx | rust | bats-core | act | sshpass) echo "Dev" ;;
+    # --- Linters and formatters ---
+    shellcheck | shfmt | actionlint | swiftformat) echo "Linters" ;;
+    # --- Local dev environments and service runtimes ---
+    herd | orbstack) echo "Services" ;;
     # --- Databases ---
     mysql | mysql-client | postgresql | redis | sqlite) echo "Databases" ;;
     # --- Media processing ---

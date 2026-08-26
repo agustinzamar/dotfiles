@@ -185,3 +185,61 @@ moment production code moved to the grouped order. Replaced with a direct call t
 | `bats test/` | 84 pass / 0 fail |
 | `cd tools/tui && bun test` | 136 pass / 0 fail |
 | `tsc --noEmit -p tools/tui` | clean |
+
+## Work unit 6 — full category taxonomy audit (owner request, pre-merge)
+
+**Status: COMPLETE** · Branch: `feat/tui-default-install-pr5` · Executor: parent inline
+
+Owner asked for a full audit of `manifest_category()` before merging to `main`, beyond
+the specific examples given ("analyze, don't do only what I said"). Cross-referenced
+every `brew`/`cask`/`tap` line in `install/topics/*` against `manifest_category()` by
+generating a real context JSON and grouping it through the already-fixed
+`toolRowsGrouped`.
+
+### Confirmed already fixed by work unit 5
+
+`aerospace` (with yabai/skhd/sketchybar/borders) and `linearmouse` (with the other
+Tweakers) were already correctly categorized in the data — they only *looked* wrong
+in the owner's screenshot because of the pre-fix header-repeat bug. No data change
+needed for those two.
+
+### Real bugs found and fixed
+
+1. **Duplicate declaration**: `unar` was declared in BOTH `install/topics/core` and
+   `install/topics/media` — the exact same formula rendered as two separate
+   selectable rows. Removed from `media` (stays in `core`, next to `7zip`).
+2. **Uncategorized fallthrough**: any package not in `manifest_category()`'s case
+   table falls back to its raw topic filename ("core"/"desktop"/"dev"/"media",
+   always lowercase), producing headers that mix Title-Case categories with raw
+   lowercase ones in the same selector. Orphans found and fixed: `fzf`, `git`,
+   `gh`, `lazygit`, `hunk`, `tmux`, `poppler`, `dockutil`, `duti`, `herd`.
+3. **New categories** (owner-requested + audit-driven): `Git` (git/gh/lazygit/hunk),
+   `Services` (herd/orbstack — owner's "Orbstack & Herd together"), `Linters`
+   (shellcheck/shfmt/actionlint/swiftformat — owner's "linters grouped"), `Prompt`
+   (oh-my-posh today; starship/p10k have no brew/cask packages yet so there was
+   nothing literal to group, but the category now exists for when they do).
+4. **Reassigned orphans to existing categories**: `poppler` → Filesystem (yazi
+   preview dependency), `dockutil`/`duti` → Utilities, `tmux` → Terminals, `fzf` →
+   Shell.
+5. **Deliberately left alone**: `AI` stays one category (agents + consumer apps +
+   Gentle-AI's own tools) — broad but coherent; splitting it wasn't requested and
+   would be scope creep.
+
+### Test evidence (RED → GREEN, TDD)
+
+Two new bats tests added to `test/manifest.bats` against the REAL `install/topics/`
+tree (not synthetic fixtures, since this is a real-data audit): a regression guard
+asserting NO toggleable package's category ever equals its raw lowercase topic name,
+and an exact-count assertion that `unar` appears exactly once. Both failed before the
+fix (`fzf` orphaned, `unar` duplicated) and pass after.
+
+### Gate evidence (green)
+
+| Gate | Result |
+| --- | --- |
+| `make check` | clean |
+| `make lint` | clean |
+| `bats test/manifest.bats` | 13/13 (2 new) |
+| `bats test/` (full) | 86 pass / 0 fail |
+| `cd tools/tui && bun test` | 136 pass / 0 fail |
+| Live render probe (real context → `toolRowsGrouped`) | every category Title-Cased, no repeats, no duplicates |
