@@ -57,6 +57,63 @@ export function initialState(
 }
 
 /**
+ * Phase-1 pure adapter layer (design §3.2): maps component MultiSelect
+ * values back onto the payload main.ts consumes. No state coupling yet — the
+ * old reducer/string views keep rendering until the Phase-2 component swap.
+ */
+
+/** Step-1 submit adapter: every locked/pseudo row id -> true REGARDLESS of
+ *  value (the applyConfirmed-critical locked reinsertion, ADR-1/3), every
+ *  toggleable row id -> `value.includes(id)`. Special installers
+ *  (code/duti-defaults/dock/macos) are ordinary toggleable rows: present in
+ *  value -> true, absent -> false. */
+export function adaptStepOne(
+  value: string[],
+  context: InstallContext,
+): Record<string, boolean> {
+  const selected: Record<string, boolean> = {};
+  for (const row of toolRows(context)) {
+    selected[row.id] = row.locked || row.pseudo || value.includes(row.id);
+  }
+  return selected;
+}
+
+/** Step-2 submit adapter: one `{ [name]: true }` entry per confirmed link
+ *  name. The value IS the name, so multi-target names are exactly ONE key
+ *  (never per-target keys); empty value -> {} (nothing links unless checked). */
+export function adaptStepTwo(value: string[]): Record<string, boolean> {
+  const checked: Record<string, boolean> = {};
+  for (const name of value) {
+    checked[name] = true;
+  }
+  return checked;
+}
+
+/** Step-1 component options: `toolRowsGrouped` minus the locked/pseudo rows
+ *  (ADR-1 — locked rows render as the inert block, never MultiSelect options).
+ *  Same-category adjacency from the grouped order is preserved. */
+export function toggleableRowsForStep(context: InstallContext): ToolRow[] {
+  return toolRowsGrouped(context).filter((row) => !row.locked && !row.pseudo);
+}
+
+/** Step-1 component defaultValue: the pre-checked set = TOGGLEABLE rows where
+ *  `row.default || row.installed`, plus the `initialSelected` test seam
+ *  (truthy entries appended). Locked/pseudo ids never appear (they are not
+ *  options); unchecked defaults are omitted so the user can un-check them. */
+export function defaultValuesFor(
+  context: InstallContext,
+  initialSelected: Record<string, boolean> = {},
+): string[] {
+  const ids = toggleableRowsForStep(context)
+    .filter((row) => row.default || row.installed === true)
+    .map((row) => row.id);
+  for (const [id, on] of Object.entries(initialSelected)) {
+    if (on && !ids.includes(id)) ids.push(id);
+  }
+  return ids;
+}
+
+/**
  * Step-2 link listing: offered main links, then the opt-in agents group.
  * Locked rows stay in the selection map but offeredLinks ignores them, so only
  * confirmed toggleable rows light up areas (ADR-3).
@@ -244,7 +301,7 @@ export interface MappedKey {
   key: string;
 }
 
-interface InkKeyFlags {
+export interface InkKeyFlags {
   upArrow?: boolean;
   downArrow?: boolean;
   leftArrow?: boolean;
@@ -256,6 +313,15 @@ interface InkKeyFlags {
   delete?: boolean;
   ctrl?: boolean;
   meta?: boolean;
+}
+
+/** App-level quit-only contract (ADR-2): plain `q` (no ctrl/meta) and
+ *  `ctrl+c` request a quit; arrows/space/return/uppercase Q and every other
+ *  ctrl/meta-combo are the component's keys, not App's. Supersedes the old
+ *  mapInkKey vocabulary for the quit paths. */
+export function quitRequested(input: string, key: InkKeyFlags): boolean {
+  if (key.ctrl && input === "c") return true;
+  return input === "q" && !key.ctrl && !key.meta;
 }
 
 /** Normalizes Ink's (input, key) pair onto the app key vocabulary. */

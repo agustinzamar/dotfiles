@@ -10,12 +10,17 @@ import { cleanup, render } from "ink-testing-library";
 import type { InstallContext } from "./context";
 import { toolRowsGrouped } from "./manifest";
 import {
+  adaptStepOne,
+  adaptStepTwo,
   App,
+  defaultValuesFor,
   initialState,
   linkView,
   mapInkKey,
+  quitRequested,
   reducer,
   toggleLink,
+  toggleableRowsForStep,
   toolView,
   type TuiState,
 } from "./tui";
@@ -49,6 +54,22 @@ const fixtureContext: InstallContext = {
       topic: "core",
       kind: "brew",
       area: "terminal",
+      locked: true,
+      default: false,
+    },
+    {
+      id: "zsh",
+      topic: "core",
+      kind: "brew",
+      area: "shell",
+      locked: true,
+      default: false,
+    },
+    {
+      id: "gh",
+      topic: "core",
+      kind: "brew",
+      area: "git",
       locked: true,
       default: false,
     },
@@ -99,6 +120,24 @@ const fixtureContext: InstallContext = {
       category: "System",
       kind: "topic",
       area: "terminal",
+      locked: false,
+      default: false,
+    },
+    {
+      id: "dock",
+      topic: "system",
+      category: "System",
+      kind: "topic",
+      area: "system",
+      locked: false,
+      default: false,
+    },
+    {
+      id: "macos",
+      topic: "system",
+      category: "System",
+      kind: "topic",
+      area: "system",
       locked: false,
       default: false,
     },
@@ -247,6 +286,196 @@ export function rowIndex(id: string): number {
     .indexOf(id);
 }
 
+// ---------------------------------------------------------------------------
+// Phase 1 adapters — pure value adapters + option shapers (design §3.2/§2.2)
+// ---------------------------------------------------------------------------
+
+describe("adaptStepOne", () => {
+  test("locked packages and pseudo-steps map to true regardless of value", () => {
+    for (const value of [[], ["ghostty"], ["gh", "fzf", "zsh-setup"]]) {
+      const selected = adaptStepOne(value, fixtureContext);
+      expect(selected["zsh-setup"]).toBe(true);
+      expect(selected["git-signing"]).toBe(true);
+      for (const id of ["zsh", "fzf", "git", "gh", "tmux"]) {
+        expect(selected[id]).toBe(true);
+      }
+    }
+  });
+
+  test("toggleable rows follow value.includes(id), never context flags", () => {
+    const selected = adaptStepOne(["ghostty", "opencode"], fixtureContext);
+    expect(selected["ghostty"]).toBe(true);
+    expect(selected["opencode"]).toBe(true);
+    // Default/installed flags are a component pre-check concern; the adapter
+    // must NOT reinsert rows the user un-checked (former defaults CAN be off).
+    expect(selected["lazygit"]).toBe(false);
+    expect(selected["7zip"]).toBe(false);
+    expect(selected["brave-browser"]).toBe(false);
+  });
+
+  test("special installers are ordinary toggleable rows: absent -> false, present -> true", () => {
+    const empty = adaptStepOne([], fixtureContext);
+    for (const id of ["code", "duti-defaults", "dock", "macos"]) {
+      expect(empty[id]).toBe(false);
+    }
+    const chosen = adaptStepOne(["dock", "code"], fixtureContext);
+    expect(chosen["dock"]).toBe(true);
+    expect(chosen["code"]).toBe(true);
+    expect(chosen["duti-defaults"]).toBe(false);
+    expect(chosen["macos"]).toBe(false);
+  });
+});
+
+describe("adaptStepTwo", () => {
+  test("one true key per element name", () => {
+    expect(adaptStepTwo(["ghostty", "hunk"])).toEqual({
+      ghostty: true,
+      hunk: true,
+    });
+  });
+
+  test("multi-target name is exactly ONE key (never per-target rows)", () => {
+    const checked = adaptStepTwo(["ghostty"]);
+    expect(checked).toEqual({ ghostty: true });
+    expect(Object.keys(checked)).toHaveLength(1);
+  });
+
+  test("empty value -> empty checked map", () => {
+    expect(adaptStepTwo([])).toEqual({});
+  });
+});
+
+describe("toggleableRowsForStep", () => {
+  test("never returns locked or pseudo rows (ADR-1: never component options)", () => {
+    const ids = toggleableRowsForStep(fixtureContext).map((r) => r.id);
+    for (const id of [
+      "zsh-setup",
+      "git-signing",
+      "zsh",
+      "fzf",
+      "git",
+      "gh",
+      "tmux",
+    ]) {
+      expect(ids).not.toContain(id);
+    }
+  });
+
+  test("is exactly toolRowsGrouped minus locked/pseudo rows, order preserved", () => {
+    const rows = toggleableRowsForStep(fixtureContext);
+    const ids = rows.map((r) => r.id);
+    for (const id of [
+      "ghostty",
+      "lazygit",
+      "hunk",
+      "yazi",
+      "code",
+      "duti-defaults",
+      "dock",
+      "macos",
+      "opencode",
+      "stupside/tap/castor",
+      "brave-browser",
+      "7zip",
+    ]) {
+      expect(ids).toContain(id);
+    }
+    const groupedToggleable = toolRowsGrouped(fixtureContext)
+      .filter((r) => !r.locked && !r.pseudo)
+      .map((r) => r.id);
+    expect(ids).toEqual(groupedToggleable);
+  });
+});
+
+describe("defaultValuesFor", () => {
+  test("pre-checks default+installed TOGGLEABLE rows only (never locked/pseudo)", () => {
+    const defaults = defaultValuesFor(fixtureContext);
+    for (const id of ["ghostty", "lazygit", "hunk", "yazi", "7zip"]) {
+      expect(defaults).toContain(id);
+    }
+    for (const id of ["opencode", "code", "dock", "macos", "brave-browser"]) {
+      expect(defaults).not.toContain(id);
+    }
+    // Locked/pseudo rows are never option values, even though pseudo-steps
+    // carry default:true in toolRows.
+    expect(defaults).not.toContain("fzf");
+    expect(defaults).not.toContain("zsh-setup");
+  });
+
+  test("initialSelected seam adds extras on top of defaults", () => {
+    const defaults = defaultValuesFor(fixtureContext, {
+      opencode: true,
+      code: true,
+    });
+    expect(defaults).toContain("opencode");
+    expect(defaults).toContain("code");
+    expect(defaults).toContain("ghostty");
+    // false entries in the seam do not add rows.
+    const negative = defaultValuesFor(fixtureContext, { opencode: false });
+    expect(negative).not.toContain("opencode");
+  });
+});
+
+describe("quitRequested", () => {
+  test("plain q and ctrl+c request a quit (ADR-2 App quit-only contract)", () => {
+    expect(quitRequested("q", {})).toBe(true);
+    expect(quitRequested("c", { ctrl: true })).toBe(true);
+  });
+
+  test("arrows, space, return, uppercase Q, ctrl+other and meta+q never quit", () => {
+    expect(quitRequested("", { upArrow: true })).toBe(false);
+    expect(quitRequested("", { downArrow: true })).toBe(false);
+    expect(quitRequested(" ", {})).toBe(false);
+    expect(quitRequested("", { return: true })).toBe(false);
+    expect(quitRequested("Q", {})).toBe(false);
+    expect(quitRequested("x", { ctrl: true })).toBe(false);
+    expect(quitRequested("q", { meta: true })).toBe(false);
+    expect(quitRequested("", { escape: true })).toBe(false);
+  });
+});
+
+describe("adapter boundaries (TRIANGULATE)", () => {
+  test("adaptStepOne([], context) keeps the essentials on: nothing selected = locked block only", () => {
+    const selected = adaptStepOne([], fixtureContext);
+    for (const id of [
+      "zsh-setup",
+      "git-signing",
+      "zsh",
+      "fzf",
+      "git",
+      "gh",
+      "tmux",
+    ]) {
+      expect(selected[id]).toBe(true);
+    }
+    expect(selected["ghostty"]).toBe(false);
+    // The map covers exactly the tool row set: no orphans, no tap rows.
+    expect(Object.keys(selected).sort()).toEqual(
+      toolRowsGrouped(fixtureContext)
+        .map((r) => r.id)
+        .sort(),
+    );
+  });
+
+  test("adaptStepTwo round-trips: duplicate names collapse to one idempotent key", () => {
+    expect(adaptStepTwo(["ghostty", "ghostty", "hunk"])).toEqual({
+      ghostty: true,
+      hunk: true,
+    });
+  });
+
+  test("un-checked defaults stay off through the adapter (defaults CAN be removed)", () => {
+    const allToggleable = toggleableRowsForStep(fixtureContext).map(
+      (r) => r.id,
+    );
+    const minusGhostty = allToggleable.filter((id) => id !== "ghostty");
+    const selected = adaptStepOne(minusGhostty, fixtureContext);
+    expect(selected["ghostty"]).toBe(false);
+    expect(selected["lazygit"]).toBe(true);
+    expect(selected["fzf"]).toBe(true);
+  });
+});
+
 afterEach(() => {
   cleanup();
 });
@@ -323,7 +552,9 @@ describe("toolView (step 1)", () => {
   });
 
   test("default rows start checked; unselected rows show empty marks", () => {
-    const view = toolView(initialState(fixtureContext), fixtureContext);
+    // Tall viewport: initialState's 24-row default clips the bottom groups.
+    const state = { ...initialState(fixtureContext), height: 200 };
+    const view = toolView(state, fixtureContext);
     expect(view).toContain("[x] ghostty");
     expect(view).toContain("[x] lazygit");
     expect(view).toContain("[ ] opencode");
