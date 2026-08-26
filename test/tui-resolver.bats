@@ -22,6 +22,9 @@ setup() {
   # A PATH that contains neither bun nor go unless a stub adds one. /usr/bin
   # and /bin keep dirname/sort/mktemp working inside bin/dot itself.
   BASE_PATH="/usr/bin:/bin"
+  # Path-first bun lookup only: this machine has a real bun at a known
+  # location that would otherwise defeat the fake-bun stubs below.
+  export DOT_RUNTIME_BUN_LOOKUP=path
 
   if [ -e "$TUI_BIN" ]; then
     mv "$TUI_BIN" "$SANDBOX/saved-dot-tui"

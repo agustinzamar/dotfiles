@@ -54,7 +54,6 @@ testing:
     command: ""
     enforced_threshold: none
   quality_tools:
-    linter:
-      { available: true, command: "shellcheck -x <scripts>" }
+    linter: { available: true, command: "shellcheck -x <scripts>" }
     type_checker: { available: true, command: "tsc --noEmit -p tools/tui" }
     formatter: { available: true, command: "shfmt -d <scripts>" }

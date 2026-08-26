@@ -791,3 +791,28 @@ EOF
     }
   done
 }
+
+# ---------------------------------------------------------------------------
+# dot bootstrap (hidden): PATH-independent Xcode/Homebrew provisioning
+# ---------------------------------------------------------------------------
+
+@test "bootstrap is hidden from help and TOP_COMMANDS but dispatchable" {
+  run "$DOT" help
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"bootstrap"* ]]
+  run "$DOT" --dry-run bootstrap
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"already installed"* ]]
+}
+
+@test "bootstrap finds Homebrew at known paths even with a bare GUI PATH" {
+  if [[ ! -x /opt/homebrew/bin/brew && ! -x /usr/local/bin/brew ]]; then
+    skip "no Homebrew at a known path on this machine"
+  fi
+  # macOS GUI-launched shells start with this PATH; `type brew` would miss
+  # /opt/homebrew/bin and trigger a reinstall. Path-based checks must not.
+  PATH=/usr/bin:/bin:/usr/sbin:/sbin run "$DOT" --dry-run bootstrap
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"already installed"* ]]
+  [[ "$output" != *"+ install Homebrew"* ]]
+}

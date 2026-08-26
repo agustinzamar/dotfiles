@@ -200,13 +200,24 @@ export async function applyConfirmed(
       operation: `dot install ${p.topic}`,
     }));
   // taps before formulas, then locked pseudo-steps, then links, then specials.
-  const runSteps: ApplyStep[] = [
-    ...tapSteps,
-    ...brewSteps,
-    ...pseudoSteps,
-    ...linkSteps,
-    ...specialSteps,
-  ];
+      const runSteps: ApplyStep[] = [
+        // Xcode CLT + Homebrew, installed only now that the user confirmed
+        // (never before the selector). PATH-independent: uses the absolute dot
+        // binary path, falling back to a bare `dot` on PATH.
+        {
+          id: "bootstrap",
+          label: "Bootstrap (Xcode CLT + Homebrew)",
+          operation:
+            (process.env.DOTFILES_DIR ?? "")
+              ? `${process.env.DOTFILES_DIR}/bin/dot bootstrap`
+              : "dot bootstrap",
+        },
+        ...tapSteps,
+        ...brewSteps,
+        ...pseudoSteps,
+        ...linkSteps,
+        ...specialSteps,
+      ];
 
   // Dry-run: plan only, zero filesystem writes, exit 0.
   if (opts.dryRun) {
