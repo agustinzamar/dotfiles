@@ -1,12 +1,18 @@
-// Two-step installer flow (design §2): Step 1 is a per-tool selector with the
-// locked essentials pinned at top (🔒, never toggleable), visual topic
-// grouping, strictly per-row toggles and the special code/duti rows included.
-// Step 2 lists the ADR-3-filtered config links (all unchecked, multi-target
-// names as ONE row) followed by the opt-in AI-agents group (unchecked).
-// Quitting anywhere before confirm submits nothing — main.ts maps that to
-// exit 10 with zero filesystem writes. Views stay pure-string Ink text.
-import { Text, useApp, useInput, useStdout } from "ink";
-import { useEffect, useReducer, useRef } from "react";
+// Two-step installer flow on @inkjs/ui MultiSelect (design §2, ADR-1..6):
+// Step 1 is a component tool selector with an inert always-checked LockedBlock
+// (shell/git essentials: zsh, fzf, git, gh, tmux + Zinit/Git-signing pseudo
+// steps) rendered ABOVE the MultiSelect — locked rows are NEVER options (the
+// installed MultiSelect has no per-option disabled; ADR-1). Former baseline
+// rows render pre-checked via defaultValue and CAN be unchecked. Step 2 is a
+// checkbox list of the ADR-3/4-filtered .main config links (agents pruned),
+// all unchecked, one row per multi-target NAME (value = name). App owns ONLY
+// the quit keys (q / ctrl+c, ADR-2): quitting submits nothing — main.ts maps
+// that to exit 10 with zero filesystem writes. Selected/checked values cross
+// into main.ts through thin adapters (adaptStepOne/adaptStepTwo) that reinsert
+// locked ids as always-true (applyConfirmed-critical, ADR-3).
+import { Box, Text, useApp, useInput, type Key } from "ink";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { MultiSelect } from "@inkjs/ui";
 import type { ContextLink, InstallContext } from "./context";
 import {
   offeredLinks,
@@ -16,25 +22,17 @@ import {
   type ToolRow,
 } from "./manifest";
 
-export const LOCK_MARK = "🔒";
-
 export interface TuiState {
   step: 1 | 2;
-  cursor: number;
   /** Per-tool row selections (package ids + locked pseudo-step ids). */
   selected: Record<string, boolean>;
   /** Confirmed link names (step 2), toggled as one unit per multi-target name. */
   checked: Record<string, boolean>;
   submitted: boolean;
-  width: number;
-  height: number;
 }
 
-export type Action =
-  | { type: "resize"; width: number; height: number }
-  | { type: "key"; key: string };
-
-/** Seeds every locked/default row checked, every other row unchecked. */
+/** Seeds every locked/default row checked, every other row unchecked. Cursor
+ *  and viewport bookkeeping are gone — the component owns focus/scroll. */
 export function initialState(
   context: InstallContext,
   initialSelected: Record<string, boolean> = {},
@@ -45,22 +43,11 @@ export function initialState(
   }
   return {
     step: 1,
-    cursor: 0,
     selected: { ...selected, ...initialSelected },
     checked: {},
     submitted: false,
-    // 80x24 dingbat defaults keep the pure views readable before the App
-    // dispatches the real terminal size on mount.
-    width: 80,
-    height: 24,
   };
 }
-
-/**
- * Phase-1 pure adapter layer (design §3.2): maps component MultiSelect
- * values back onto the payload main.ts consumes. No state coupling yet — the
- * old reducer/string views keep rendering until the Phase-2 component swap.
- */
 
 /** Step-1 submit adapter: every locked/pseudo row id -> true REGARDLESS of
  *  value (the applyConfirmed-critical locked reinsertion, ADR-1/3), every
@@ -128,59 +115,6 @@ export function linkRowsForStep(
   return offeredLinks(context, selected);
 }
 
-/** Toggles one link name (all its targets together). */
-export function toggleLink(state: TuiState, name: string): TuiState {
-  return {
-    ...state,
-    checked: { ...state.checked, [name]: !state.checked[name] },
-  };
-}
-
-function selectedMark(selected: boolean): string {
-  return selected ? "[x]" : "[ ]";
-}
-
-/** Pure string view for Step 1 (per-tool selector). */
-export function toolView(state: TuiState, context: InstallContext): string {
-  // Grouped order, not raw toolRows: same-category rows are guaranteed
-  // contiguous here, so the adjacency-based header check below never repeats
-  // a category (reduceKey below indexes this SAME order for the cursor).
-  const rows = toolRowsGrouped(context);
-  const lines: string[] = [" dot installer  step 1/2: choose tools ", ""];
-  let cursorRow = 0;
-  for (let i = 0; i < rows.length; i++) {
-    if (i === state.cursor) cursorRow = lines.length;
-    const row = rows[i]!;
-    if (
-      row.category !== "locked" &&
-      i > 0 &&
-      rows[i - 1]!.category !== row.category
-    ) {
-      lines.push(` [${row.category}]`);
-      if (i < state.cursor) cursorRow++;
-    }
-    const cursorMark = i === state.cursor ? ">" : " ";
-    const lock = row.locked ? `${LOCK_MARK} ` : "  ";
-    lines.push(
-      `${cursorMark} ${lock}${selectedMark(state.selected[row.id] === true)} ${row.label}`,
-    );
-  }
-  return (
-    viewportOf(lines, cursorRow, state.height) +
-    "\n\nspace toggle  enter next  q quit"
-  );
-}
-
-function linkRowLine(
-  link: ContextLink,
-  cursor: boolean,
-  checked: boolean,
-): string {
-  const cursorMark = cursor ? ">" : " ";
-  const targets = link.rows.length > 1 ? ` (${link.rows.length} targets)` : "";
-  return `${cursorMark} ${selectedMark(checked)} ${link.name}${targets}`;
-}
-
 /** Step-2 rows: the ADR-3-filtered config links only (no opt-in agents,
  *  no gated extra installs — extras like code/duti-defaults/dock/macos are
  *  first-class step-1 rows now). */
@@ -191,160 +125,35 @@ export function stepTwoRows(
   return linkRowsForStep(context, state).main;
 }
 
-export function linkView(state: TuiState, context: InstallContext): string {
-  const rows = stepTwoRows(context, state);
-  const lines: string[] = [" dot installer  step 2/2: link configs ", ""];
-  let cursorRow = 0;
-  for (let i = 0; i < rows.length; i++) {
-    if (i === state.cursor) cursorRow = lines.length;
-    const link = rows[i]!;
-    lines.push(
-      linkRowLine(link, i === state.cursor, state.checked[link.name] === true),
-    );
-  }
-  return (
-    viewportOf(lines, cursorRow, state.height) +
-    "\n\nspace toggle  enter apply  q quit"
-  );
-}
-
-/** Keeps the cursor row visible in a small terminal (footer stays last). */
-function viewportOf(
-  lines: string[],
-  cursorRow: number,
-  height: number,
-): string {
-  const viewport = Math.max(height - 3, 3);
-  const start = Math.max(
-    0,
-    Math.min(
-      cursorRow - Math.floor(viewport / 2),
-      Math.max(lines.length - viewport, 0),
-    ),
-  );
-  const end = Math.min(start + viewport, lines.length);
-  return (
-    (start > 0 ? "↑ more\n" : "") +
-    lines.slice(start, end).join("\n") +
-    (end < lines.length ? "\n↓ more" : "")
-  );
-}
-
-export function reducer(
-  state: TuiState,
-  action: Action,
-  context: InstallContext,
-): TuiState {
-  switch (action.type) {
-    case "resize":
-      return { ...state, width: action.width, height: action.height };
-    case "key":
-      return reduceKey(state, action.key, context);
-  }
-}
-
-function reduceKey(
-  state: TuiState,
-  name: string,
-  context: InstallContext,
-): TuiState {
-  const rows: Array<
-    { kind: "tool"; row: ToolRow } | { kind: "link"; link: ContextLink }
-  > =
-    state.step === 1
-      ? toolRowsGrouped(context).map((row) => ({ kind: "tool" as const, row }))
-      : stepTwoRows(context, state).map((link) => ({
-          kind: "link" as const,
-          link,
-        }));
-
-  switch (name) {
-    case "up":
-      return { ...state, cursor: Math.max(0, state.cursor - 1) };
-    case "down":
-      return {
-        ...state,
-        cursor: Math.max(0, Math.min(rows.length - 1, state.cursor + 1)),
-      };
-    case "space": {
-      if (state.step === 1) {
-        const entry = rows[state.cursor] as
-          { kind: "tool"; row: ToolRow } | undefined;
-        if (!entry || entry.row.locked) return state; // locked rows ignore the key
-        return {
-          ...state,
-          selected: {
-            ...state.selected,
-            [entry.row.id]: !state.selected[entry.row.id],
-          },
-        };
-      }
-      const entry = rows[state.cursor] as
-        { kind: "link"; link: ContextLink } | undefined;
-      if (!entry || entry.kind !== "link") return state;
-      return toggleLink(state, entry.link.name);
-    }
-    case "enter":
-      if (state.step === 1) {
-        return { ...state, step: 2, cursor: 0 };
-      }
-      // Confirm: submit as-is. Every installable row (brew/cask/tap/topic)
-      // was already chosen directly in step 1, so there is nothing extra to
-      // merge from a special map.
-      return { ...state, submitted: true };
-    default:
-      return state;
-  }
-}
-
-export interface MappedKey {
-  key: string;
-}
-
-export interface InkKeyFlags {
-  upArrow?: boolean;
-  downArrow?: boolean;
-  leftArrow?: boolean;
-  rightArrow?: boolean;
-  return?: boolean;
-  escape?: boolean;
-  tab?: boolean;
-  backspace?: boolean;
-  delete?: boolean;
-  ctrl?: boolean;
-  meta?: boolean;
-}
-
 /** App-level quit-only contract (ADR-2): plain `q` (no ctrl/meta) and
  *  `ctrl+c` request a quit; arrows/space/return/uppercase Q and every other
- *  ctrl/meta-combo are the component's keys, not App's. Supersedes the old
- *  mapInkKey vocabulary for the quit paths. */
-export function quitRequested(input: string, key: InkKeyFlags): boolean {
+ *  ctrl/meta-combo are the component's keys, not App's. */
+export function quitRequested(input: string, key: Partial<Key>): boolean {
   if (key.ctrl && input === "c") return true;
   return input === "q" && !key.ctrl && !key.meta;
-}
-
-/** Normalizes Ink's (input, key) pair onto the app key vocabulary. */
-export function mapInkKey(input: string, key: InkKeyFlags): MappedKey | null {
-  if (key.upArrow) return { key: "up" };
-  if (key.downArrow) return { key: "down" };
-  if (key.return) return { key: "enter" };
-  if (key.escape) return { key: "esc" };
-  if (key.backspace || key.delete) return { key: "backspace" };
-  if (input === " ") return { key: "space" };
-  if (key.ctrl && input === "c") return { key: "ctrl+c" };
-  if (input === "q" && !key.ctrl && !key.meta) return { key: "q" };
-  return null;
 }
 
 export interface AppProps {
   context: InstallContext;
   /** Test seam: seeds extra selections. */
   initialSelected?: Record<string, boolean>;
-  /** Test seam: deterministic terminal size instead of the real stdout. */
+  /** Test seam: deterministic terminal height for `visibleOptionCount`. */
   fixedSize?: { width: number; height: number };
   /** main.ts: receives the final state on submission, immediately before exit. */
   onSubmit?: (state: TuiState) => void;
+}
+
+/** Inert always-checked row block ABOVE the step-1 MultiSelect (ADR-1): the
+ *  locked essentials are visible and permanently selected, but never appear in
+ *  the component's options — space/enter cannot reach them by construction. */
+function LockedBlock({ rows }: { rows: ToolRow[] }): React.ReactElement {
+  return (
+    <Box flexDirection="column">
+      {rows.map((row) => (
+        <Text key={row.id}>✔ {row.label}</Text>
+      ))}
+    </Box>
+  );
 }
 
 export function App({
@@ -353,43 +162,12 @@ export function App({
   fixedSize,
   onSubmit,
 }: AppProps): React.ReactElement {
-  const [state, dispatch] = useReducer(
-    (s: TuiState, a: Action) => reducer(s, a, context),
-    undefined,
-    () => initialState(context, initialSelected),
+  const [state, setState] = useState<TuiState>(() =>
+    initialState(context, initialSelected),
   );
   const stateRef = useRef(state);
   stateRef.current = state;
   const { exit } = useApp();
-  const { stdout } = useStdout();
-
-  useEffect(() => {
-    if (fixedSize) {
-      dispatch({
-        type: "resize",
-        width: fixedSize.width,
-        height: fixedSize.height,
-      });
-      return;
-    }
-    const stream = stdout as typeof stdout & {
-      columns?: number;
-      rows?: number;
-      on?: (event: string, listener: () => void) => unknown;
-      off?: (event: string, listener: () => void) => unknown;
-    };
-    const dispatchResize = () =>
-      dispatch({
-        type: "resize",
-        width: stream.columns ?? 80,
-        height: stream.rows ?? 24,
-      });
-    dispatchResize();
-    stream.on?.("resize", dispatchResize);
-    return () => {
-      stream.off?.("resize", dispatchResize);
-    };
-  }, [fixedSize, stdout]);
 
   useEffect(() => {
     if (state.submitted) {
@@ -399,20 +177,98 @@ export function App({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.submitted, exit]);
 
+  // App owns ONLY the quit keys (ADR-2): arrows/space/enter belong to the
+  // mounted MultiSelect. Quitting submits nothing; main.ts maps that to exit
+  // 10 with zero writes, from either step.
   useInput((input, key) => {
-    const mapped = mapInkKey(input, key);
-    if (!mapped) return;
-    if (mapped.key === "q" || mapped.key === "ctrl+c") {
-      // Quit before confirm: submits nothing (main maps to exit 10, zero writes).
+    if (quitRequested(input, key)) {
       exit();
-      return;
     }
-    dispatch({ type: "key", key: mapped.key });
   });
 
+  // ADR-6: memoize per mounted step so the MultiSelect never receives a
+  // deep-inequal options array from a parent re-render (which resets it to
+  // defaultValue). Step 1 unmounts before step 2 mounts, so the two selections
+  // never co-live.
+  const lockedRows = useMemo(
+    () => toolRowsGrouped(context).filter((row) => row.locked || row.pseudo),
+    [context],
+  );
+  const step1Options = useMemo(
+    () =>
+      toggleableRowsForStep(context).map((row) => ({
+        label: row.label,
+        value: row.id,
+      })),
+    [context],
+  );
+  const step1Defaults = useMemo(
+    () => defaultValuesFor(context, initialSelected),
+    [context, initialSelected],
+  );
+  const step2Options = useMemo(
+    () =>
+      state.step === 2
+        ? stepTwoRows(context, state).map((link) => ({
+            label:
+              link.rows.length > 1
+                ? `${link.name} (${link.rows.length} targets)`
+                : link.name,
+            value: link.name,
+          }))
+        : [],
+    [context, state.step, state.selected],
+  );
+  const visibleOptionCount = fixedSize ? fixedSize.height - 4 : 5;
+
   return (
-    <Text>
-      {state.step === 1 ? toolView(state, context) : linkView(state, context)}
-    </Text>
+    <Box flexDirection="column">
+      {state.step === 1 ? (
+        <Fragment>
+          <Text bold> dot installer step 1/2: choose tools </Text>
+          <LockedBlock rows={lockedRows} />
+          <MultiSelect
+            options={step1Options}
+            defaultValue={step1Defaults}
+            visibleOptionCount={visibleOptionCount}
+            onSubmit={(value) => {
+              // The adapter reinserts every locked/pseudo id as true (ADR-1/3)
+              // and flips to step 2; step-1 MultiSelect unmounts.
+              setState((s) => ({
+                ...s,
+                selected: adaptStepOne(value, context),
+                step: 2,
+              }));
+            }}
+          />
+          <Text dimColor>
+            {" "}
+            ↑/↓ navigate · space toggle · enter submit · q quit{" "}
+          </Text>
+        </Fragment>
+      ) : (
+        <Fragment>
+          <Text bold> dot installer step 2/2: link configs </Text>
+          <MultiSelect
+            options={step2Options}
+            defaultValue={[]}
+            visibleOptionCount={visibleOptionCount}
+            onSubmit={(value) => {
+              // ADR-4: options are pruned .main links; ADR-5: enter on an
+              // empty list still fires onSubmit([]) -> checked = {}.
+              setState((s) => ({
+                ...s,
+                checked: adaptStepTwo(value),
+                submitted: true,
+              }));
+            }}
+          />
+          <Text dimColor>
+            {" "}
+            ↑/↓ navigate · space toggle · enter apply · q quit{" "}
+          </Text>
+        </Fragment>
+      )}
+    </Box>
   );
 }

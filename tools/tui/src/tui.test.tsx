@@ -1,11 +1,17 @@
-// Task 2.5 (RED first): selector rendering tests for the two-step flow
-// (design §2). Step 1 renders locked essentials pinned at top with a 🔒 marker,
-// topic-grouped per-tool rows with strictly per-row toggles (locked rows ignore
-// the toggle key entirely), former-baseline rows pre-checked but removable, and
-// special code/duti rows included. Step 2 renders the ADR-3-filtered link list
-// (one row per multi-target name, all unchecked) plus the opt-in AI agents
-// group. Quit anywhere before confirm submits nothing (main exits 10).
+// Phase 2 (tasks 2.1–2.5, RED first): component frame tests for the two-step
+// flow on @inkjs/ui MultiSelect (design §2/§6). Step 1 renders an inert
+// always-checked locked block ABOVE the component (ADR-1: locked rows are
+// never options), toggleable rows as pre-checked-by-default options that CAN
+// be unchecked. Step 2 lists ONLY the offered .main config links (ADR-4), all
+// unchecked at mount; space toggles, enter submits the checked set; multi-target
+// names are ONE row (value = name). Quit (q / ctrl+c) is App-owned on both
+// steps and NEVER reaches onSubmit — main.ts maps that to exit 10 with zero
+// writes (roundExitCode contract lives in main.test.ts, untouched).
+// Frame technique mirrors apply.test.tsx: chalk.level=1 at module top,
+// ink-testing-library, stripAnsi for words, color-close/label assertions
+// (never a bare \x1b[0m), afterEach(cleanup), fixedSize tall.
 import { afterEach, describe, expect, test } from "bun:test";
+import chalk from "chalk";
 import { cleanup, render } from "ink-testing-library";
 import type { InstallContext } from "./context";
 import { toolRowsGrouped } from "./manifest";
@@ -15,15 +21,17 @@ import {
   App,
   defaultValuesFor,
   initialState,
-  linkView,
-  mapInkKey,
+  linkRowsForStep,
   quitRequested,
-  reducer,
-  toggleLink,
+  stepTwoRows,
   toggleableRowsForStep,
-  toolView,
   type TuiState,
 } from "./tui";
+
+// The test worker disables color detection, but the point of these frame tests
+// is asserting ink's RENDERED style closes. Force chalk level 1 so @inkjs/ui/
+// ink emit real codes — same technique as apply.test.tsx.
+chalk.level = 1;
 
 // ---------------------------------------------------------------------------
 // Fixtures — mirrors the real-tree shape (test/manifest.bats golden json).
@@ -249,16 +257,12 @@ const fixtureContext: InstallContext = {
   ],
 };
 
-const key = (name: string, text?: string) => ({
-  type: "key" as const,
-  key: name,
-  text,
-});
-const resize = (width: number, height: number) => ({
-  type: "resize" as const,
-  width,
-  height,
-});
+/** ADR-5 fixture: a context with no config links at all — step 2 must still
+ *  mount with zero options and confirm on enter with checked = {}. */
+const emptyLinksContext: InstallContext = {
+  ...fixtureContext,
+  links: [],
+};
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -271,19 +275,36 @@ const press = async (ui: Instance, data: string) => {
 
 const KEY_ENTER = "\r";
 const KEY_DOWN = "\x1b[B";
+const KEY_UP = "\x1b[A";
+const KEY_CTRL_C = "\x03";
 
 const TALL = { width: 100, height: 60 };
 
-// Flat step-1 row order: pseudo-steps first, then locked rows, then toggleable
-// rows in context order (topic grouping is a view concern, not row order).
-// Delegates to the real production row order (toolRowsGrouped) instead of a
-// hand-rolled mirror: a hand-rolled copy silently drifted out of sync once
-// before (reduceKey moved to the grouped order, this helper did not), so the
-// source of truth is the function under test, never a duplicate of it.
-export function rowIndex(id: string): number {
-  return toolRowsGrouped(fixtureContext)
-    .map((r) => r.id)
-    .indexOf(id);
+/** Visible-text helper: strips every ANSI escape so text assertions never
+ *  depend on style codes (apply.test.tsx technique). */
+function stripAnsi(frame: string): string {
+  return frame.replace(/\x1b\[[0-9;]*m/g, "");
+}
+
+/** Exact locked-block line (`✔ <label>`, no padding, our own static glyph —
+ *  never a figures glyph, so it is portable across TERM settings). */
+function lockedLine(frame: string, label: string): string | null {
+  return (
+    stripAnsi(frame)
+      .split("\n")
+      .find((line) => line === `✔ ${label}`) ?? null
+  );
+}
+
+/** Exact unfocused option line (`  <label> ✔` when checked, `  <label>` when
+ *  not). Only unfocused rows are matchable portably: the focused row renders
+ *  with figures' pointer glyph (❯ or ASCII fallback). */
+function optionLine(frame: string, label: string): string | null {
+  return (
+    stripAnsi(frame)
+      .split("\n")
+      .find((line) => line === `  ${label}` || line === `  ${label} ✔`) ?? null
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -481,10 +502,20 @@ afterEach(() => {
 });
 
 // ---------------------------------------------------------------------------
-// initialState — locked and pseudo-step rows start checked and stay non-togg
+// initialState — trimmed shape { step, selected, checked, submitted }; locked
+// and pseudo-step rows start checked, defaults pre-checked, rest off.
 // ---------------------------------------------------------------------------
 
 describe("initialState", () => {
+  test("slims to { step, selected, checked, submitted } (cursor/viewport bookkeeping deleted)", () => {
+    expect(Object.keys(initialState(fixtureContext)).sort()).toEqual([
+      "checked",
+      "selected",
+      "step",
+      "submitted",
+    ]);
+  });
+
   test("locked rows and pseudo-steps start selected; defaults pre-checked; rest off", () => {
     const state = initialState(fixtureContext);
     expect(state.step).toBe(1);
@@ -507,266 +538,220 @@ describe("initialState", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Step 1 view — locked block, topic grouping, special rows
+// linkRowsForStep / stepTwoRows — surviving Phase-1 shaping functions keep
+// their own coverage now that the string views (linkView/toggleLink) are gone.
 // ---------------------------------------------------------------------------
 
-describe("toolView (step 1)", () => {
-  test("locked essentials render pinned at top with a 🔒 marker", () => {
-    const view = toolView(initialState(fixtureContext), fixtureContext);
-    const lockedIdx = view.indexOf("🔒");
-    const zshIdx = view.indexOf("Zinit/Zsh setup");
-    const fzfIdx = view.indexOf("fzf");
-    expect(lockedIdx).toBeGreaterThanOrEqual(0);
-    // Pseudo-steps and locked rows come before the first topic group header.
-    expect(view.indexOf("[core]")).toBeGreaterThan(zshIdx);
-    expect(fzfIdx).toBeLessThan(view.indexOf("[core]"));
-    // Locked rows are always checked.
-    expect(view).toContain("[x] fzf");
+describe("linkRowsForStep / stepTwoRows shaping", () => {
+  const atStep2 = (state: TuiState): TuiState => ({ ...state, step: 2 });
+
+  test("stepTwoRows is .main only: offered links for confirmed areas, never the agents group", () => {
+    const state = atStep2(initialState(fixtureContext));
+    const grouped = linkRowsForStep(fixtureContext, state);
+    expect(grouped.main.map((l) => l.name)).toEqual([
+      "zsh",
+      "ghostty",
+      "hunk",
+      "lazygit",
+    ]);
+    // offeredLinks keeps the optional group (manifest untouched)…
+    expect(grouped.agents.map((l) => l.name)).toEqual(["agents"]);
+    // …while stepTwoRows prunes it for rendering (ADR-4).
+    expect(stepTwoRows(fixtureContext, state).map((l) => l.name)).toEqual([
+      "zsh",
+      "ghostty",
+      "hunk",
+      "lazygit",
+    ]);
   });
 
-  test("topic groups render from categories; code/duti-defaults are step-1 rows under Editors/System", () => {
-    // Tall viewport: initialState's 24-row default clips the bottom groups.
-    const state = { ...initialState(fixtureContext), height: 200 };
-    const view = toolView(state, fixtureContext);
-    for (const group of [
-      "[core]",
-      "[git]",
-      "[file]",
-      "[ai]",
-      "[media]",
-      "[Browsers]",
-      "[Editors]",
-      "[System]",
-    ]) {
-      expect(view).toContain(group);
-    }
-    // The delegating installs appear in the main selector now.
-    expect(view).toContain("[ ] code");
-    expect(view).toContain("[ ] duti-defaults");
-  });
-
-  test("a category header never repeats, even when its rows are non-contiguous in context order (7zip is topic 'core', declared after Browsers)", () => {
-    const view = toolView(initialState(fixtureContext), fixtureContext);
-    const coreOccurrences = view.split("[core]").length - 1;
-    expect(coreOccurrences).toBe(1);
-  });
-
-  test("default rows start checked; unselected rows show empty marks", () => {
-    // Tall viewport: initialState's 24-row default clips the bottom groups.
-    const state = { ...initialState(fixtureContext), height: 200 };
-    const view = toolView(state, fixtureContext);
-    expect(view).toContain("[x] ghostty");
-    expect(view).toContain("[x] lazygit");
-    expect(view).toContain("[ ] opencode");
-  });
-
-  test("installed:true rows are pre-checked even when default is false", () => {
-    const state = initialState(fixtureContext);
-    expect(state.selected["7zip"]).toBe(true);
-    expect(state.selected["opencode"]).toBe(false);
-  });
-
-  test("category headers group rows and tap-qualified rows render their label", () => {
-    const state = { ...initialState(fixtureContext), height: 200 };
-    const view = toolView(state, fixtureContext);
-    expect(view).toContain("[Browsers]");
-    // The tap-qualified cask renders its simple label, never the qualified id.
-    expect(view).toContain("[ ] castor");
-    expect(view).not.toContain("stupside/tap/castor");
-    expect(view).toContain("[ ] brave-browser");
-  });
-});
-
-describe("reducer toggling (step 1)", () => {
-  const at = (partial: Partial<TuiState>): TuiState => ({
-    ...initialState(fixtureContext),
-    ...partial,
-  });
-
-  test("locked rows ignore the toggle key entirely", () => {
-    // fzf sits at row index 2 (two pseudo-steps, then fzf, git, tmux).
-    let state = at({ step: 1, cursor: 2 });
-    state = reducer(state, key("space"), fixtureContext);
-    expect(state.selected["fzf"]).toBe(true);
-    // Pseudo-steps are locked too.
-    state = at({ step: 1, cursor: 0 });
-    state = reducer(state, key("space"), fixtureContext);
-    expect(state.selected["zsh-setup"]).toBe(true);
-  });
-
-  test("sibling rows in one topic group toggle independently", () => {
-    let state = at({ step: 1, cursor: rowIndex("lazygit") });
-    state = reducer(state, key("space"), fixtureContext); // lazygit off
-    expect(state.selected["lazygit"]).toBe(false);
-    expect(state.selected["hunk"]).toBe(true); // sibling untouched
-    state = at({ step: 1, cursor: rowIndex("opencode") });
-    state = reducer(state, key("space"), fixtureContext); // opencode on
-    expect(state.selected["opencode"]).toBe(true);
-    expect(state.selected["brave-browser"]).toBe(false); // different group untouched
-  });
-
-  test("former-baseline rows start checked and CAN be unchecked", () => {
-    let state = at({ step: 1, cursor: rowIndex("ghostty") });
-    state = reducer(state, key("space"), fixtureContext);
-    expect(state.selected["ghostty"]).toBe(false);
-  });
-
-  test("up/down navigation clamps at both edges", () => {
-    let state = at({ step: 1, cursor: 0 });
-    state = reducer(state, key("up"), fixtureContext);
-    expect(state.cursor).toBe(0);
-    state = reducer(state, key("down"), fixtureContext);
-    expect(state.cursor).toBe(1);
-  });
-
-  test("enter moves to step 2; space there is inert for tools", () => {
-    let state = at({ step: 1, cursor: 0 });
-    state = reducer(state, key("enter"), fixtureContext);
-    expect(state.step).toBe(2);
-    expect(state.cursor).toBe(0);
-  });
-
-  test("resize records dimensions", () => {
-    const state = reducer(
-      initialState(fixtureContext),
-      resize(80, 24),
+  test("ADR-4: open-code and unselected areas never reach step 2", () => {
+    const names = stepTwoRows(
       fixtureContext,
+      atStep2(initialState(fixtureContext)),
+    ).map((l) => l.name);
+    expect(names).not.toContain("opencode");
+    expect(names).not.toContain("agents");
+  });
+
+  test("multi-target links remain ONE entry whose name is the toggle unit", () => {
+    const rows = stepTwoRows(
+      fixtureContext,
+      atStep2(initialState(fixtureContext)),
     );
-    expect(state.width).toBe(80);
-    expect(state.height).toBe(24);
+    const ghostty = rows.find((l) => l.name === "ghostty");
+    expect(ghostty).toBeDefined();
+    expect(ghostty!.rows).toHaveLength(2);
   });
 });
 
 // ---------------------------------------------------------------------------
-// Step 2 view — filtered links + opt-in agents, multi-target single row
+// Step 1 component frame — inert locked block above the MultiSelect (ADR-1),
+// pre-checked defaults that CAN be unchecked, per-row space toggles.
 // ---------------------------------------------------------------------------
 
-describe("linkView (step 2)", () => {
-  test("multi-target link name renders as ONE row; no opt-in agents group", () => {
-    const state: TuiState = { ...initialState(fixtureContext), step: 2 };
-    const view = linkView(state, fixtureContext);
-    // ghostty appears exactly once as a row label (its two targets collapse).
-    expect(view).toContain("ghostty");
-    expect(view).not.toContain("ghostty.conf");
-    // The opt-in agents group was removed; step 2 is pure config links.
-    expect(view).not.toContain("opt-in AI agents");
-    expect(view).not.toContain("[ ] agents");
-    // Multi-target label names its target count.
-    expect(view).toContain("ghostty (2 targets)");
-  });
-
-  test("offered links and agents all start unchecked", () => {
-    const state: TuiState = { ...initialState(fixtureContext), step: 2 };
-    const view = linkView(state, fixtureContext);
-    expect(view).not.toContain("[x]");
-  });
-});
-
-describe("toggleLink (step 2)", () => {
-  test("toggling a multi-target name flips the whole entry once", () => {
-    const before: TuiState = { ...initialState(fixtureContext), step: 2 };
-    const after = toggleLink(before, "ghostty");
-    expect(after.checked["ghostty"]).toBe(true);
-    const twice = toggleLink(after, "ghostty");
-    expect(twice.checked["ghostty"]).toBe(false);
-  });
-
-  test("toggling one link never touches the others", () => {
-    let state: TuiState = { ...initialState(fixtureContext), step: 2 };
-    state = toggleLink(state, "zsh");
-    expect(state.checked).toEqual({ zsh: true });
-  });
-
-  test("step-2 space routes through toggleLink on the cursor row", () => {
-    // Step-2 row order: main list first (zsh, ghostty, hunk, lazygit), then
-    // agents (agents). Cursor 1 = ghostty.
-    let state: TuiState = {
-      ...initialState(fixtureContext),
-      step: 2,
-      cursor: 1,
-    };
-    state = reducer(state, key("space"), fixtureContext);
-    expect(state.checked["ghostty"]).toBe(true);
-    expect(state.checked).not.toHaveProperty("zsh");
-  });
-
-  test("enter submits (applies) from step 2", () => {
-    let state: TuiState = { ...initialState(fixtureContext), step: 2 };
-    state = reducer(state, key("enter"), fixtureContext);
-    expect(state.submitted).toBe(true);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// mapInkKey (unchanged vocabulary)
-// ---------------------------------------------------------------------------
-
-describe("mapInkKey", () => {
-  test("maps Ink input pairs onto the key vocabulary", () => {
-    expect(mapInkKey("", { upArrow: true })).toEqual({ key: "up" });
-    expect(mapInkKey("", { downArrow: true })).toEqual({ key: "down" });
-    expect(mapInkKey("", { return: true })).toEqual({ key: "enter" });
-    expect(mapInkKey(" ", {})).toEqual({ key: "space" });
-    expect(mapInkKey("q", {})).toEqual({ key: "q" });
-    expect(mapInkKey("c", { ctrl: true })).toEqual({ key: "ctrl+c" });
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Frame tests via ink-testing-library (tasks 2.5–2.6)
-// ---------------------------------------------------------------------------
-
-describe("frame: two-step flow", () => {
-  test("step 1 renders the locked 🔒 block and topic groups", async () => {
+describe("step-1 frame (MultiSelect + locked block)", () => {
+  test("renders the header, the inert ✔ locked block, and the component options", async () => {
     const ui = render(<App context={fixtureContext} fixedSize={TALL} />);
     await delay(20);
     const frame = ui.lastFrame() ?? "";
-    expect(frame).toContain("step 1/2");
-    expect(frame).toContain("🔒");
-    expect(frame).toContain("Zinit/Zsh setup");
-    expect(frame).toContain("[x] fzf");
-    expect(frame).toContain("[x] ghostty");
-    expect(frame).toContain("[ ] opencode");
-    expect(frame).toContain("space toggle  enter next  q quit");
-    ui.unmount();
-  });
-
-  test("space on a locked row leaves the frame byte-identical (no toggle)", async () => {
-    const ui = render(<App context={fixtureContext} fixedSize={TALL} />);
-    await delay(20);
-    await press(ui, " "); // cursor starts on Zinit/Zsh setup (locked)
-    expect(ui.lastFrame()).toContain("[x] Zinit/Zsh setup");
-    await press(ui, KEY_DOWN); // git signing (locked)
-    await press(ui, KEY_DOWN); // fzf (locked)
-    const before = ui.lastFrame() ?? "";
-    await press(ui, " ");
-    expect(ui.lastFrame() ?? "").not.toContain("[ ] fzf");
-    expect(ui.lastFrame()).toBe(before);
-    ui.unmount();
-  });
-
-  test("enter advances to step 2 with every link row unchecked", async () => {
-    const ui = render(<App context={fixtureContext} fixedSize={TALL} />);
-    await delay(20);
-    await press(ui, KEY_ENTER);
-    const frame = ui.lastFrame() ?? "";
-    expect(frame).toContain("step 2/2");
-    for (const name of ["zsh", "ghostty", "hunk", "lazygit"]) {
-      expect(frame).toContain(name);
+    const text = stripAnsi(frame);
+    expect(text).toContain("step 1/2");
+    expect(text).toContain(
+      "↑/↓ navigate · space toggle · enter submit · q quit",
+    );
+    for (const label of [
+      "Zinit/Zsh setup",
+      "Git signing config",
+      "fzf",
+      "git",
+      "tmux",
+      "zsh",
+      "gh",
+    ]) {
+      expect(lockedLine(frame, label)).toBe(`✔ ${label}`);
     }
-    expect(frame).toContain("[ ] zsh");
-    expect(frame).not.toContain("[ ] opencode"); // ai area inactive
-    // Step 2 is pure config links now: no opt-in agents, no extras.
-    expect(frame).not.toContain("opt-in AI agents");
-    expect(frame).not.toContain("extra installs");
-    expect(frame).toContain("space toggle  enter apply  q quit");
-    // Multi-target renders once.
-    expect((frame.match(/ghostty/g) ?? []).length).toBeGreaterThanOrEqual(1);
-    expect(frame).not.toContain("ghostty.conf");
+    // Toggleable rows render as component options — no string-view markup.
+    // (ghostty is the FOCUSED row at mount, so it is asserted via its blue
+    // label in the next describe; optionLine only matches unfocused rows.)
+    for (const label of ["7zip", "lazygit", "hunk", "yazi"]) {
+      expect(optionLine(frame, label)).not.toBeNull();
+    }
+    expect(text).not.toContain("[x]");
+    expect(text).not.toContain("[ ]");
+    expect(text).not.toContain("[core]");
+    expect(text).not.toContain("🔒");
     ui.unmount();
   });
 
-  test("a checked multi-target link submits both targets as one name", async () => {
+  test("former defaults render pre-checked (green labels) and can be unchecked; locked rows are never options", async () => {
+    const ui = render(<App context={fixtureContext} fixedSize={TALL} />);
+    await delay(20);
+    const frame = ui.lastFrame() ?? "";
+    // Focused default (ghostty) renders blue; unfocused defaults render green.
+    expect(frame).toContain("\x1b[34mghostty\x1b[39m");
+    for (const label of ["lazygit", "hunk", "yazi", "7zip"]) {
+      expect(frame).toContain(`\x1b[32m${label}\x1b[39m`);
+    }
+    // Unchecked rows render plain — never green.
+    for (const label of ["opencode", "code", "brave-browser"]) {
+      expect(frame).not.toContain(`\x1b[32m${label}\x1b[39m`);
+    }
+    // Ghostty starts checked: its green tick is in the frame.
+    expect(frame).toContain("\x1b[32m✔\x1b[39m");
+    // Locked ids never appear in the option list (ADR-1): no option row for
+    // fzf/zsh (the ✔ fzf line is the inert block, which is NOT an option).
+    expect(optionLine(frame, "fzf")).toBeNull();
+    expect(optionLine(frame, "zsh")).toBeNull();
+    ui.unmount();
+  });
+
+  test("space toggles the focused option only; sibling rows stay byte-identical", async () => {
+    const ui = render(<App context={fixtureContext} fixedSize={TALL} />);
+    await delay(20);
+    await press(ui, KEY_DOWN); // 7zip
+    await press(ui, KEY_DOWN); // lazygit (focused, blue)
+    const a = ui.lastFrame() ?? "";
+    expect(a).toContain("\x1b[34mlazygit\x1b[39m");
+    await press(ui, " "); // lazygit OFF (still focused -> blue, tick gone)
+    const b = ui.lastFrame() ?? "";
+    expect(b).toContain("\x1b[34mlazygit\x1b[39m");
+    expect(b).not.toContain("\x1b[32mlazygit\x1b[39m");
+    await press(ui, KEY_DOWN); // hunk
+    await press(ui, KEY_DOWN); // yazi focused; lazygit now unfocused+unselected
+    const c = ui.lastFrame() ?? "";
+    expect(c).not.toContain("\x1b[32mlazygit\x1b[39m");
+    expect(c).not.toContain("\x1b[34mlazygit\x1b[39m");
+    // Sibling rows' lines are byte-identical across the whole interaction
+    // (the always-unfocused trio; the trio is focused in none of a/b/c).
+    for (const frame of [a, b, c]) {
+      expect(optionLine(frame, "ghostty")).toBe("  ghostty ✔");
+      expect(optionLine(frame, "7zip")).toBe("  7zip ✔");
+      expect(optionLine(frame, "hunk")).toBe("  hunk ✔");
+    }
+    expect(c).toContain("\x1b[34myazi\x1b[39m");
+    expect(c).toContain("\x1b[32mhunk\x1b[39m");
+    ui.unmount();
+  });
+
+  test("the locked block is inert: its lines stay byte-identical through toggles and navigation", async () => {
+    const ui = render(<App context={fixtureContext} fixedSize={TALL} />);
+    await delay(20);
+    const before = ui.lastFrame() ?? "";
+    const labels = [
+      "Zinit/Zsh setup",
+      "Git signing config",
+      "fzf",
+      "git",
+      "tmux",
+      "zsh",
+      "gh",
+    ];
+    for (const label of labels) {
+      expect(lockedLine(before, label)).toBe(`✔ ${label}`);
+    }
+    // Space always acts on the component's focused OPTION (never a locked
+    // row), so pressing it repeatedly and moving around must not disturb the
+    // locked block: it never loses a check, never toggles.
+    await press(ui, " "); // ghostty off (focused default)
+    await press(ui, KEY_DOWN);
+    await press(ui, " ");
+    await press(ui, KEY_DOWN);
+    await press(ui, KEY_DOWN);
+    await press(ui, " ");
+    await press(ui, KEY_UP);
+    await press(ui, KEY_UP);
+    const after = ui.lastFrame() ?? "";
+    for (const label of labels) {
+      expect(lockedLine(after, label)).toBe(`✔ ${label}`);
+    }
+    ui.unmount();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Step 2 component frame — ADR-4 pruned .main options, all unchecked at mount,
+// space toggles, enter submits, multi-target = ONE row; quit frames for both
+// steps keep onSubmit silent (exit-10 zero-writes, ADR-2).
+// ---------------------------------------------------------------------------
+
+const atStep2 = async (ui: Instance) => {
+  await press(ui, KEY_ENTER); // submit step 1 -> mounts step 2
+};
+
+describe("step-2 frame (MultiSelect, ADR-4 pruned links)", () => {
+  test("options are the offered .main links only: agents / open-code / unselected areas absent", async () => {
+    const ui = render(<App context={fixtureContext} fixedSize={TALL} />);
+    await delay(20);
+    await atStep2(ui);
+    const frame = ui.lastFrame() ?? "";
+    const text = stripAnsi(frame);
+    expect(text).toContain("step 2/2");
+    expect(text).toContain(
+      "↑/↓ navigate · space toggle · enter apply · q quit",
+    );
+    for (const label of ["zsh", "ghostty (2 targets)", "hunk", "lazygit"]) {
+      expect(text).toContain(label);
+    }
+    expect(text).not.toContain("opencode");
+    expect(text).not.toContain("agents");
+    expect(text).not.toContain("opt-in AI agents");
+    ui.unmount();
+  });
+
+  test("every link row starts unchecked at mount; the focused row is the blue target", async () => {
+    const ui = render(<App context={fixtureContext} fixedSize={TALL} />);
+    await delay(20);
+    await atStep2(ui);
+    const frame = ui.lastFrame() ?? "";
+    // First option (zsh) is focused -> blue label, NO green anywhere: all rows
+    // start unchecked (defaultValue = []).
+    expect(frame).toContain("\x1b[34mzsh\x1b[39m");
+    expect(frame).not.toContain("\x1b[32m");
+    ui.unmount();
+  });
+
+  test("space toggles a link row; enter submits the checked set; multi-target name is ONE row", async () => {
     let submitted: TuiState | null = null;
     const ui = render(
       <App
@@ -778,46 +763,174 @@ describe("frame: two-step flow", () => {
       />,
     );
     await delay(20);
-    await press(ui, KEY_ENTER); // step 2
-    await press(ui, KEY_DOWN); // cursor -> ghostty
-    await press(ui, " ");
+    await atStep2(ui);
+    await press(ui, KEY_DOWN); // ghostty focused
+    await press(ui, " "); // ghostty checked
+    await press(ui, KEY_DOWN); // hunk focused; ghostty unfocused+selected
+    const frame = ui.lastFrame() ?? "";
+    expect(frame).toContain("\x1b[32mghostty (2 targets)\x1b[39m");
+    expect(frame).not.toContain("\x1b[32mhunk\x1b[39m");
     await press(ui, KEY_ENTER);
     await delay(30);
     expect(submitted).not.toBeNull();
-    expect(submitted!.checked["ghostty"]).toBe(true);
+    expect(submitted!.checked).toEqual({ ghostty: true });
+    expect(submitted!.submitted).toBe(true);
+    expect(submitted!.step).toBe(2);
     ui.unmount();
   });
 
-  test("q quits from step 1 without submitting", async () => {
-    let submitted = false;
-    const ui = render(
-      <App
-        context={fixtureContext}
-        fixedSize={TALL}
-        onSubmit={() => (submitted = true)}
-      />,
-    );
+  test("multi-target ghostty renders as ONE 'ghostty (2 targets)' row, value = name", async () => {
+    const ui = render(<App context={fixtureContext} fixedSize={TALL} />);
     await delay(20);
-    await press(ui, "q");
-    await delay(30);
-    expect(submitted).toBe(false);
+    await atStep2(ui);
+    const frame = ui.lastFrame() ?? "";
+    expect(stripAnsi(frame).match(/ghostty \(2 targets\)/g)).toHaveLength(1);
+    expect(stripAnsi(frame)).not.toContain("ghostty.conf");
     ui.unmount();
   });
 
-  test("q quits from step 2 without submitting", async () => {
-    let submitted = false;
+  test("enter on an empty step-2 list still confirms with checked = {} (ADR-5)", async () => {
+    let submitted: TuiState | null = null;
     const ui = render(
       <App
-        context={fixtureContext}
+        context={emptyLinksContext}
         fixedSize={TALL}
-        onSubmit={() => (submitted = true)}
+        onSubmit={(s) => {
+          submitted = s;
+        }}
       />,
     );
     await delay(20);
+    await atStep2(ui);
+    // Zero options: no link rows render, only the header + hint lines.
+    const frame = ui.lastFrame() ?? "";
+    expect(stripAnsi(frame)).toContain("step 2/2");
+    expect(optionLine(frame, "zsh")).toBeNull();
     await press(ui, KEY_ENTER);
+    await delay(30);
+    expect(submitted).not.toBeNull();
+    expect(submitted!.checked).toEqual({});
+    expect(submitted!.submitted).toBe(true);
+    ui.unmount();
+  });
+});
+
+describe("frame: quit before confirm submits nothing (exit-10 zero-writes)", () => {
+  const renderWithSpy = () => {
+    let submitted = false;
+    const ui = render(
+      <App
+        context={fixtureContext}
+        fixedSize={TALL}
+        onSubmit={() => (submitted = true)}
+      />,
+    );
+    return { ui, submitted: () => submitted };
+  };
+
+  test("q at step 1 quits without submitting", async () => {
+    const { ui, submitted } = renderWithSpy();
+    await delay(20);
     await press(ui, "q");
     await delay(30);
-    expect(submitted).toBe(false);
+    expect(submitted()).toBe(false);
+    ui.unmount();
+  });
+
+  test("q at step 2 (after step-1 submit, before confirm) quits without submitting", async () => {
+    const { ui, submitted } = renderWithSpy();
+    await delay(20);
+    await atStep2(ui);
+    await press(ui, "q");
+    await delay(30);
+    expect(submitted()).toBe(false);
+    ui.unmount();
+  });
+
+  test("ctrl+c at step 1 quits without submitting", async () => {
+    const { ui, submitted } = renderWithSpy();
+    await delay(20);
+    await press(ui, KEY_CTRL_C);
+    await delay(30);
+    expect(submitted()).toBe(false);
+    ui.unmount();
+  });
+
+  test("ctrl+c at step 2 quits without submitting", async () => {
+    const { ui, submitted } = renderWithSpy();
+    await delay(20);
+    await atStep2(ui);
+    await press(ui, KEY_CTRL_C);
+    await delay(30);
+    expect(submitted()).toBe(false);
+    ui.unmount();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// TRIANGULATE (task 2.4) — full-flow submitted state: locked reinsertion,
+// default/installed survive the adapter, quit paths leave no bridge to apply.
+// ---------------------------------------------------------------------------
+
+describe("two-step flow: adapted selection feeds the apply pipeline", () => {
+  test("submitted state carries locked/pseudo ids true and the user's toggles", async () => {
+    let submitted: TuiState | null = null;
+    const ui = render(
+      <App
+        context={fixtureContext}
+        fixedSize={TALL}
+        onSubmit={(s) => {
+          submitted = s;
+        }}
+      />,
+    );
+    await delay(20);
+    // Uncheck lazygit (a former default) at step 1.
+    await press(ui, KEY_DOWN); // 7zip
+    await press(ui, KEY_DOWN); // lazygit
+    await press(ui, " "); // lazygit off
+    await atStep2(ui);
+    await press(ui, KEY_ENTER); // confirm step 2 (nothing checked)
+    await delay(30);
+    expect(submitted).not.toBeNull();
+    const sel = submitted!.selected;
+    for (const id of [
+      "zsh-setup",
+      "git-signing",
+      "zsh",
+      "fzf",
+      "git",
+      "gh",
+      "tmux",
+    ]) {
+      expect(sel[id]).toBe(true);
+    }
+    expect(sel["ghostty"]).toBe(true); // pre-checked default kept
+    expect(sel["7zip"]).toBe(true); // installed:true pre-checked
+    expect(sel["lazygit"]).toBe(false); // user removed the former default
+    expect(sel["opencode"]).toBe(false);
+    expect(submitted!.checked).toEqual({});
+    expect(submitted!.submitted).toBe(true);
+    ui.unmount();
+  });
+
+  test("quit between step-1 submit and step-2 mount keeps onSubmit silent (exit 10, zero writes)", async () => {
+    const { ui, submitted } = (() => {
+      let submitted = false;
+      const ui = render(
+        <App
+          context={fixtureContext}
+          fixedSize={TALL}
+          onSubmit={() => (submitted = true)}
+        />,
+      );
+      return { ui, submitted: () => submitted };
+    })();
+    await delay(20);
+    await atStep2(ui); // step 2 mounted (step-1 selection already adapted)
+    await press(ui, "q");
+    await delay(30);
+    expect(submitted()).toBe(false);
     ui.unmount();
   });
 });

@@ -101,7 +101,7 @@ stripAnsi for words, color-close/label assertions never bare `\x1b[0m`,
 `afterEach(cleanup)`, `fixedSize` 100×60). Keep `initialState` (trimmed shape),
 `linkRowsForStep`, `stepTwoRows` and their surviving tests.
 
-### 2.1 RED — Step-1 frame tests + initialState trim
+- [x] 2.1 RED — Step-1 frame tests + initialState trim <!-- sdd-owner: implementation -->
 
 Rework step-1 describes in `tui.test.tsx`: locked block stays byte-identical after
 pressing space (never loses its check, never toggles); former baseline defaults
@@ -113,9 +113,9 @@ and leaves sibling rows' labels byte-identical. Trim the `initialState` describe
 `reducer toggling` describes (removed-block references). Acceptance: delta spec
 "Frame tests assert the component contract" scenario + "Locked row cannot be
 deselected" / "Old baseline extras are pre-checked but removable"; suite RED against
-the current string App. <!-- sdd-owner: implementation -->
+the current string App.
 
-### 2.2 RED — Step-2 frame tests + quit/exit-10 frames
+- [x] 2.2 RED — Step-2 frame tests + quit/exit-10 frames <!-- sdd-owner: implementation -->
 
 Rework step-2 describes: options are `offeredLinks(...).main` only (assert
 agents/`open-code`/unselected-area names absent — ADR-4), all unchecked at mount,
@@ -126,9 +126,9 @@ null/unsubmitted → 10 in `main.test.ts`, which survives untouched, plus the
 applyConfirmed dry-run zero-write proof). Delete `linkView`, `toggleLink`, and
 `mapInkKey` describes (removed-block references). Acceptance: delta spec "Quit at the
 link step" (exit 10, zero writes) + "Space toggles and enter submits" + "Link list
-follows tool selection"; suite RED against current App. <!-- sdd-owner: implementation -->
+follows tool selection"; suite RED against current App.
 
-### 2.3 GREEN — App rewrite on MultiSelect
+- [x] 2.3 GREEN — App rewrite on MultiSelect <!-- sdd-owner: implementation -->
 
 Rewrite `App` in `tools/tui/src/tui.tsx`: slim `TuiState` to
 `{ step, selected, checked, submitted }`; render an inert always-checked `LockedBlock`
@@ -147,9 +147,9 @@ fires `onSubmit([])` → `checked = {}` (ADR-5). Delete `Action`/`reducer`/`redu
 Keep `initialState` (trimmed), `linkRowsForStep`, `stepTwoRows`, `AppProps`, the
 submitted → `onSubmit(state)` + `exit()` effect. Acceptance: delta spec "Per-tool
 toggleable rows" / "Component-filtered config-link step" / "Adapted selection feeds
-the apply pipeline" scenarios; `bun test` green. <!-- sdd-owner: implementation -->
+the apply pipeline" scenarios; `bun test` green.
 
-### 2.4 TRIANGULATE — Corner cases
+- [x] 2.4 TRIANGULATE — Corner cases <!-- sdd-owner: implementation -->
 
 Confirm/complete edge coverage: space on step-1 locked block leaves it byte-identical
 and locked ids are still `true` in `selected` at submit (adapter reinsertion);
@@ -157,16 +157,16 @@ empty step-2 options → enter confirms with `checked = {}` and `applyConfirmed`
 it (ADR-5 + "Nothing selected means nothing offered"); quit between step-1 submit and
 step-2 mount → exit 10 (quit handler mounted throughout); `ctrl+c` during apply stays a
 real SIGINT → exit 1 distinction preserved. Acceptance: design §6.2 scenario-coverage
-map complete; no regression in `roundExitCode` contract tests. <!-- sdd-owner: implementation -->
+map complete; no regression in `roundExitCode` contract tests.
 
-### 2.5 REFACTOR + verify — PR 2 gate
+- [x] 2.5 REFACTOR + verify — PR 2 gate <!-- sdd-owner: implementation -->
 
 Prettier-clean both files; confirm untouched surfaces: `manifest.ts` helpers,
 `install/manifest.sh`, `apply.tsx`, apply phase, headless `-apply -profile`; run
 `cd tools/tui && bun test` + `tsc --noEmit -p tools/tui`. Acceptance: PR 2
 self-contained and green with v4 markers still in place (marker bump is PR 3);
 `offeredLinks` still returns `agents` (manifest untouched) while step-2 options stay
-pruned (ADR-4). <!-- sdd-owner: implementation -->
+pruned (ADR-4).
 
 ## Phase 3 — TUI_VERSION v4 → v5, rebuild, final gates (PR 3)
 
