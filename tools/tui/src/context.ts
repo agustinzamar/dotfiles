@@ -4,21 +4,21 @@
 // or malformed file is a fatal, loud error.
 import { readFile } from "node:fs/promises";
 
-    export interface ContextPackage {
-      id: string;
-      /** Simple display name (tap-qualified rows collapse to the bare tool name). */
-      label?: string;
-      topic: string;
-      /** Display category override for the selector grouping (v1 additive). */
-      category?: string;
-      kind: "brew" | "cask" | "tap" | "topic";
-      area: string;
-      locked: boolean;
-      default: boolean;
-      /** Pre-check signal from `brew list` at emit time (v1 additive field;
-       *  absent on older context files means not pre-checked). */
-      installed?: boolean;
-    }
+export interface ContextPackage {
+  id: string;
+  /** Simple display name (tap-qualified rows collapse to the bare tool name). */
+  label?: string;
+  topic: string;
+  /** Display category override for the selector grouping (v1 additive). */
+  category?: string;
+  kind: "brew" | "cask" | "tap" | "topic";
+  area: string;
+  locked: boolean;
+  default: boolean;
+  /** Pre-check signal from `brew list` at emit time (v1 additive field;
+   *  absent on older context files means not pre-checked). */
+  installed?: boolean;
+}
 
 export interface LinkRow {
   source: string;
@@ -41,7 +41,10 @@ export interface InstallContext {
   links: ContextLink[];
 }
 
-function requireObject(value: unknown, what: string): asserts value is Record<string, unknown> {
+function requireObject(
+  value: unknown,
+  what: string,
+): asserts value is Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error(`invalid context: ${what} is required`);
   }

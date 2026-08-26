@@ -60,8 +60,16 @@ const validContext: InstallContext = {
       component: "terminal",
       requirement: "",
       rows: [
-        { source: "config/ghostty/config", target: "~/.config/ghostty/config", mode: "" },
-        { source: "config/ghostty/config", target: "~/Library/ghostty.conf", mode: "" },
+        {
+          source: "config/ghostty/config",
+          target: "~/.config/ghostty/config",
+          mode: "",
+        },
+        {
+          source: "config/ghostty/config",
+          target: "~/Library/ghostty.conf",
+          mode: "",
+        },
       ],
     },
     {
@@ -69,7 +77,9 @@ const validContext: InstallContext = {
       optional: true,
       component: "ai",
       requirement: "",
-      rows: [{ source: "ai/AGENTS.md", target: "~/.claude/CLAUDE.md", mode: "" }],
+      rows: [
+        { source: "ai/AGENTS.md", target: "~/.claude/CLAUDE.md", mode: "" },
+      ],
     },
   ],
 };
@@ -150,17 +160,38 @@ describe("rejecting malformed package rows", () => {
   test("a package row without an id is rejected", async () => {
     const target = await writeContext({
       ...validContext,
-      packages: [{ topic: "core", kind: "brew", area: "shell", locked: false, default: false }],
+      packages: [
+        {
+          topic: "core",
+          kind: "brew",
+          area: "shell",
+          locked: false,
+          default: false,
+        },
+      ],
     });
-    expect(loadContext(target)).rejects.toThrow(/invalid context: malformed packages row/);
+    expect(loadContext(target)).rejects.toThrow(
+      /invalid context: malformed packages row/,
+    );
   });
 
   test("a package row with a non-string area is rejected", async () => {
     const target = await writeContext({
       ...validContext,
-      packages: [{ id: "x", topic: "core", kind: "brew", area: 7, locked: false, default: false }],
+      packages: [
+        {
+          id: "x",
+          topic: "core",
+          kind: "brew",
+          area: 7,
+          locked: false,
+          default: false,
+        },
+      ],
     });
-    expect(loadContext(target)).rejects.toThrow(/invalid context: malformed packages row/);
+    expect(loadContext(target)).rejects.toThrow(
+      /invalid context: malformed packages row/,
+    );
   });
 });
 
@@ -179,17 +210,27 @@ describe("rejecting malformed link rows", () => {
         { optional: false, component: "terminal", requirement: "", rows: [] },
       ],
     });
-    expect(loadContext(target)).rejects.toThrow(/invalid context: malformed links row/);
+    expect(loadContext(target)).rejects.toThrow(
+      /invalid context: malformed links row/,
+    );
   });
 
   test("a link row whose rows are not an array is rejected", async () => {
     const target = await writeContext({
       ...validContext,
       links: [
-        { name: "ghostty", optional: false, component: "terminal", requirement: "", rows: {} },
+        {
+          name: "ghostty",
+          optional: false,
+          component: "terminal",
+          requirement: "",
+          rows: {},
+        },
       ],
     });
-    expect(loadContext(target)).rejects.toThrow(/invalid context: malformed links row/);
+    expect(loadContext(target)).rejects.toThrow(
+      /invalid context: malformed links row/,
+    );
   });
 
   test("a row without a source is rejected", async () => {
@@ -205,7 +246,9 @@ describe("rejecting malformed link rows", () => {
         },
       ],
     });
-    expect(loadContext(target)).rejects.toThrow(/invalid context: malformed links row/);
+    expect(loadContext(target)).rejects.toThrow(
+      /invalid context: malformed links row/,
+    );
   });
 });
 
