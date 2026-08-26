@@ -312,3 +312,49 @@ and the System/Editors category assertions.
 | `cd tools/tui && bun test` | 134 pass / 0 fail |
 | `tsc --noEmit -p tools/tui` | clean |
 | `bin/dot-tui --version` | `dot-tui-context-v3` |
+
+## Work unit 9 — ink-ui components (ADR-2 relaxation: pure views render via components)
+
+**Status: COMPLETE** · Branch: `feat/ink-ui-components` (off `main` @ `ae413a1`) · Executor: delegated implementation · Commit: see branch (do NOT push/merge — owner reviews)
+
+Owner request: adopt vadimdemedes/ink-ui (`@inkjs/ui@2.0.0`, peer ink ≥5 — runs on installed ink 6.8 / react 19.2) and replace the hand-built text widgets where the component contract preserves the pinned behavior exactly.
+
+### Adopted — apply phase (interactive only, main.ts + new src/apply.tsx)
+
+- New `src/apply.tsx`: `ApplyScreen` renders `@inkjs/ui` **Spinner** (running step label), **ProgressBar** (steps done/total, clamped 0–100), **StatusMessage** per finished step (`success` ✓ / `error` ✖ / `warning` ⚠ variants on ink's theme icons + colors), and a final **Badge** (`Done` green / `Failed` red) whose commit triggers `useApp().exit()` — ink's unmount keeps the final frame visible (`log.done()`), so the summary stays on screen.
+- `ApplyUiBridge`: the async `applyConfirmed` pipeline feeds the tree through a typed `ApplyUi` seam (`progress/result/error/finished`); events arriving before mount are queued and flushed on registration. `applyConfirmed` keeps its ONE logic path: with `ui` present it routes progress/results/summaries to the tree, without it output stays on the plain 🔧/✅/❌ console lines.
+- `runInteractive` mounts the screen only for a real apply; **dry-run keeps plain console plan lines** (no UI mounts) and headless `-apply -profile` never mounts a UI — the spec's no-UI-mount contract holds untouched.
+- **SIGINT safety (verified in ink 6.8 source)**: ink enables stdin raw mode ONLY while a `useInput` hook is mounted; `ApplyScreen` registers none, so ctrl+c stays a real signal and `applyConfirmedLive`'s abort handler (loud completed-vs-pending summary → `EXIT_ERROR`) keeps working. `signal-exit`'s re-raise is suppressed too (it only fires when its listener is the sole SIGINT listener; applyConfirmedLive's handler is always registered during apply).
+- `TUI_VERSION` bumped `dot-tui-context-v3` → `-v4` in `main.ts` (renders differently now) and matched in `bin/dot`'s resolver check + `test/tui-resolver.bats` stub fixtures. The `main.test.ts` unit pin follows (keeps `bun test` green — the 4th, test-side mirror of the runtime trio). Binary rebuilt: `bin/dot-tui --version` → `dot-tui-context-v4`.
+
+### NOT adopted — step-1 selector stays custom (hard requirement)
+
+**`MultiSelect` cannot preserve the pinned contract**, so per the owner's fallback the custom selector (+ linkage in the reducer) stays byte-identical. Evidence from the installed package + docs: `MultiSelect` is a flat, UNCONTROLLED list (`options: {label, value, isDisabled?}[]`, `defaultValue`, `onChange`/`onSubmit` arrays); it renders no `[Category]` group headers, has no locked-block semantics beyond per-option `isDisabled` (which would change the locked rows' render and cursor behavior), and owns its selection state internally — it cannot be driven by the existing byte-identical reducer/key contract (space toggles the row, locked rows ignore space, enter advances, q quits, up/down navigate). `ConfirmInput` was also NOT added before step-2 apply: enter-to-confirm already IS the confirmation, and inserting a prompt would alter the pinned key contract and the spec's "apply immediately when the user confirms" reading.
+
+### Frame-test guidance baked in
+
+Ink normalizes a bare `\x1b[0m` into attribute-specific closes (`\x1b[39m` colors, `\x1b[22m` bold/dim, `\x1b[27m` reverse), so the new `apply.test.tsx` asserts rendered closes: red error icon `\x1b[31m`/`\x1b[39m`, dim step output `\x1b[2m`/`\x1b[22m`, green Done badge `\x1b[32m`/`\x1b[39m`, and `not.toContain("\x1b[0m")`. The bun test worker disables color detection, so `chalk.level = 1` is set at the top of the file to force real codes (chalk never emits a bare reset).
+
+### Test evidence (RED → GREEN)
+
+- RED: `apply.test.tsx` (new, 13 tests) — module missing, frames lacked rendered closes at default chalk level; `main.test.ts` ui-seam describe (4 tests) failed on missing `ui` option + wrong planned-step counts; v4 pin failed vs v3 const; resolver bats 1/5/7 failed when `bin/dot` was bumped before the stubs.
+- GREEN: `src/apply.tsx` + main.ts wiring; all 149 bun tests pass; `bats test/` 86/86.
+- TRIANGULATE: reducer finish is terminal (late events inert); dry-run ignores the ui seam; failure/interruption events flow (`result:failed`, `error:❌ Interrupted…`) with `finished:false`; ProgressBar % clamped; `\x1b[0m` never emitted.
+
+### Gate evidence (green)
+
+| Gate | Result |
+| --- | --- |
+| `make check` | clean (bash -n + tsc --noEmit) |
+| `make lint` | clean (shellcheck -x + shfmt -d; pre-existing install/manifest.sh 2-space quirk flattened with shfmt -w before gating) |
+| `bats test/` | 86 pass / 0 fail |
+| `cd tools/tui && bun test` | 149 pass / 0 fail (was 134; +13 apply +2 net main: -0/+15) |
+| `tsc --noEmit -p tools/tui` | clean |
+| `bin/dot-tui --version` | `dot-tui-context-v4` |
+
+### Notes for next work units
+
+- Dep budget held: only `@inkjs/ui@^2.0.0` added (+ its transitive chalk/cli-spinners/deepmerge/figures via bun.lock).
+- The apply UI is interactive-only by design; if the owner later wants the headless path styled too, the `ui` seam is the seam — pass a UI render only when stdout is a TTY, never by default (spec: headless MUST NOT mount a UI).
+- Uncommitted pre-existing working-tree formatting changes in `tools/tui/src/tui.tsx` + `tools/tui/src/manifest.test.ts` were preserved untouched and are NOT part of this branch's commits.
+    
