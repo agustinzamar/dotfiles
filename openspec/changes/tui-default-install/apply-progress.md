@@ -243,3 +243,24 @@ fix (`fzf` orphaned, `unar` duplicated) and pass after.
 | `bats test/` (full) | 86 pass / 0 fail |
 | `cd tools/tui && bun test` | 136 pass / 0 fail |
 | Live render probe (real context → `toolRowsGrouped`) | every category Title-Cased, no repeats, no duplicates |
+
+## Work unit 7 — tmux unlocked + TUI_VERSION v2 (stale-binary rebuild)
+
+**Status: COMPLETE** · Branch: `feat/tui-default-install-pr5` · Executor: parent inline
+
+Owner re-reported pre-fix symptoms (2x Monitoring/Filesystem/Text, Git tools split,
+aerospace/linearmouse alone, bare tap ids) after all data-side fixes were already
+committed. Root cause was NOT data: the compiled `bin/dot-tui` on disk predated the
+fixes, and `dot_runtime_path` only rebuilds when `--version` output differs from the
+hardcoded marker — which no source change had bumped.
+
+- `tmux` removed from `manifest_is_locked` (real preference, not forced); now a
+  `manifest_is_default` member (pre-checked, toggleable) like lazygit/hunk/yazi.
+  bats locked/defaults test updated (RED before, GREEN after).
+- `TUI_VERSION` bumped `dot-tui-context-v1` → `-v2` in `main.ts` (with a comment
+  pinning the 3-place sync contract) and matched in `bin/dot`'s resolver check and
+  `test/tui-resolver.bats` fixtures; unit test pins v2.
+- Noted: the owner's editor reformats `install/manifest.sh` case-bodies to 2-space,
+  which shfmt rejects — re-ran `shfmt -w` before gating.
+- Rebuilt binary (`make build-tui`): `bin/dot-tui --version` → `dot-tui-context-v2`.
+  Gate green: bats 86/86, bun 136/136, check/lint clean.

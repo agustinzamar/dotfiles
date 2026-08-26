@@ -161,10 +161,12 @@ EOF
   ctx="$(mktemp)"
   install_context_json "$ctx"
   json="$(cat "$ctx")"
-  for id in fzf git gh tmux; do
+  for id in fzf git gh; do
     [ "$(jq -r --arg id "$id" '[.packages[] | select(.id == $id)][0].locked' <<<"$json")" == "true" ]
   done
-  for id in lazygit hunk yazi neovim ghostty; do
+  # tmux is a real preference (some people don't want a multiplexer forced on)
+  # -- pre-checked like the other former-baseline tools, but toggleable.
+  for id in lazygit hunk yazi neovim ghostty tmux; do
     [ "$(jq -r --arg id "$id" '[.packages[] | select(.id == $id)][0].default' <<<"$json")" == "true" ]
     [ "$(jq -r --arg id "$id" '[.packages[] | select(.id == $id)][0].locked' <<<"$json")" == "false" ]
   done

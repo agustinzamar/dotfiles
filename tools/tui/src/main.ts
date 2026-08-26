@@ -468,7 +468,13 @@ export async function runInteractive(
 // prints exactly this. Any stale or foreign binary (e.g. one built before the
 // context-delta) fails the check and gets rebuilt from src, so a checked-out
 // repo can never silently run an outdated installer UI.
-export const TUI_VERSION = "dot-tui-context-v1";
+// Bump whenever a source change affects what the compiled binary renders or
+// how it behaves (selector layout, category taxonomy, locked/default rows,
+// flag parsing, ...). bin/dot's resolver treats a mismatched/missing marker
+// as a stale binary and rebuilds from source instead of trusting stale disk
+// state; a version bump is a NO-OP without ALSO bumping bin/dot's own check
+// and the test/tui-resolver.bats fixtures that assert against it.
+export const TUI_VERSION = "dot-tui-context-v2";
 
 if (import.meta.main) {
   const raw = process.argv.slice(2);
