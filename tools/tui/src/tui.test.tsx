@@ -8,6 +8,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { cleanup, render } from "ink-testing-library";
 import type { InstallContext } from "./context";
+import { toolRowsGrouped } from "./manifest";
 import {
   App,
   stepTwoRows,
@@ -28,66 +29,196 @@ const fixtureContext: InstallContext = {
   version: 1,
   locked: ["base", "shell"],
   packages: [
-    { id: "fzf", topic: "core", kind: "brew", area: "shell", locked: true, default: false },
-    { id: "git", topic: "core", kind: "brew", area: "git", locked: true, default: false },
-    { id: "tmux", topic: "core", kind: "brew", area: "terminal", locked: true, default: false },
-    { id: "ghostty", topic: "core", kind: "cask", area: "terminal", locked: false, default: true },
-    { id: "lazygit", topic: "git", kind: "brew", area: "git", locked: false, default: true },
-    { id: "hunk", topic: "git", kind: "brew", area: "git", locked: false, default: true },
-    { id: "yazi", topic: "file", kind: "brew", area: "terminal", locked: false, default: true },
-    { id: "code", topic: "code", kind: "topic", area: "vscode", locked: false, default: false },
-    { id: "duti-defaults", topic: "duti", kind: "topic", area: "terminal", locked: false, default: false },
-        { id: "opencode", topic: "ai", kind: "brew", area: "ai", locked: false, default: false },
-        // Category/label/installed extensions: an AI tool from a foreign tap
-        // (label collapses to the bare name), a browser grouped under Browsers,
-        // and an installed formula pre-checked via installed:true.
+    {
+      id: "fzf",
+      topic: "core",
+      kind: "brew",
+      area: "shell",
+      locked: true,
+      default: false,
+    },
+    {
+      id: "git",
+      topic: "core",
+      kind: "brew",
+      area: "git",
+      locked: true,
+      default: false,
+    },
+    {
+      id: "tmux",
+      topic: "core",
+      kind: "brew",
+      area: "terminal",
+      locked: true,
+      default: false,
+    },
+    {
+      id: "ghostty",
+      topic: "core",
+      kind: "cask",
+      area: "terminal",
+      locked: false,
+      default: true,
+    },
+    {
+      id: "lazygit",
+      topic: "git",
+      kind: "brew",
+      area: "git",
+      locked: false,
+      default: true,
+    },
+    {
+      id: "hunk",
+      topic: "git",
+      kind: "brew",
+      area: "git",
+      locked: false,
+      default: true,
+    },
+    {
+      id: "yazi",
+      topic: "file",
+      kind: "brew",
+      area: "terminal",
+      locked: false,
+      default: true,
+    },
+    {
+      id: "code",
+      topic: "code",
+      kind: "topic",
+      area: "vscode",
+      locked: false,
+      default: false,
+    },
+    {
+      id: "duti-defaults",
+      topic: "duti",
+      kind: "topic",
+      area: "terminal",
+      locked: false,
+      default: false,
+    },
+    {
+      id: "opencode",
+      topic: "ai",
+      kind: "brew",
+      area: "ai",
+      locked: false,
+      default: false,
+    },
+    // Category/label/installed extensions: an AI tool from a foreign tap
+    // (label collapses to the bare name), a browser grouped under Browsers,
+    // and an installed formula pre-checked via installed:true.
+    {
+      id: "stupside/tap/castor",
+      label: "castor",
+      topic: "media",
+      category: "media",
+      kind: "cask",
+      area: "media",
+      locked: false,
+      default: false,
+    },
+    {
+      id: "brave-browser",
+      topic: "desktop",
+      category: "Browsers",
+      kind: "cask",
+      area: "desktop",
+      locked: false,
+      default: false,
+    },
+    {
+      id: "7zip",
+      topic: "core",
+      kind: "brew",
+      area: "terminal",
+      locked: false,
+      default: false,
+      installed: true,
+    },
+  ],
+  links: [
+    {
+      name: "zsh",
+      optional: false,
+      component: "shell",
+      requirement: "",
+      rows: [{ source: "config/zsh/.zshrc", target: "~/.zshrc", mode: "" }],
+    },
+    {
+      name: "ghostty",
+      optional: false,
+      component: "terminal",
+      requirement: "",
+      rows: [
         {
-          id: "stupside/tap/castor",
-          label: "castor",
-          topic: "media",
-          category: "media",
-          kind: "cask",
-          area: "media",
-          locked: false,
-          default: false,
+          source: "config/ghostty/config",
+          target: "~/.config/ghostty/config",
+          mode: "",
         },
         {
-          id: "brave-browser",
-          topic: "desktop",
-          category: "Browsers",
-          kind: "cask",
-          area: "desktop",
-          locked: false,
-          default: false,
-        },
-        {
-          id: "7zip",
-          topic: "core",
-          kind: "brew",
-          area: "terminal",
-          locked: false,
-          default: false,
-          installed: true,
+          source: "config/ghostty/config",
+          target: "~/Library/ghostty.conf",
+          mode: "",
         },
       ],
-  links: [
-    { name: "zsh", optional: false, component: "shell", requirement: "", rows: [{ source: "config/zsh/.zshrc", target: "~/.zshrc", mode: "" }] },
-    { name: "ghostty", optional: false, component: "terminal", requirement: "", rows: [
-      { source: "config/ghostty/config", target: "~/.config/ghostty/config", mode: "" },
-      { source: "config/ghostty/config", target: "~/Library/ghostty.conf", mode: "" },
-    ] },
-    { name: "hunk", optional: false, component: "git", requirement: "hunk", rows: [{ source: "config/hunk/x", target: "~/.config/hunk/x", mode: "" }] },
-    { name: "lazygit", optional: false, component: "git", requirement: "lazygit", rows: [{ source: "config/lazygit/x", target: "~/.config/lazygit/x", mode: "" }] },
-    { name: "opencode", optional: false, component: "ai", requirement: "", rows: [{ source: "config/opencode/x", target: "~/.config/opencode/x", mode: "" }] },
-    { name: "agents", optional: true, component: "ai", requirement: "", rows: [
-      { source: "ai/AGENTS.md", target: "~/.claude/CLAUDE.md", mode: "" },
-      { source: "ai/AGENTS.md", target: "~/.agents/AGENTS.md", mode: "" },
-    ] },
+    },
+    {
+      name: "hunk",
+      optional: false,
+      component: "git",
+      requirement: "hunk",
+      rows: [{ source: "config/hunk/x", target: "~/.config/hunk/x", mode: "" }],
+    },
+    {
+      name: "lazygit",
+      optional: false,
+      component: "git",
+      requirement: "lazygit",
+      rows: [
+        { source: "config/lazygit/x", target: "~/.config/lazygit/x", mode: "" },
+      ],
+    },
+    {
+      name: "opencode",
+      optional: false,
+      component: "ai",
+      requirement: "",
+      rows: [
+        {
+          source: "config/opencode/x",
+          target: "~/.config/opencode/x",
+          mode: "",
+        },
+      ],
+    },
+    {
+      name: "agents",
+      optional: true,
+      component: "ai",
+      requirement: "",
+      rows: [
+        { source: "ai/AGENTS.md", target: "~/.claude/CLAUDE.md", mode: "" },
+        { source: "ai/AGENTS.md", target: "~/.agents/AGENTS.md", mode: "" },
+      ],
+    },
   ],
 };
 
-const key = (name: string, text?: string) => ({ type: "key" as const, key: name, text });
-const resize = (width: number, height: number) => ({ type: "resize" as const, width, height });
+const key = (name: string, text?: string) => ({
+  type: "key" as const,
+  key: name,
+  text,
+});
+const resize = (width: number, height: number) => ({
+  type: "resize" as const,
+  width,
+  height,
+});
 
 const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -105,13 +236,14 @@ const TALL = { width: 100, height: 60 };
 
 // Flat step-1 row order: pseudo-steps first, then locked rows, then toggleable
 // rows in context order (topic grouping is a view concern, not row order).
+// Delegates to the real production row order (toolRowsGrouped) instead of a
+// hand-rolled mirror: a hand-rolled copy silently drifted out of sync once
+// before (reduceKey moved to the grouped order, this helper did not), so the
+// source of truth is the function under test, never a duplicate of it.
 export function rowIndex(id: string): number {
-  const pseudo = [{ id: "zsh-setup" }, { id: "git-signing" }];
-  // Mirror toolRows: locked rows first, then toggleable rows in context order,
-  // step-2 extras (kind topic) excluded entirely.
-  const locked = fixtureContext.packages.filter((p) => p.locked);
-  const toggle = fixtureContext.packages.filter((p) => !p.locked && p.kind !== "topic");
-  return [...pseudo, ...locked, ...toggle].map((r) => r.id).indexOf(id);
+  return toolRowsGrouped(fixtureContext)
+    .map((r) => r.id)
+    .indexOf(id);
 }
 
 afterEach(() => {
@@ -163,12 +295,25 @@ describe("toolView (step 1)", () => {
 
   test("topic groups render from categories; code/duti stay OUT of step 1", () => {
     const view = toolView(initialState(fixtureContext), fixtureContext);
-    for (const group of ["[core]", "[git]", "[file]", "[ai]", "[media]", "[Browsers]"]) {
+    for (const group of [
+      "[core]",
+      "[git]",
+      "[file]",
+      "[ai]",
+      "[media]",
+      "[Browsers]",
+    ]) {
       expect(view).toContain(group);
     }
     // Step-2 extras never appear in the tool selector.
     expect(view).not.toContain("[ ] code");
     expect(view).not.toContain("[ ] duti-defaults");
+  });
+
+  test("a category header never repeats, even when its rows are non-contiguous in context order (7zip is topic 'core', declared after Browsers)", () => {
+    const view = toolView(initialState(fixtureContext), fixtureContext);
+    const coreOccurrences = view.split("[core]").length - 1;
+    expect(coreOccurrences).toBe(1);
   });
 
   test("default rows start checked; unselected rows show empty marks", () => {
@@ -244,7 +389,11 @@ describe("reducer toggling (step 1)", () => {
   });
 
   test("resize records dimensions", () => {
-    const state = reducer(initialState(fixtureContext), resize(80, 24), fixtureContext);
+    const state = reducer(
+      initialState(fixtureContext),
+      resize(80, 24),
+      fixtureContext,
+    );
     expect(state.width).toBe(80);
     expect(state.height).toBe(24);
   });
@@ -291,7 +440,11 @@ describe("toggleLink (step 2)", () => {
   test("step-2 space routes through toggleLink on the cursor row", () => {
     // Step-2 row order: main list first (zsh, ghostty, hunk, lazygit), then
     // agents (agents). Cursor 1 = ghostty.
-    let state: TuiState = { ...initialState(fixtureContext), step: 2, cursor: 1 };
+    let state: TuiState = {
+      ...initialState(fixtureContext),
+      step: 2,
+      cursor: 1,
+    };
     state = reducer(state, key("space"), fixtureContext);
     expect(state.checked["ghostty"]).toBe(true);
     expect(state.checked).not.toHaveProperty("zsh");
@@ -327,7 +480,10 @@ describe("step-2 extras (code/duti-defaults)", () => {
     expect(view).toContain("duti-defaults");
     expect(view).not.toContain("code");
     // Pick VS Code instead: only the extensions row appears.
-    view = linkView(at2({ selected: { "visual-studio-code": true } }), fixtureContext);
+    view = linkView(
+      at2({ selected: { "visual-studio-code": true } }),
+      fixtureContext,
+    );
     expect(view).toContain("code");
     expect(view).not.toContain("duti-defaults");
   });
@@ -441,7 +597,11 @@ describe("frame: two-step flow", () => {
   test("q quits from step 1 without submitting", async () => {
     let submitted = false;
     const ui = render(
-      <App context={fixtureContext} fixedSize={TALL} onSubmit={() => (submitted = true)} />,
+      <App
+        context={fixtureContext}
+        fixedSize={TALL}
+        onSubmit={() => (submitted = true)}
+      />,
     );
     await delay(20);
     await press(ui, "q");
@@ -453,7 +613,11 @@ describe("frame: two-step flow", () => {
   test("q quits from step 2 without submitting", async () => {
     let submitted = false;
     const ui = render(
-      <App context={fixtureContext} fixedSize={TALL} onSubmit={() => (submitted = true)} />,
+      <App
+        context={fixtureContext}
+        fixedSize={TALL}
+        onSubmit={() => (submitted = true)}
+      />,
     );
     await delay(20);
     await press(ui, KEY_ENTER);

@@ -16,6 +16,7 @@ import {
   LOCKED_PSEUDO_STEPS,
   offeredLinks,
   selectedPackages,
+  withRequiredTaps,
 } from "./manifest";
 import {
   brewCommandFor,
@@ -170,10 +171,14 @@ export async function applyConfirmed(
       else console.log(line);
     });
 
-  const selectedIds = new Set(
+  const confirmedIds = new Set(
     Object.keys(selection.selected).filter((id) => selection.selected[id]),
   );
-  const areas = activeProfileAreas(context, selectedIds);
+  // Tap rows are never step-1 rows (manifest.ts toolRows), so `confirmedIds`
+  // never contains one directly; withRequiredTaps adds a topic's tap
+  // whenever any sibling formula/cask from that same topic was confirmed.
+  const selectedIds = withRequiredTaps(context, confirmedIds);
+  const areas = activeProfileAreas(context, confirmedIds);
   const packages = selectedPackages(context, selectedIds);
 
   const brewSteps: ApplyStep[] = [];

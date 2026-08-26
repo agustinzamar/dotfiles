@@ -5,11 +5,7 @@
 // TUI consumes context packages exclusively. This module keeps only pure
 // planning/metadata helpers: selector row shaping, the link filter rule, and
 // profile-area derivation.
-import type {
-  ContextLink,
-  ContextPackage,
-  InstallContext,
-} from "./context";
+import type { ContextLink, ContextPackage, InstallContext } from "./context";
 
 /** Locked informational rows rendered at the top of the selector. They always
  *  run at apply time, mapped onto bin/dot's sub_zsh / sub_git. */
@@ -19,8 +15,18 @@ export const LOCKED_PSEUDO_STEPS: Array<{
   area: string;
   command: string;
 }> = [
-  { id: "zsh-setup", label: "Zinit/Zsh setup", area: "shell", command: "dot zsh" },
-  { id: "git-signing", label: "Git signing config", area: "git", command: "dot git" },
+  {
+    id: "zsh-setup",
+    label: "Zinit/Zsh setup",
+    area: "shell",
+    command: "dot zsh",
+  },
+  {
+    id: "git-signing",
+    label: "Git signing config",
+    area: "git",
+    command: "dot git",
+  },
 ];
 
 export interface ToolRow {
@@ -64,8 +70,11 @@ export function toolRows(context: InstallContext): ToolRow[] {
   for (const p of context.packages) {
     // kind "topic" rows (code extensions / duti defaults) never render in
     // step 1: the user picks vscode/duti there and code/duti-defaults are
-    // offered as gated extra rows in step 2.
-    if (p.kind === "topic") continue;
+    // offered as gated extra rows in step 2. kind "tap" rows are never
+    // directly toggleable either: a user picks a TOOL (yabai, sketchybar),
+    // never "enable this Homebrew tap" — withRequiredTaps() below adds the
+    // tap install automatically whenever a sibling formula is selected.
+    if (p.kind === "topic" || p.kind === "tap") continue;
     rows.push({
       id: p.id,
       label: p.label ?? p.id,
@@ -101,6 +110,15 @@ export function toolGroups(context: InstallContext): Array<{
   return groups;
 }
 
+/** Flat row order for rendering/navigation: every same-category row is
+ *  guaranteed contiguous (unlike raw `toolRows`, whose order follows the
+ *  context/topic-file order and can interleave categories). `toolView` and
+ *  `reduceKey` both index into this SAME order, so the displayed cursor
+ *  position and the interacted-with row never drift apart. */
+export function toolRowsGrouped(context: InstallContext): ToolRow[] {
+  return toolGroups(context).flatMap((group) => group.rows);
+}
+
 /**
  * ADR-3 link-filter rule (requirement-first). A link is offered iff:
  *  1. requirement != "" -> the package row with id == requirement is a
@@ -131,7 +149,8 @@ export function offeredLinks(
       );
     }
     const active =
-      context.locked.includes(link.component) || selectedAreas.has(link.component);
+      context.locked.includes(link.component) ||
+      selectedAreas.has(link.component);
     return active;
   });
   const agents = context.links.filter((link) => link.optional);
@@ -170,4 +189,30 @@ export function selectedPackages(
   selected: ReadonlySet<string>,
 ): ContextPackage[] {
   return context.packages.filter((p) => selected.has(p.id));
+}
+
+/**
+ * Tap rows are never directly toggleable (see toolRows); the tap they
+ * represent is required whenever ANY sibling package from the same topic
+ * file is a confirmed selection (Homebrew Bundle semantics: a topic's taps
+ * cover every formula/cask declared in that same file). Returns a NEW set
+ * that is `selected` plus every such tap id, so callers can feed it straight
+ * into `selectedPackages`/`planBrewCommands` without a separate tap step.
+ */
+export function withRequiredTaps(
+  context: InstallContext,
+  selected: ReadonlySet<string>,
+): Set<string> {
+  const selectedTopics = new Set(
+    context.packages
+      .filter((p) => p.kind !== "tap" && selected.has(p.id))
+      .map((p) => p.topic),
+  );
+  const augmented = new Set(selected);
+  for (const p of context.packages) {
+    if (p.kind === "tap" && selectedTopics.has(p.topic)) {
+      augmented.add(p.id);
+    }
+  }
+  return augmented;
 }

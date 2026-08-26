@@ -514,11 +514,69 @@ describe("applyConfirmed — one code path for interactive and headless", () => 
     expect(calls.indexOf("dot link agents")).toBeGreaterThan(linkIdx);
     const specialCode = calls.findIndex((c) => c === "dot install code");
     const pseudoZsh = calls.findIndex((c) => c === "dot zsh");
-    expect(specialCode).toBeGreaterThan(linkIdx);
-    expect(pseudoZsh).toBeGreaterThan(-1);
-  });
+        expect(specialCode).toBeGreaterThan(linkIdx);
+        expect(pseudoZsh).toBeGreaterThan(-1);
+      });
 
-  test("mid-apply interruption exits non-zero and short-circuits the next steps", async () => {
+      test("a tap is installed automatically when a sibling formula is selected, even though the tap itself is never in `selected`", async () => {
+        const dir = await makeTempDir();
+        const profilePath = path.join(dir, "profile.json");
+        const calls: string[] = [];
+        const context: InstallContext = {
+          version: 1,
+          locked: [],
+          packages: [
+            {
+              id: "koekeishiya/formulae",
+              topic: "desktop",
+              kind: "tap",
+              area: "desktop",
+              locked: false,
+              default: false,
+            },
+            {
+              id: "yabai",
+              topic: "desktop",
+              kind: "brew",
+              area: "desktop",
+              locked: false,
+              default: false,
+            },
+            {
+              id: "raycast",
+              topic: "utilities",
+              kind: "cask",
+              area: "utilities",
+              locked: false,
+              default: false,
+            },
+          ],
+          links: [],
+        };
+        const exit = await applyConfirmed(
+          context,
+          // Only "yabai" is checked; the tap row is absent from `selected`
+          // entirely (it is never a step-1 row — see manifest.ts toolRows).
+          { selected: { yabai: true }, checked: {} },
+          {
+            profilePath,
+            dryRun: false,
+            run: recordingRunner(calls),
+            linkRunner: async () => {},
+          },
+        );
+        expect(exit).toBe(EXIT_OK);
+        const brewCalls = calls.filter((c) => c.startsWith("brew "));
+        expect(brewCalls).toContain("brew tap koekeishiya/formulae");
+        expect(brewCalls).toContain("brew install yabai");
+        expect(brewCalls.indexOf("brew tap koekeishiya/formulae")).toBeLessThan(
+          brewCalls.indexOf("brew install yabai"),
+        );
+        // A different topic's tap never gets pulled in.
+        expect(brewCalls).not.toContain("brew install --cask raycast");
+      });
+
+      test("mid-apply interruption exits non-zero and short-circuits the next steps", async () => {
     const dir = await makeTempDir();
     const profilePath = path.join(dir, "profile.json");
     const calls: string[] = [];

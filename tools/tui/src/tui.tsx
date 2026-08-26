@@ -11,6 +11,7 @@ import type { ContextLink, ContextPackage, InstallContext } from "./context";
 import {
   offeredLinks,
   toolRows,
+  toolRowsGrouped,
   type LinkGrouping,
   type ToolRow,
 } from "./manifest";
@@ -73,38 +74,38 @@ export function linkRowsForStep(
   return offeredLinks(context, selected);
 }
 
-    /** Toggles one link name (all its targets together). */
-    export function toggleLink(state: TuiState, name: string): TuiState {
-      return {
-        ...state,
-        checked: { ...state.checked, [name]: !state.checked[name] },
-      };
-    }
+/** Toggles one link name (all its targets together). */
+export function toggleLink(state: TuiState, name: string): TuiState {
+  return {
+    ...state,
+    checked: { ...state.checked, [name]: !state.checked[name] },
+  };
+}
 
-    /**
-     * Step-2 extra-install rows (kind "topic": VS Code extensions, duti default
-     * file handlers). Offered only when their prerequisite was picked in step 1:
-     * code iff visual-studio-code is selected, duti-defaults iff the duti
-     * formula is selected. Never part of step 1.
-     */
-    export function specialRowsForStep(
-      context: InstallContext,
-      state: TuiState,
-    ): ContextPackage[] {
-      return context.packages.filter((p) => {
-        if (p.kind !== "topic") return false;
-        if (p.id === "code") return state.selected["visual-studio-code"] === true;
-        if (p.id === "duti-defaults") return state.selected["duti"] === true;
-        return false;
-      });
-    }
+/**
+ * Step-2 extra-install rows (kind "topic": VS Code extensions, duti default
+ * file handlers). Offered only when their prerequisite was picked in step 1:
+ * code iff visual-studio-code is selected, duti-defaults iff the duti
+ * formula is selected. Never part of step 1.
+ */
+export function specialRowsForStep(
+  context: InstallContext,
+  state: TuiState,
+): ContextPackage[] {
+  return context.packages.filter((p) => {
+    if (p.kind !== "topic") return false;
+    if (p.id === "code") return state.selected["visual-studio-code"] === true;
+    if (p.id === "duti-defaults") return state.selected["duti"] === true;
+    return false;
+  });
+}
 
-    export function toggleSpecial(state: TuiState, id: string): TuiState {
-      return {
-        ...state,
-        special: { ...state.special, [id]: !state.special[id] },
-      };
-    }
+export function toggleSpecial(state: TuiState, id: string): TuiState {
+  return {
+    ...state,
+    special: { ...state.special, [id]: !state.special[id] },
+  };
+}
 
 function selectedMark(selected: boolean): string {
   return selected ? "[x]" : "[ ]";
@@ -112,13 +113,20 @@ function selectedMark(selected: boolean): string {
 
 /** Pure string view for Step 1 (per-tool selector). */
 export function toolView(state: TuiState, context: InstallContext): string {
-  const rows = toolRows(context);
+  // Grouped order, not raw toolRows: same-category rows are guaranteed
+  // contiguous here, so the adjacency-based header check below never repeats
+  // a category (reduceKey below indexes this SAME order for the cursor).
+  const rows = toolRowsGrouped(context);
   const lines: string[] = [" dot installer  step 1/2: choose tools ", ""];
   let cursorRow = 0;
   for (let i = 0; i < rows.length; i++) {
     if (i === state.cursor) cursorRow = lines.length;
     const row = rows[i]!;
-    if (row.category !== "locked" && i > 0 && rows[i - 1]!.category !== row.category) {
+    if (
+      row.category !== "locked" &&
+      i > 0 &&
+      rows[i - 1]!.category !== row.category
+    ) {
       lines.push(` [${row.category}]`);
       if (i < state.cursor) cursorRow++;
     }
@@ -128,7 +136,10 @@ export function toolView(state: TuiState, context: InstallContext): string {
       `${cursorMark} ${lock}${selectedMark(state.selected[row.id] === true)} ${row.label}`,
     );
   }
-  return viewportOf(lines, cursorRow, state.height) + "\n\nspace toggle  enter next  q quit";
+  return (
+    viewportOf(lines, cursorRow, state.height) +
+    "\n\nspace toggle  enter next  q quit"
+  );
 }
 
 function linkRowLine(
@@ -147,8 +158,7 @@ export function stepTwoRows(
   context: InstallContext,
   state: TuiState,
 ): Array<
-  | { kind: "link"; link: ContextLink }
-  | { kind: "special"; pkg: ContextPackage }
+  { kind: "link"; link: ContextLink } | { kind: "special"; pkg: ContextPackage }
 > {
   const { main, agents } = linkRowsForStep(context, state);
   const specials = specialRowsForStep(context, state);
@@ -175,32 +185,46 @@ export function linkView(state: TuiState, context: InstallContext): string {
     if (row.kind === "link") {
       const link = row.link;
       if (linkIdx === linkRowsForStep(context, state).main.length) {
-lines.push(" opt-in AI agents (unchecked)");
-if (i <= state.cursor) cursorRow++;
+        lines.push(" opt-in AI agents (unchecked)");
+        if (i <= state.cursor) cursorRow++;
       }
       linkIdx++;
       lines.push(
-linkRowLine(link, i === state.cursor, state.checked[link.name] === true),
+        linkRowLine(
+          link,
+          i === state.cursor,
+          state.checked[link.name] === true,
+        ),
       );
     } else {
       if (i > 0 && rows[i - 1]!.kind === "link") {
-lines.push(" extra installs (from step-1 picks)");
-if (i <= state.cursor) cursorRow++;
+        lines.push(" extra installs (from step-1 picks)");
+        if (i <= state.cursor) cursorRow++;
       }
       lines.push(
-`${i === state.cursor ? ">" : " "} ${selectedMark(state.special[row.pkg.id] === true)} ${row.pkg.label ?? row.pkg.id}`,
+        `${i === state.cursor ? ">" : " "} ${selectedMark(state.special[row.pkg.id] === true)} ${row.pkg.label ?? row.pkg.id}`,
       );
     }
   }
-  return viewportOf(lines, cursorRow, state.height) + "\n\nspace toggle  enter apply  q quit";
+  return (
+    viewportOf(lines, cursorRow, state.height) +
+    "\n\nspace toggle  enter apply  q quit"
+  );
 }
 
 /** Keeps the cursor row visible in a small terminal (footer stays last). */
-function viewportOf(lines: string[], cursorRow: number, height: number): string {
+function viewportOf(
+  lines: string[],
+  cursorRow: number,
+  height: number,
+): string {
   const viewport = Math.max(height - 3, 3);
   const start = Math.max(
     0,
-    Math.min(cursorRow - Math.floor(viewport / 2), Math.max(lines.length - viewport, 0)),
+    Math.min(
+      cursorRow - Math.floor(viewport / 2),
+      Math.max(lines.length - viewport, 0),
+    ),
   );
   const end = Math.min(start + viewport, lines.length);
   return (
@@ -234,7 +258,7 @@ function reduceKey(
     | { kind: "special"; pkg: ContextPackage }
   > =
     state.step === 1
-      ? toolRows(context).map((row) => ({ kind: "tool" as const, row }))
+      ? toolRowsGrouped(context).map((row) => ({ kind: "tool" as const, row }))
       : stepTwoRows(context, state);
 
   switch (name) {

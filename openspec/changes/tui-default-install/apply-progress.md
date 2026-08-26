@@ -125,3 +125,63 @@ Bare `dot install` on this already-set-up Mac installed Xcode CLT + Homebrew bef
 **Bug (owner report)**: the TUI still showed grouped tools ("Composer, Herd and PHPStorm"). Cause: the prebuilt `bin/dot-tui` on disk predated the context delta (grouped-label UI); the resolver trusted ANY prebuilt binary, so the per-tool selector never shipped.
 
 **Fix**: `dot_runtime_path` gates the prebuilt binary on `bin/dot-tui --version` output exactly `dot-tui-context-v1` (TUI_VERSION in main.ts); stale/foreign binaries fall through to a rebuild from src. Resolver stubs answer `--version`; new stale-rebuild test; unit test pins the marker. Local binary rebuilt (`make build-tui`): next `dot install` runs the per-tool installer. Gates green: bun 125/125, bats 83/83, check/lint clean.
+
+## Work unit 5 — repeated category headers + tap rows shown as bare selectable items
+
+**Status: COMPLETE** · Branch: `feat/tui-default-install-pr5` · Executor: parent inline (found reviewing the owner's screenshot after commit `6b0de35` landed the fine-grained category taxonomy in `install/manifest.sh`)
+
+### Bug 1 (owner screenshot): `[Desktop]` header repeats non-contiguously
+
+`toolView`/`reduceKey` indexed `toolRows(context)` directly — raw context/topic-file
+order — and printed a new `[Category]` header on every adjacency break. `toolGroups`
+(true grouping) already existed in `manifest.ts` but nothing rendered from it, so any
+topic whose rows weren't contiguous in the source Brewfile (e.g. `7zip`, topic `core`,
+declared after `Browsers` in the fixture) reprinted its header.
+
+**Fix**: new `toolRowsGrouped(context)` = `toolGroups(context).flatMap(g => g.rows)`.
+`toolView` and `reduceKey` BOTH switched to it (display and cursor navigation must
+share one order or the highlighted row drifts from the interacted-with row). The
+existing adjacency-check header logic becomes correct once fed pre-grouped input —
+no other rendering logic changed.
+
+### Bug/decision 2 (owner screenshot + explicit product decision): bare tap ids as checkbox rows
+
+`koekeishiya/formulae` and `FelixKratz/formulae` rendered as their own toggleable
+rows (raw tap id as label — `install/manifest.sh`'s comment called this deliberate:
+"tap rows keep their full tap name, they ARE the tap"). Owner decision when asked:
+hide taps from the selector entirely; auto-include the `brew tap` step whenever any
+sibling formula/cask from the same topic file is selected.
+
+**Fix**: `toolRows()` now skips `kind === "tap"` (same treatment as `kind === "topic"`).
+New `withRequiredTaps(context, selected): Set<string>` in `manifest.ts` returns
+`selected` plus every tap id whose topic matches a selected non-tap package's topic
+(Homebrew Bundle semantics: a topic's taps cover every formula/cask in that file).
+`applyConfirmed` (main.ts) wires it in right after building the confirmed id set —
+the one code path both interactive and headless apply share, so neither can diverge.
+
+### Regression found while fixing
+
+`tui.test.tsx`'s `rowIndex()` test helper hand-rolled a COPY of the row order
+("mirror toolRows") instead of calling the real function — it silently drifted the
+moment production code moved to the grouped order. Replaced with a direct call to
+`toolRowsGrouped(fixtureContext)`, so it can never desync from production again.
+
+### Test evidence (RED → GREEN, TDD)
+
+| Test | RED | GREEN |
+| --- | --- | --- |
+| `manifest.test.ts`: tap rows excluded from `toolRows`, sibling still toggleable | new | pass |
+| `manifest.test.ts`: `toolRowsGrouped` keeps same-category runs contiguous | new | pass |
+| `manifest.test.ts`: `withRequiredTaps` auto-includes / no-ops correctly (3 cases) | new | pass |
+| `tui.test.tsx`: `[core]` header appears exactly once despite non-contiguous `7zip` | fail (2 occurrences) | pass |
+| `main.test.ts`: tap installed automatically when only a sibling formula is checked | fail (missing `brew tap ...`) | pass |
+
+### Gate evidence (green)
+
+| Gate | Result |
+| --- | --- |
+| `make check` | clean |
+| `make lint` | clean (found and fixed a pre-existing `shfmt` indentation drift in `install/manifest.sh` unrelated to this fix) |
+| `bats test/` | 84 pass / 0 fail |
+| `cd tools/tui && bun test` | 136 pass / 0 fail |
+| `tsc --noEmit -p tools/tui` | clean |
