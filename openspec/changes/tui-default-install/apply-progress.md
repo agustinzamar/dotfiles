@@ -94,3 +94,25 @@
 | `make lint` | clean (shellcheck -x + shfmt -d) |
 | `cd tools/tui && bun test` | 124 pass / 0 fail |
 | `bats test/` | 80 pass / 0 fail (was 72; +8 new contract tests) |
+
+## Work unit 4 — PR 5: TUI-first + bootstrap-on-confirm + PATH-proof detection (commit `be726a2`)
+
+**Status: COMPLETE** · Branch: `feat/tui-default-install-pr5` · Executor: parent inline (verify remediation — found during the owner's real smoke run)
+
+### Bug (owner smoke report)
+Bare `dot install` on this already-set-up Mac installed Xcode CLT + Homebrew before showing the TUI. Root cause: `sub_bootstrap` detected via PATH (`type brew`, `xcode-select` unqualified); macOS GUI-launched terminals start with a bare `/usr/bin:/bin:/usr/sbin:/sbin` PATH, so the present installs looked missing and were reinstalled.
+
+### Fix
+- `run_interactive_install`: TTY guard → resolve runtime only (prebuilt needs nothing) → show TUI. No Xcode/Homebrew provisioning before the selector. PATH normalization for the TUI's subprocesses moved AFTER resolution.
+- Hidden `dot bootstrap` dispatch (not in TOP_COMMANDS/help); the TUI's apply phase runs it as its FIRST step (post-confirm) via the absolute `$DOTFILES_DIR/bin/dot` path, so bootstrap happens only after the user confirms.
+- `sub_bootstrap` PATH-independent: `/usr/bin/xcode-select -p` + known Homebrew paths (`/opt/homebrew/bin/brew`, `/usr/local/bin/brew`) by path, never `type`.
+- `dot_runtime_path` resolves bun PATH-first (bats stubs stay deterministic) with known-locations fallback for GUI-PATH shells; `DOT_RUNTIME_BUN_LOOKUP=path` forces PATH-only in the resolver suite (the real bun at /opt/homebrew was defeating stubs).
+- Regression bats: `bootstrap` hidden-but-dispatchable; PATH-stripped bootstrap never reinstalls Homebrew (2 new tests; resolver suite 9/9).
+
+### Gate evidence (green at `be726a2`)
+| Gate | Result |
+| --- | --- |
+| `make check` | clean |
+| `make lint` | clean |
+| `bats test/` | 82 pass / 0 fail |
+| `cd tools/tui && bun test` | 124 pass / 0 fail |
