@@ -10,7 +10,7 @@
 // that to exit 10 with zero filesystem writes. Selected/checked values cross
 // into main.ts through thin adapters (adaptStepOne/adaptStepTwo) that reinsert
 // locked ids as always-true (applyConfirmed-critical, ADR-3).
-import { Box, Text, useApp, useInput, type Key } from "ink";
+import { Box, Text, useApp, useInput, useStdout, type Key } from "ink";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { MultiSelect } from "@inkjs/ui";
 import type { ContextLink, InstallContext } from "./context";
@@ -133,6 +133,22 @@ export function quitRequested(input: string, key: Partial<Key>): boolean {
   return input === "q" && !key.ctrl && !key.meta;
 }
 
+/**
+ * Visible options the MultiSelect should show, derived from the form's
+ * available height. reserveres the chrome of the current step — step 1:
+ * header + locked block + hint + margin; step 2: header + hint + margin —
+ * and clamps to [3, 20] so tiny terminals stay usable and huge ones don't
+ * render an unwieldy list.
+ */
+export function visibleOptionsFor(
+  height: number,
+  step: 1 | 2,
+  lockedCount: number,
+): number {
+  const reserved = step === 1 ? 2 + lockedCount + 1 : 3;
+  return Math.max(3, Math.min(height - reserved, 20));
+}
+
 export interface AppProps {
   context: InstallContext;
   /** Test seam: seeds extra selections. */
@@ -162,6 +178,7 @@ export function App({
   fixedSize,
   onSubmit,
 }: AppProps): React.ReactElement {
+  const { stdout } = useStdout();
   const [state, setState] = useState<TuiState>(() =>
     initialState(context, initialSelected),
   );
@@ -219,7 +236,12 @@ export function App({
         : [],
     [context, state.step, state.selected],
   );
-  const visibleOptionCount = fixedSize ? fixedSize.height - 4 : 5;
+  const availableHeight = fixedSize ? fixedSize.height : (stdout.rows ?? 5);
+  const visibleOptionCount = visibleOptionsFor(
+    availableHeight,
+    state.step,
+    lockedRows.length,
+  );
 
   return (
     <Box flexDirection="column">

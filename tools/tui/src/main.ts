@@ -565,7 +565,7 @@ async function runApplyRound(
 // as a stale binary and rebuilds from source instead of trusting stale disk
 // state; a version bump is a NO-OP without ALSO bumping bin/dot's own check
 // and the test/tui-resolver.bats fixtures that assert against it.
-export const TUI_VERSION = "dot-tui-context-v5";
+export const TUI_VERSION = "dot-tui-context-v6";
 
 if (import.meta.main) {
   const raw = process.argv.slice(2);

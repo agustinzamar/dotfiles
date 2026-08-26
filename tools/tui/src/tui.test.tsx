@@ -25,6 +25,7 @@ import {
   quitRequested,
   stepTwoRows,
   toggleableRowsForStep,
+  visibleOptionsFor,
   type TuiState,
 } from "./tui";
 
@@ -452,6 +453,25 @@ describe("quitRequested", () => {
     expect(quitRequested("x", { ctrl: true })).toBe(false);
     expect(quitRequested("q", { meta: true })).toBe(false);
     expect(quitRequested("", { escape: true })).toBe(false);
+  });
+});
+
+describe("visibleOptionsFor", () => {
+  test("fills the available height minus the reserved chrome, clamped to [3, 20]", () => {
+    // Step 1 reserves header + locked block + hint + margin (2+4+1 = 7).
+    expect(visibleOptionsFor(25, 1, 4)).toBe(18);
+    // Step 2 reserves header + hint + margin (3).
+    expect(visibleOptionsFor(20, 2, 0)).toBe(17);
+  });
+
+  test("small terminals clamp to a minimum of 3", () => {
+    expect(visibleOptionsFor(4, 1, 5)).toBe(3);
+    expect(visibleOptionsFor(3, 2, 0)).toBe(3);
+  });
+
+  test("huge terminals cap at 20 visible options", () => {
+    expect(visibleOptionsFor(200, 2, 0)).toBe(20);
+    expect(visibleOptionsFor(200, 1, 0)).toBe(20);
   });
 });
 
