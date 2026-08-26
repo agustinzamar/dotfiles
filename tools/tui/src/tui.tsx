@@ -124,15 +124,15 @@ function linkRowLine(
   return `${cursorMark} ${selectedMark(checked)} ${link.name}${targets}`;
 }
 
-    /** Step-2 rows: the ADR-3-filtered config links only (no opt-in agents,
-     *  no gated extra installs — extras like code/duti-defaults/dock/macos are
-     *  first-class step-1 rows now). */
-    export function stepTwoRows(
-      context: InstallContext,
-      state: TuiState,
-    ): ContextLink[] {
-      return linkRowsForStep(context, state).main;
-    }
+/** Step-2 rows: the ADR-3-filtered config links only (no opt-in agents,
+ *  no gated extra installs — extras like code/duti-defaults/dock/macos are
+ *  first-class step-1 rows now). */
+export function stepTwoRows(
+  context: InstallContext,
+  state: TuiState,
+): ContextLink[] {
+  return linkRowsForStep(context, state).main;
+}
 
 export function linkView(state: TuiState, context: InstallContext): string {
   const rows = stepTwoRows(context, state);
@@ -191,16 +191,15 @@ function reduceKey(
   name: string,
   context: InstallContext,
 ): TuiState {
-      const rows: Array<
-        | { kind: "tool"; row: ToolRow }
-        | { kind: "link"; link: ContextLink }
-      > =
-        state.step === 1
-          ? toolRowsGrouped(context).map((row) => ({ kind: "tool" as const, row }))
-          : stepTwoRows(context, state).map((link) => ({
-              kind: "link" as const,
-              link,
-            }));
+  const rows: Array<
+    { kind: "tool"; row: ToolRow } | { kind: "link"; link: ContextLink }
+  > =
+    state.step === 1
+      ? toolRowsGrouped(context).map((row) => ({ kind: "tool" as const, row }))
+      : stepTwoRows(context, state).map((link) => ({
+          kind: "link" as const,
+          link,
+        }));
 
   switch (name) {
     case "up":

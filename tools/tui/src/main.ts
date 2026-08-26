@@ -10,6 +10,7 @@
 // mounts. Mid-apply interruption prints a loud ❌ completed-vs-pending summary.
 import { createElement } from "react";
 import { render } from "ink";
+import { ApplyScreen, ApplyUiBridge, type ApplyUi } from "./apply";
 import { loadContext, type InstallContext } from "./context";
 import {
   activeProfileAreas,
@@ -124,6 +125,9 @@ export interface ApplyConfirmedOptions extends ApplyIO {
   signal?: AbortSignal;
   /** Output seam; defaults to console.log (progress) / console.error. */
   report?: (line: string, stderr?: boolean) => void;
+  /** Component-driven apply UI (interactive mode); when absent, output
+   *  stays on the plain `report` lines (headless -apply -profile, dry-run). */
+  ui?: ApplyUi;
 }
 
 interface ApplyStep {
@@ -261,14 +265,17 @@ export async function applyConfirmed(
     return EXIT_OK;
   }
 
-  const completed: string[] = [];
+  const done: string[] = [];
   const plannedLabels = runSteps.map((s) => s.label);
   let failed = false;
   const interrupted = (): boolean => opts.interrupt?.() ?? false;
 
   // 1. Atomic profile write (areas only; link choices are never persisted).
   if (interrupted()) {
-    report(interruptionSummary([], plannedLabels), true);
+    const summary = interruptionSummary([], plannedLabels);
+    if (opts.ui) opts.ui.error(summary);
+    else report(summary, true);
+    opts.ui?.finished(false);
     return EXIT_ERROR;
   }
   const profile = {
@@ -276,9 +283,14 @@ export async function applyConfirmed(
   };
   try {
     await saveProfile(opts.profilePath, profile);
-    completed.push("profile");
+    done.push("profile");
   } catch (err) {
-    report(errorMessage(err), true);
+    if (opts.ui) {
+      opts.ui.error(errorMessage(err));
+      opts.ui.finished(false);
+    } else {
+      report(errorMessage(err), true);
+    }
     return EXIT_ERROR;
   }
 
@@ -292,35 +304,57 @@ export async function applyConfirmed(
     operation: step.operation,
     dependencies: [],
   }));
+  // done counter feeds the apply UI's ProgressBar: at the moment step k
+  // starts, k of N steps have been announced as running.
+  let runningCount = 0;
   const executed = await executeWithProgress(
     tasks,
     opts.run,
     opts.signal,
-    (task) => report(progressLine(task.label)),
+    (task) => {
+      if (opts.ui) opts.ui.progress(task.label, runningCount, tasks.length);
+      else report(progressLine(task.label));
+      runningCount++;
+    },
     () => interrupted(),
   );
   for (const result of executed) {
     if (result.status === "failed") {
       failed = true;
-      report(failedLine(result.task.label), true);
-      if (result.output !== "") {
-        report(result.output, true);
+      if (opts.ui) {
+        opts.ui.result("failed", result.task.label, result.output);
+      } else {
+        report(failedLine(result.task.label), true);
+        if (result.output !== "") {
+          report(result.output, true);
+        }
       }
     } else if (result.status === "skipped") {
-      report(skippedLine(result.task.label, result.output));
+      if (opts.ui) {
+        opts.ui.result("skipped", result.task.label, result.output);
+      } else {
+        report(skippedLine(result.task.label, result.output));
+      }
     } else {
-      report(installedLine(result.task.label));
-      completed.push(result.task.label);
+      if (opts.ui) {
+        opts.ui.result("installed", result.task.label, result.output);
+      } else {
+        report(installedLine(result.task.label));
+      }
+      done.push(result.task.label);
     }
   }
 
   if (failed || interrupted()) {
     if (interrupted()) {
-      const pendingLabels = plannedLabels.filter((l) => !completed.includes(l));
-      report(interruptionSummary(completed, pendingLabels), true);
+      const pendingLabels = plannedLabels.filter((l) => !done.includes(l));
+      if (opts.ui) opts.ui.error(interruptionSummary(done, pendingLabels));
+      else report(interruptionSummary(done, pendingLabels), true);
     }
+    opts.ui?.finished(false);
     return EXIT_ERROR;
   }
+  opts.ui?.finished(true);
   return EXIT_OK;
 }
 
@@ -472,11 +506,50 @@ export async function runInteractive(
     return round;
   }
 
-  return applyConfirmedLive(context, finalState, {
-    profilePath: defaultProfilePath(),
-    dryRun,
-    ...io,
-  });
+  if (dryRun) {
+    // Dry-run shows the plain plan (console lines) — no apply UI mounts.
+    return applyConfirmedLive(context, finalState, {
+      profilePath: defaultProfilePath(),
+      dryRun,
+      ...io,
+    });
+  }
+  return runApplyRound(context, finalState, io);
+}
+
+/**
+ * Interactive apply phase (work unit 9): runs applyConfirmedLive while a
+ * tiny @inkjs/ui screen (Spinner/ProgressBar/StatusMessage/Badge) renders
+ * live progress, then exits the ink app leaving the final frame visible.
+ * The screen registers NO useInput hook, so ink never enables stdin raw
+ * mode here — SIGINT stays a real signal and applyConfirmedLive's abort
+ * handler (loud completed-vs-pending summary) keeps working.
+ */
+async function runApplyRound(
+  context: InstallContext,
+  selection: {
+    selected: Record<string, boolean>;
+    checked: Record<string, boolean>;
+  },
+  io: ApplyIO,
+): Promise<number> {
+  const ui = new ApplyUiBridge();
+  const instance = render(createElement(ApplyScreen, { ui }));
+  let code: number;
+  try {
+    code = await applyConfirmedLive(context, selection, {
+      profilePath: defaultProfilePath(),
+      dryRun: false,
+      ...io,
+      ui,
+    });
+  } catch (err) {
+    ui.error(errorMessage(err));
+    code = EXIT_ERROR;
+  }
+  ui.finished(code === EXIT_OK);
+  await instance.waitUntilExit();
+  return code;
 }
 
 // --- Entry (func main analog).
@@ -492,7 +565,7 @@ export async function runInteractive(
 // as a stale binary and rebuilds from source instead of trusting stale disk
 // state; a version bump is a NO-OP without ALSO bumping bin/dot's own check
 // and the test/tui-resolver.bats fixtures that assert against it.
-export const TUI_VERSION = "dot-tui-context-v3";
+export const TUI_VERSION = "dot-tui-context-v4";
 
 if (import.meta.main) {
   const raw = process.argv.slice(2);
