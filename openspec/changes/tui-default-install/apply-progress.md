@@ -100,9 +100,11 @@
 **Status: COMPLETE** · Branch: `feat/tui-default-install-pr5` · Executor: parent inline (verify remediation — found during the owner's real smoke run)
 
 ### Bug (owner smoke report)
+
 Bare `dot install` on this already-set-up Mac installed Xcode CLT + Homebrew before showing the TUI. Root cause: `sub_bootstrap` detected via PATH (`type brew`, `xcode-select` unqualified); macOS GUI-launched terminals start with a bare `/usr/bin:/bin:/usr/sbin:/sbin` PATH, so the present installs looked missing and were reinstalled.
 
 ### Fix
+
 - `run_interactive_install`: TTY guard → resolve runtime only (prebuilt needs nothing) → show TUI. No Xcode/Homebrew provisioning before the selector. PATH normalization for the TUI's subprocesses moved AFTER resolution.
 - Hidden `dot bootstrap` dispatch (not in TOP_COMMANDS/help); the TUI's apply phase runs it as its FIRST step (post-confirm) via the absolute `$DOTFILES_DIR/bin/dot` path, so bootstrap happens only after the user confirms.
 - `sub_bootstrap` PATH-independent: `/usr/bin/xcode-select -p` + known Homebrew paths (`/opt/homebrew/bin/brew`, `/usr/local/bin/brew`) by path, never `type`.
@@ -110,9 +112,16 @@ Bare `dot install` on this already-set-up Mac installed Xcode CLT + Homebrew bef
 - Regression bats: `bootstrap` hidden-but-dispatchable; PATH-stripped bootstrap never reinstalls Homebrew (2 new tests; resolver suite 9/9).
 
 ### Gate evidence (green at `be726a2`)
+
 | Gate | Result |
 | --- | --- |
 | `make check` | clean |
 | `make lint` | clean |
 | `bats test/` | 82 pass / 0 fail |
 | `cd tools/tui && bun test` | 124 pass / 0 fail |
+
+## Work unit 4b — PR 5 (second commit `f98950e`): stale-binary version gate
+
+**Bug (owner report)**: the TUI still showed grouped tools ("Composer, Herd and PHPStorm"). Cause: the prebuilt `bin/dot-tui` on disk predated the context delta (grouped-label UI); the resolver trusted ANY prebuilt binary, so the per-tool selector never shipped.
+
+**Fix**: `dot_runtime_path` gates the prebuilt binary on `bin/dot-tui --version` output exactly `dot-tui-context-v1` (TUI_VERSION in main.ts); stale/foreign binaries fall through to a rebuild from src. Resolver stubs answer `--version`; new stale-rebuild test; unit test pins the marker. Local binary rebuilt (`make build-tui`): next `dot install` runs the per-tool installer. Gates green: bun 125/125, bats 83/83, check/lint clean.
