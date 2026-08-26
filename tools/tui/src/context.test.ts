@@ -95,6 +95,7 @@ describe("loading a valid context file", () => {
       area: "shell",
       locked: true,
       default: false,
+      installed: false,
     });
     // Multi-target rows survive the round-trip untouched.
     expect(context.links[0]!.name).toBe("ghostty");

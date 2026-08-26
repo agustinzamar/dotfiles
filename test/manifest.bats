@@ -4,6 +4,13 @@
 
 setup() {
   DOTFILES_DIR="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
+  # Deterministic 'brew list': an empty stub by default so installed pre-check
+  # flags are independent of this machine; tests swap MANIFEST_BREW for richer
+  # fakes. One printf line (no heredoc) keeps bats' preprocessor happy.
+  BREW_STUB="$BATS_TEST_TMPDIR/brew-stub"
+  printf '#!/bin/sh\nif [ "$1" = \"list\" ]; then exit 0; fi\nexit 0\n' >"$BREW_STUB"
+  chmod +x "$BREW_STUB"
+  export MANIFEST_BREW="$BREW_STUB"
   # shellcheck source=../install/manifest.sh
   . "$DOTFILES_DIR/install/manifest.sh"
 }
@@ -49,10 +56,12 @@ fixture_topics() {
 brew "fzf"
 cask "ghostty"
 brew "we"ird\name"
+brew "anomalyco/tap/opencode"
 tap "timescam/tap"
 EOF
   cat >"$dir/desktop" <<'EOF'
 cask "google-chrome"
+cask "discord"
 EOF
   cat >"$dir/code" <<'EOF'
 vscode-extension-one
@@ -84,13 +93,15 @@ golden_json() {
   "version": 1,
   "locked": ["base", "shell"],
   "packages": [
-    { "id": "fzf", "topic": "core", "kind": "brew", "area": "shell", "locked": true, "default": false },
-    { "id": "ghostty", "topic": "core", "kind": "cask", "area": "terminal", "locked": false, "default": true },
-    { "id": "we\"ird\\name", "topic": "core", "kind": "brew", "area": "terminal", "locked": false, "default": false },
-    { "id": "timescam/tap", "topic": "core", "kind": "tap", "area": "shell", "locked": false, "default": false },
-    { "id": "google-chrome", "topic": "desktop", "kind": "cask", "area": "desktop", "locked": false, "default": false },
-    { "id": "code", "topic": "code", "kind": "topic", "area": "vscode", "locked": false, "default": false },
-    { "id": "duti-defaults", "topic": "duti", "kind": "topic", "area": "terminal", "locked": false, "default": false }
+    { "id": "fzf", "label": "fzf", "topic": "core", "category": "core", "kind": "brew", "area": "shell", "locked": true, "default": false, "installed": true },
+    { "id": "ghostty", "label": "ghostty", "topic": "core", "category": "core", "kind": "cask", "area": "terminal", "locked": false, "default": true, "installed": false },
+    { "id": "we\"ird\\name", "label": "we\"ird\\name", "topic": "core", "category": "core", "kind": "brew", "area": "terminal", "locked": false, "default": false, "installed": false },
+    { "id": "anomalyco/tap/opencode", "label": "opencode", "topic": "core", "category": "ai", "kind": "brew", "area": "ai", "locked": false, "default": false, "installed": false },
+    { "id": "timescam/tap", "label": "timescam/tap", "topic": "core", "category": "core", "kind": "tap", "area": "shell", "locked": false, "default": false, "installed": false },
+    { "id": "google-chrome", "label": "google-chrome", "topic": "desktop", "category": "Browsers", "kind": "cask", "area": "desktop", "locked": false, "default": false, "installed": false },
+    { "id": "discord", "label": "discord", "topic": "desktop", "category": "Communication", "kind": "cask", "area": "desktop", "locked": false, "default": false, "installed": false },
+    { "id": "code", "label": "code", "topic": "code", "category": "code", "kind": "topic", "area": "vscode", "locked": false, "default": false, "installed": false },
+    { "id": "duti-defaults", "label": "duti-defaults", "topic": "duti", "category": "duti", "kind": "topic", "area": "terminal", "locked": false, "default": false, "installed": false }
   ],
   "links": [
     { "name": "ghostty", "optional": false, "component": "terminal", "requirement": "",
@@ -205,5 +216,34 @@ EOF
     count="$(jq --arg area "$area" '[.packages[] | select(.area == $area)] | length' "$ctx")"
     [ "$count" -ge 1 ] || { echo "token '$token' → area '$area' has no package rows" >&2; fail "orphan token $token"; }
   done <<<"$tokens"
+  rm -f "$ctx"
+}
+
+@test "real tree: tap labels collapse, categories group, installed detection works" {
+  local ctx json
+  ctx="$(mktemp)"
+  # Real brew list: the installed-pre-check assertion must see actual state
+  # (the setup stub reports nothing installed by design for the other tests).
+  MANIFEST_BREW=/opt/homebrew/bin/brew install_context_json "$ctx"
+  json="$(cat "$ctx")"
+  [ "$(jq -r '[.packages[] | select(.id == "anomalyco/tap/opencode")][0].label' <<<"$json")" == "opencode" ]
+  [ "$(jq -r '[.packages[] | select(.id == "stupside/tap/castor")][0].label' <<<"$json")" == "castor" ]
+  [ "$(jq -r '[.packages[] | select(.id == "claude-code@latest")][0].category' <<<"$json")" == "AI" ]
+  [ "$(jq -r '[.packages[] | select(.id == "codex")][0].category' <<<"$json")" == "AI" ]
+  [ "$(jq -r '[.packages[] | select(.id == "discord")][0].category' <<<"$json")" == "Communication" ]
+  [ "$(jq -r '[.packages[] | select(.id == "google-chrome")][0].category' <<<"$json")" == "Browsers" ]
+  [ "$(jq -r '[.packages[] | select(.id == "yabai")][0].category' <<<"$json")" == "Desktop" ]
+  [ "$(jq -r '[.packages[] | select(.id == "linearmouse")][0].category' <<<"$json")" == "Tweakers" ]
+  [ "$(jq -r '[.packages[] | select(.id == "raycast")][0].category' <<<"$json")" == "Utilities" ]
+  [ "$(jq -r '[.packages[] | select(.id == "7zip")][0].category' <<<"$json")" == "Archives" ]
+  [ "$(jq -r '[.packages[] | select(.id == "btop")][0].category' <<<"$json")" == "Monitoring" ]
+  [ "$(jq -r '[.packages[] | select(.id == "eza")][0].category' <<<"$json")" == "Filesystem" ]
+  [ "$(jq -r '[.packages[] | select(.id == "ffmpeg")][0].category' <<<"$json")" == "Media tools" ]
+  [ "$(jq -r '[.packages[] | select(.id == "spotify")][0].category' <<<"$json")" == "Entertainment" ]
+  [ "$(jq -r '[.packages[] | select(.id == "mysql")][0].category' <<<"$json")" == "Databases" ]
+  # Taps keep their full name as the label.
+  [ "$(jq -r '[.packages[] | select(.id == "timescam/tap")][0].label' <<<"$json")" == "timescam/tap" ]
+  # Installed detection via brew list: t3-code is present on this machine.
+  [ "$(jq -r '[.packages[] | select(.id == "t3-code")][0].installed' <<<"$json")" == "true" ]
   rm -f "$ctx"
 }

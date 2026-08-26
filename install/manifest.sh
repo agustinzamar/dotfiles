@@ -10,6 +10,33 @@
 # No jq: on a fresh Mac jq only exists after packages install, and the context
 # is emitted before any install. All JSON escaping is pure Bash.
 
+# "installed" pre-checks come from `brew list`. Snapshot the sets once per
+# emitter run (two subprocesses) instead of one `brew info` probe per row; any
+# failure (no brew yet, empty list) degrades to empty sets, i.e. nothing
+# pre-checked. Tests stub a fake `brew` on PATH to control these.
+MANIFEST_BREW=${MANIFEST_BREW:-brew}
+_manifest_installed_snapshot() {
+  MANIFEST_INSTALLED_FORMULAE="$("$MANIFEST_BREW" list --formula 2>/dev/null || true)"
+  MANIFEST_INSTALLED_CASKS="$("$MANIFEST_BREW" list --cask 2>/dev/null || true)"
+  MANIFEST_INSTALLED_DONE=true
+}
+
+_manifest_is_installed() {
+  local id=$1 kind=$2
+  local match=$id
+  [[ "${MANIFEST_INSTALLED_DONE:-}" == true ]] || _manifest_installed_snapshot
+  [[ "$kind" == tap || "$kind" == topic ]] && return 1
+  # brew list reports tap formulae/casks by their SIMPLE name (opencode, castor).
+  [[ "$kind" == brew || "$kind" == cask ]] && match=${id##*/}
+  local haystack
+  if [[ "$kind" == cask ]]; then
+    haystack=$MANIFEST_INSTALLED_CASKS
+  else
+    haystack=$MANIFEST_INSTALLED_FORMULAE
+  fi
+  grep -qxF "$match" <<<"$haystack"
+}
+
 # Root used to locate install/topics. Derived from this file's location so the
 # emitter works standalone (tests) and when sourced from bin/dot.
 MANIFEST_ROOT=${MANIFEST_ROOT:-"$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"}
@@ -62,7 +89,7 @@ area_for_package() {
     borders) echo "desktop-borders" ;;
     pearcleaner | google-chrome | firefox | brave-browser | discord | telegram | whatsapp | slack | raycast | finetune | typewhisper | rectangle | localsend | hyperkey | alt-tab | chatgpt | koekeishiya/formulae | FelixKratz/formulae | FelixKratz/JankyBorders) echo "desktop" ;;
     # --- Media ---
-    ffmpeg | ffmpegthumbnailer | imagemagick | webp | spotify | stremio | vlc | stupside/tap/castor) echo "media" ;;
+    ffmpeg | ffmpegthumbnailer | imagemagick | webp | spotify | stremio | vlc | stupside/tap/castor | castor) echo "media" ;;
     *) return 1 ;;
   esac
 }
@@ -120,23 +147,86 @@ link_rows() {
 }
 
 # One JSON package row object.
+# Display label: tap rows keep their full tap name (they ARE the tap); brew and
+# cask rows from third-party taps render as the simple name after the last
+# slash (anomalyco/tap/opencode -> opencode) so the selector lists real tools.
+_manifest_label() {
+  local id=$1 kind=$2
+  if [[ "$kind" == tap ]]; then
+    printf '%s' "$id"
+  else
+    printf '%s' "${id##*/}"
+  fi
+}
+
+# Display categories for the selector grouping. The TUI groups by category,
+# not by the source install/topics file, so related tools get shared headers
+# (AI apps, browsers, window managers, utilities...) while still installing
+# from their original topic files (`dot install <topic>` / brew bundle
+# semantics are untouched). Unknown ids fall back to their topic.
+manifest_category() {
+  case "$1" in
+    # --- AI agents and AI apps ---
+    claude-code@latest | codex | t3-code | anomalyco/tap/opencode | pi-coding-agent | claude | chatgpt | herdr | openusage) echo "AI" ;;
+    # --- Browsers ---
+    google-chrome | firefox | brave-browser) echo "Browsers" ;;
+    # --- Communication ---
+    discord | telegram | whatsapp | slack) echo "Communication" ;;
+    # --- Desktop / window managers (the tiling stack) ---
+    yabai | skhd | sketchybar | aerospace | borders | koekeishiya/formulae | FelixKratz/formulae | FelixKratz/JankyBorders) echo "Desktop" ;;
+    # --- Tweakers (input, window and bar tweaks) ---
+    linearmouse | finetune | rectangle | hyperkey | alt-tab | typewhisper) echo "Tweakers" ;;
+    # --- Utilities ---
+    raycast | localsend | mole | pearcleaner | topgrade) echo "Utilities" ;;
+    # --- Archives ---
+    7zip | unar) echo "Archives" ;;
+    # --- Monitoring ---
+    btop | procs | watch) echo "Monitoring" ;;
+    # --- Filesystem navigation ---
+    eza | fd | dust | yazi) echo "Filesystem" ;;
+    # --- Shell (prompt, nav, env) ---
+    zoxide | oh-my-posh | pay-respects | direnv | timescam/tap) echo "Shell" ;;
+    # --- Text and search ---
+    ripgrep | bat | jq | jless | yq | grip) echo "Text" ;;
+    # --- Terminals and fonts ---
+    ghostty | font-jetbrains-mono-nerd-font) echo "Terminals" ;;
+    # --- Editors and IDEs ---
+    neovim | visual-studio-code | phpstorm) echo "Editors" ;;
+    # --- Dev toolchains, services and container runtimes ---
+    make | go | node | python@3.14 | pnpm | bun | npm-check-updates | pipx | rust | shellcheck | shfmt | bats-core | act | sshpass | actionlint | swiftformat | orbstack) echo "Dev" ;;
+    # --- Databases ---
+    mysql | mysql-client | postgresql | redis | sqlite) echo "Databases" ;;
+    # --- Media processing ---
+    ffmpeg | ffmpegthumbnailer | imagemagick | webp) echo "Media tools" ;;
+    # --- Entertainment ---
+    spotify | stremio | vlc | stupside/tap/castor) echo "Entertainment" ;;
+    *) echo "pin-topic" ;;
+  esac
+}
+
 _manifest_package_json() {
-  local topic=$1 kind=$2 id=$3 locked=false default=false
+  local topic=$1 kind=$2 id=$3 locked=false default=false installed=false
   manifest_is_locked "$id" && locked=true
   manifest_is_default "$id" && default=true
-  local area
+  _manifest_is_installed "$id" "$kind" && installed=true
+  local area label category
   area=$(area_for_package "$id") || {
     echo "manifest: no area mapping for package '$id'" >&2
     return 1
   }
-  printf '{"id":"%s","topic":"%s","kind":"%s","area":"%s","locked":%s,"default":%s}' \
-    "$(json_escape "$id")" "$(json_escape "$topic")" "$(json_escape "$kind")" \
-    "$(json_escape "$area")" "$locked" "$default"
+  label=$(_manifest_label "$id" "$kind")
+  category=$(manifest_category "$id")
+  [[ "$category" == pin-topic ]] && category=$topic
+  printf '{"id":"%s","label":"%s","topic":"%s","category":"%s","kind":"%s","area":"%s","locked":%s,"default":%s,"installed":%s}' \
+    "$(json_escape "$id")" "$(json_escape "$label")" "$(json_escape "$topic")" "$(json_escape "$category")" "$(json_escape "$kind")" \
+    "$(json_escape "$area")" "$locked" "$default" "$installed"
 }
 
 # Write the versioned installer context JSON to <file>.
 install_context_json() {
   local out=$1
+  # Each emission re-snapshots the installed sets (bats tests swap brew stubs).
+  unset MANIFEST_INSTALLED_DONE MANIFEST_INSTALLED_FORMULAE MANIFEST_INSTALLED_CASKS
   if [[ ! -d "$MANIFEST_TOPIC_DIR" ]]; then
     echo "manifest: topics directory not readable: $MANIFEST_TOPIC_DIR" >&2
     return 1

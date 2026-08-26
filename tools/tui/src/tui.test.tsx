@@ -10,6 +10,7 @@ import { cleanup, render } from "ink-testing-library";
 import type { InstallContext } from "./context";
 import {
   App,
+  stepTwoRows,
   initialState,
   linkView,
   mapInkKey,
@@ -36,8 +37,39 @@ const fixtureContext: InstallContext = {
     { id: "yazi", topic: "file", kind: "brew", area: "terminal", locked: false, default: true },
     { id: "code", topic: "code", kind: "topic", area: "vscode", locked: false, default: false },
     { id: "duti-defaults", topic: "duti", kind: "topic", area: "terminal", locked: false, default: false },
-    { id: "opencode", topic: "ai", kind: "brew", area: "ai", locked: false, default: false },
-  ],
+        { id: "opencode", topic: "ai", kind: "brew", area: "ai", locked: false, default: false },
+        // Category/label/installed extensions: an AI tool from a foreign tap
+        // (label collapses to the bare name), a browser grouped under Browsers,
+        // and an installed formula pre-checked via installed:true.
+        {
+          id: "stupside/tap/castor",
+          label: "castor",
+          topic: "media",
+          category: "media",
+          kind: "cask",
+          area: "media",
+          locked: false,
+          default: false,
+        },
+        {
+          id: "brave-browser",
+          topic: "desktop",
+          category: "Browsers",
+          kind: "cask",
+          area: "desktop",
+          locked: false,
+          default: false,
+        },
+        {
+          id: "7zip",
+          topic: "core",
+          kind: "brew",
+          area: "terminal",
+          locked: false,
+          default: false,
+          installed: true,
+        },
+      ],
   links: [
     { name: "zsh", optional: false, component: "shell", requirement: "", rows: [{ source: "config/zsh/.zshrc", target: "~/.zshrc", mode: "" }] },
     { name: "ghostty", optional: false, component: "terminal", requirement: "", rows: [
@@ -75,8 +107,10 @@ const TALL = { width: 100, height: 60 };
 // rows in context order (topic grouping is a view concern, not row order).
 export function rowIndex(id: string): number {
   const pseudo = [{ id: "zsh-setup" }, { id: "git-signing" }];
+  // Mirror toolRows: locked rows first, then toggleable rows in context order,
+  // step-2 extras (kind topic) excluded entirely.
   const locked = fixtureContext.packages.filter((p) => p.locked);
-  const toggle = fixtureContext.packages.filter((p) => !p.locked);
+  const toggle = fixtureContext.packages.filter((p) => !p.locked && p.kind !== "topic");
   return [...pseudo, ...locked, ...toggle].map((r) => r.id).indexOf(id);
 }
 
@@ -102,8 +136,10 @@ describe("initialState", () => {
     expect(state.selected["lazygit"]).toBe(true);
     // …ordinary rows start off.
     expect(state.selected["opencode"]).toBe(false);
-    expect(state.selected["code"]).toBe(false);
+    // code/duti-defaults are step-2 extras, not step-1 rows.
+    expect(state.selected["code"]).toBeUndefined();
     expect(state.checked).toEqual({});
+    expect(state.special).toEqual({});
   });
 });
 
@@ -125,13 +161,14 @@ describe("toolView (step 1)", () => {
     expect(view).toContain("[x] fzf");
   });
 
-  test("topic groups render and special code/duti rows are included", () => {
+  test("topic groups render from categories; code/duti stay OUT of step 1", () => {
     const view = toolView(initialState(fixtureContext), fixtureContext);
-    for (const group of ["[core]", "[git]", "[file]", "[code]", "[duti]", "[ai]"]) {
+    for (const group of ["[core]", "[git]", "[file]", "[ai]", "[media]", "[Browsers]"]) {
       expect(view).toContain(group);
     }
-    expect(view).toContain("code");
-    expect(view).toContain("duti-defaults");
+    // Step-2 extras never appear in the tool selector.
+    expect(view).not.toContain("[ ] code");
+    expect(view).not.toContain("[ ] duti-defaults");
   });
 
   test("default rows start checked; unselected rows show empty marks", () => {
@@ -139,6 +176,21 @@ describe("toolView (step 1)", () => {
     expect(view).toContain("[x] ghostty");
     expect(view).toContain("[x] lazygit");
     expect(view).toContain("[ ] opencode");
+  });
+
+  test("installed:true rows are pre-checked even when default is false", () => {
+    const state = initialState(fixtureContext);
+    expect(state.selected["7zip"]).toBe(true);
+    expect(state.selected["opencode"]).toBe(false);
+  });
+
+  test("category headers group rows and tap-qualified rows render their label", () => {
+    const view = toolView(initialState(fixtureContext), fixtureContext);
+    expect(view).toContain("[Browsers]");
+    // The tap-qualified cask renders its simple label, never the qualified id.
+    expect(view).toContain("[ ] castor");
+    expect(view).not.toContain("stupside/tap/castor");
+    expect(view).toContain("[ ] brave-browser");
   });
 });
 
@@ -167,7 +219,7 @@ describe("reducer toggling (step 1)", () => {
     state = at({ step: 1, cursor: rowIndex("opencode") });
     state = reducer(state, key("space"), fixtureContext); // opencode on
     expect(state.selected["opencode"]).toBe(true);
-    expect(state.selected["code"]).toBe(false); // different group untouched
+    expect(state.selected["brave-browser"]).toBe(false); // different group untouched
   });
 
   test("former-baseline rows start checked and CAN be unchecked", () => {
@@ -255,6 +307,50 @@ describe("toggleLink (step 2)", () => {
 // ---------------------------------------------------------------------------
 // mapInkKey (unchanged vocabulary)
 // ---------------------------------------------------------------------------
+
+describe("step-2 extras (code/duti-defaults)", () => {
+  const at2 = (partial: Partial<TuiState>): TuiState => ({
+    ...initialState(fixtureContext),
+    step: 2,
+    ...partial,
+  });
+
+  test("hidden until their step-1 prerequisite is selected", () => {
+    // Nothing selected that gates them: no special rows, no header.
+    let view = linkView(at2({}), fixtureContext);
+    expect(view).not.toContain("extra installs");
+    expect(view).not.toContain("code");
+    expect(view).not.toContain("duti-defaults");
+    // Pick the duti formula: only duti-defaults appears.
+    view = linkView(at2({ selected: { duti: true } }), fixtureContext);
+    expect(view).toContain("extra installs");
+    expect(view).toContain("duti-defaults");
+    expect(view).not.toContain("code");
+    // Pick VS Code instead: only the extensions row appears.
+    view = linkView(at2({ selected: { "visual-studio-code": true } }), fixtureContext);
+    expect(view).toContain("code");
+    expect(view).not.toContain("duti-defaults");
+  });
+
+  test("space toggles a special row; enter merges it into the tool selections", () => {
+    let state = at2({ selected: { duti: true } });
+    // Find the duti-defaults row among the gated step-2 extras.
+    const idx = stepTwoRows(fixtureContext, state).findIndex(
+      (r) => r.kind === "special" && r.pkg.id === "duti-defaults",
+    );
+    state = reducer({ ...state, cursor: idx }, key("space"), fixtureContext);
+    expect(state.special["duti-defaults"]).toBe(true);
+    state = reducer(state, key("enter"), fixtureContext);
+    expect(state.submitted).toBe(true);
+    expect(state.selected["duti-defaults"]).toBe(true);
+    // Unmerging never happens: special:false ids are dropped at confirm.
+    state = at2({ selected: { duti: true } });
+    state = reducer(state, key("space"), fixtureContext); // on
+    state = reducer(state, key("space"), fixtureContext); // off
+    state = reducer(state, key("enter"), fixtureContext);
+    expect(state.selected["duti-defaults"]).toBeUndefined();
+  });
+});
 
 describe("mapInkKey", () => {
   test("maps Ink input pairs onto the key vocabulary", () => {

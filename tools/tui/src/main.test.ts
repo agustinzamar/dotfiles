@@ -26,12 +26,7 @@ import {
 } from "./main";
 import type { InstallContext } from "./context";
 import { afterAll, describe, expect, test } from "bun:test";
-import {
-  mkdtemp,
-  readFile,
-  rm,
-  writeFile,
-} from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import type { Runner } from "./plan";
@@ -59,27 +54,114 @@ async function makeContextFile(): Promise<string> {
     version: 1,
     locked: ["base", "shell"],
     packages: [
-      { id: "fzf", topic: "core", kind: "brew", area: "shell", locked: true, default: false },
-      { id: "git", topic: "core", kind: "brew", area: "git", locked: true, default: false },
-      { id: "tmux", topic: "core", kind: "brew", area: "terminal", locked: true, default: false },
-      { id: "ghostty", topic: "core", kind: "cask", area: "terminal", locked: false, default: true },
-      { id: "lazygit", topic: "git", kind: "brew", area: "git", locked: false, default: true },
-      { id: "hunk", topic: "git", kind: "brew", area: "git", locked: false, default: true },
-      { id: "koekeishiya/formulae", topic: "desktop", kind: "tap", area: "desktop", locked: false, default: false },
-      { id: "code", topic: "code", kind: "topic", area: "vscode", locked: false, default: false },
-      { id: "duti-defaults", topic: "duti", kind: "topic", area: "terminal", locked: false, default: false },
+      {
+        id: "fzf",
+        topic: "core",
+        kind: "brew",
+        area: "shell",
+        locked: true,
+        default: false,
+      },
+      {
+        id: "git",
+        topic: "core",
+        kind: "brew",
+        area: "git",
+        locked: true,
+        default: false,
+      },
+      {
+        id: "tmux",
+        topic: "core",
+        kind: "brew",
+        area: "terminal",
+        locked: true,
+        default: false,
+      },
+      {
+        id: "ghostty",
+        topic: "core",
+        kind: "cask",
+        area: "terminal",
+        locked: false,
+        default: true,
+      },
+      {
+        id: "lazygit",
+        topic: "git",
+        kind: "brew",
+        area: "git",
+        locked: false,
+        default: true,
+      },
+      {
+        id: "hunk",
+        topic: "git",
+        kind: "brew",
+        area: "git",
+        locked: false,
+        default: true,
+      },
+      {
+        id: "koekeishiya/formulae",
+        topic: "desktop",
+        kind: "tap",
+        area: "desktop",
+        locked: false,
+        default: false,
+      },
+      {
+        id: "code",
+        topic: "code",
+        kind: "topic",
+        area: "vscode",
+        locked: false,
+        default: false,
+      },
+      {
+        id: "duti-defaults",
+        topic: "duti",
+        kind: "topic",
+        area: "terminal",
+        locked: false,
+        default: false,
+      },
     ],
     links: [
-      { name: "zsh", optional: false, component: "shell", requirement: "", rows: [{ source: "a", target: "b", mode: "" }] },
-      { name: "ghostty", optional: false, component: "terminal", requirement: "", rows: [{ source: "a", target: "b", mode: "" }, { source: "a", target: "c", mode: "" }] },
-      { name: "hunk", optional: false, component: "git", requirement: "hunk", rows: [{ source: "a", target: "b", mode: "" }] },
+      {
+        name: "zsh",
+        optional: false,
+        component: "shell",
+        requirement: "",
+        rows: [{ source: "a", target: "b", mode: "" }],
+      },
+      {
+        name: "ghostty",
+        optional: false,
+        component: "terminal",
+        requirement: "",
+        rows: [
+          { source: "a", target: "b", mode: "" },
+          { source: "a", target: "c", mode: "" },
+        ],
+      },
+      {
+        name: "hunk",
+        optional: false,
+        component: "git",
+        requirement: "hunk",
+        rows: [{ source: "a", target: "b", mode: "" }],
+      },
     ],
   };
   await writeFile(target, JSON.stringify(context));
   return target;
 }
 
-function recordingRunner(calls: string[], behavior?: (op: string) => { output: string; err?: Error }): Runner {
+function recordingRunner(
+  calls: string[],
+  behavior?: (op: string) => { output: string; err?: Error },
+): Runner {
   return async (operation) => {
     calls.push(operation);
     await new Promise((r) => setTimeout(r, 0));
@@ -248,7 +330,16 @@ describe("applyConfirmed — one code path for interactive and headless", () => 
       {
         version: 1,
         locked: ["base", "shell"],
-        packages: [{ id: "ghostty", topic: "core", kind: "cask", area: "terminal", locked: false, default: true }],
+        packages: [
+          {
+            id: "ghostty",
+            topic: "core",
+            kind: "cask",
+            area: "terminal",
+            locked: false,
+            default: true,
+          },
+        ],
         links: [],
       },
       { selected: { ghostty: true }, checked: {} },
@@ -274,26 +365,114 @@ describe("applyConfirmed — one code path for interactive and headless", () => 
       version: 1,
       locked: ["base", "shell"],
       packages: [
-        { id: "fzf", topic: "core", kind: "brew", area: "shell", locked: true, default: false },
-        { id: "git", topic: "core", kind: "brew", area: "git", locked: true, default: false },
-        { id: "tmux", topic: "core", kind: "brew", area: "terminal", locked: true, default: false },
-        { id: "ghostty", topic: "core", kind: "cask", area: "terminal", locked: false, default: true },
-        { id: "hunk", topic: "git", kind: "brew", area: "git", locked: false, default: true },
-        { id: "koekeishiya/formulae", topic: "desktop", kind: "tap", area: "desktop", locked: false, default: false },
-        { id: "code", topic: "code", kind: "topic", area: "vscode", locked: false, default: false },
-        { id: "duti-defaults", topic: "duti", kind: "topic", area: "terminal", locked: false, default: false },
+        {
+          id: "fzf",
+          topic: "core",
+          kind: "brew",
+          area: "shell",
+          locked: true,
+          default: false,
+        },
+        {
+          id: "git",
+          topic: "core",
+          kind: "brew",
+          area: "git",
+          locked: true,
+          default: false,
+        },
+        {
+          id: "tmux",
+          topic: "core",
+          kind: "brew",
+          area: "terminal",
+          locked: true,
+          default: false,
+        },
+        {
+          id: "ghostty",
+          topic: "core",
+          kind: "cask",
+          area: "terminal",
+          locked: false,
+          default: true,
+        },
+        {
+          id: "hunk",
+          topic: "git",
+          kind: "brew",
+          area: "git",
+          locked: false,
+          default: true,
+        },
+        {
+          id: "koekeishiya/formulae",
+          topic: "desktop",
+          kind: "tap",
+          area: "desktop",
+          locked: false,
+          default: false,
+        },
+        {
+          id: "code",
+          topic: "code",
+          kind: "topic",
+          area: "vscode",
+          locked: false,
+          default: false,
+        },
+        {
+          id: "duti-defaults",
+          topic: "duti",
+          kind: "topic",
+          area: "terminal",
+          locked: false,
+          default: false,
+        },
       ],
       links: [
-        { name: "zsh", optional: false, component: "shell", requirement: "", rows: [{ source: "a", target: "b", mode: "" }] },
-        { name: "ghostty", optional: false, component: "terminal", requirement: "", rows: [{ source: "a", target: "b", mode: "" }, { source: "a", target: "c", mode: "" }] },
-        { name: "hunk", optional: false, component: "git", requirement: "hunk", rows: [{ source: "a", target: "b", mode: "" }] },
-        { name: "agents", optional: true, component: "ai", requirement: "", rows: [{ source: "a", target: "b", mode: "" }] },
+        {
+          name: "zsh",
+          optional: false,
+          component: "shell",
+          requirement: "",
+          rows: [{ source: "a", target: "b", mode: "" }],
+        },
+        {
+          name: "ghostty",
+          optional: false,
+          component: "terminal",
+          requirement: "",
+          rows: [
+            { source: "a", target: "b", mode: "" },
+            { source: "a", target: "c", mode: "" },
+          ],
+        },
+        {
+          name: "hunk",
+          optional: false,
+          component: "git",
+          requirement: "hunk",
+          rows: [{ source: "a", target: "b", mode: "" }],
+        },
+        {
+          name: "agents",
+          optional: true,
+          component: "ai",
+          requirement: "",
+          rows: [{ source: "a", target: "b", mode: "" }],
+        },
       ],
     };
     const exit = await applyConfirmed(
       context,
       {
-        selected: { ghostty: true, hunk: true, code: true, "koekeishiya/formulae": true },
+        selected: {
+          ghostty: true,
+          hunk: true,
+          code: true,
+          "koekeishiya/formulae": true,
+        },
         checked: { ghostty: true, agents: true },
       },
       {
@@ -349,8 +528,22 @@ describe("applyConfirmed — one code path for interactive and headless", () => 
         version: 1,
         locked: ["base", "shell"],
         packages: [
-          { id: "git", topic: "core", kind: "brew", area: "git", locked: true, default: false },
-          { id: "hunk", topic: "git", kind: "brew", area: "git", locked: false, default: true },
+          {
+            id: "git",
+            topic: "core",
+            kind: "brew",
+            area: "git",
+            locked: true,
+            default: false,
+          },
+          {
+            id: "hunk",
+            topic: "git",
+            kind: "brew",
+            area: "git",
+            locked: false,
+            default: true,
+          },
         ],
         links: [],
       },
@@ -382,7 +575,14 @@ describe("applyConfirmed — one code path for interactive and headless", () => 
         version: 1,
         locked: ["base", "shell"],
         packages: [
-          { id: "hunk", topic: "git", kind: "brew", area: "git", locked: false, default: true },
+          {
+            id: "hunk",
+            topic: "git",
+            kind: "brew",
+            area: "git",
+            locked: false,
+            default: true,
+          },
         ],
         links: [],
       },
@@ -390,7 +590,10 @@ describe("applyConfirmed — one code path for interactive and headless", () => 
       {
         profilePath,
         dryRun: false,
-        run: recordingRunner([], () => ({ output: "boom", err: new Error("exit 7") })),
+        run: recordingRunner([], () => ({
+          output: "boom",
+          err: new Error("exit 7"),
+        })),
         linkRunner: async () => {},
       },
     );
@@ -415,7 +618,10 @@ describe("runFlagMode — headless -apply -profile (no UI mounts)", () => {
   test("dry-run prints the plan and leaves the profile untouched", async () => {
     const dir = await makeTempDir();
     const profilePath = path.join(dir, "profile.json");
-    await writeFile(profilePath, JSON.stringify({ components: { vscode: true } }));
+    await writeFile(
+      profilePath,
+      JSON.stringify({ components: { vscode: true } }),
+    );
     const contextPath = await makeContextFile();
     const calls: string[] = [];
     const exit = await runFlagMode(profilePath, contextPath, false, true, {
@@ -453,7 +659,9 @@ describe("runFlagMode — headless -apply -profile (no UI mounts)", () => {
     expect(calls.some((c) => c === "brew install fzf")).toBe(true);
     // base/shell/git/terminal are default-active (component_default_selected
     // fallback when absent), so ghostty (terminal, default:true) installs.
-    expect(calls.some((c) => c.startsWith("brew install --cask ghostty"))).toBe(true);
+    expect(calls.some((c) => c.startsWith("brew install --cask ghostty"))).toBe(
+      true,
+    );
     // Every offered link is linked and agents never are.
     expect(calls).toContain("dot link zsh");
     expect(calls).not.toContain("dot link agents");

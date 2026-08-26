@@ -27,9 +27,13 @@ export interface ToolRow {
   id: string;
   label: string;
   topic: string;
+  /** Selector group header (category override from the emitter). */
+  category: string;
   area: string;
   locked: boolean;
   default: boolean;
+  /** Pre-check signal from `brew list` at emit time (v1 additive field). */
+  installed?: boolean;
   /** Row is a locked pseudo-step (informational, always applied). */
   pseudo: boolean;
 }
@@ -50,6 +54,7 @@ export function toolRows(context: InstallContext): ToolRow[] {
       id: step.id,
       label: step.label,
       topic: "locked",
+      category: "locked",
       area: step.area,
       locked: true,
       default: true,
@@ -57,13 +62,21 @@ export function toolRows(context: InstallContext): ToolRow[] {
     });
   }
   for (const p of context.packages) {
+    // kind "topic" rows (code extensions / duti defaults) never render in
+    // step 1: the user picks vscode/duti there and code/duti-defaults are
+    // offered as gated extra rows in step 2.
+    if (p.kind === "topic") continue;
     rows.push({
       id: p.id,
-      label: p.id,
-      topic: p.locked ? "locked" : p.topic,
+      label: p.label ?? p.id,
+      topic: p.topic,
+      // Locked rows stay pinned under their own header; the rest use the
+      // emitter's category override (ai / Communication / Browsers / topic).
+      category: p.locked ? "locked" : (p.category ?? p.topic),
       area: p.area,
       locked: p.locked,
       default: p.default,
+      installed: p.installed,
       pseudo: false,
     });
   }
@@ -78,12 +91,12 @@ export function toolGroups(context: InstallContext): Array<{
   const groups: Array<{ topic: string; rows: ToolRow[] }> = [];
   const seen = new Set<string>();
   for (const row of toolRows(context)) {
-    if (seen.has(row.topic)) continue;
-    seen.add(row.topic);
-    groups.push({ topic: row.topic, rows: [] });
+    if (seen.has(row.category)) continue;
+    seen.add(row.category);
+    groups.push({ topic: row.category, rows: [] });
   }
   for (const row of toolRows(context)) {
-    groups.find((g) => g.topic === row.topic)!.rows.push(row);
+    groups.find((g) => g.topic === row.category)!.rows.push(row);
   }
   return groups;
 }

@@ -48,9 +48,11 @@ describe("toolRows", () => {
     expect(rows[0]!.area).toBe("shell");
     expect(rows[0]!.pseudo).toBe(true);
     expect(rows[1]!.id).toBe("git-signing");
-    // fzf is locked: pinned under topic 'locked' immediately after pseudo-steps.
+    // fzf is locked: pinned under category 'locked' immediately after
+    // pseudo-steps (its topic stays 'core').
     const fzf = rows.find((r) => r.id === "fzf")!;
-    expect(fzf.topic).toBe("locked");
+    expect(fzf.category).toBe("locked");
+    expect(fzf.topic).toBe("core");
     expect(fzf.locked).toBe(true);
     expect(fzf.pseudo).toBe(false);
   });
@@ -64,22 +66,20 @@ describe("toolRows", () => {
     expect(opencode.default).toBe(false);
   });
 
-  test("special code/duti delegating rows are present as toggleable rows", () => {
+  test("special code/duti delegating rows are NOT step-1 rows", () => {
     const ids = toolRows(fixture).map((r) => r.id);
-    expect(ids).toContain("code");
-    expect(ids).toContain("duti-defaults");
+    expect(ids).not.toContain("code");
+    expect(ids).not.toContain("duti-defaults");
   });
 });
 
 describe("toolGroups", () => {
-  test("groups appear in first-seen order with locked rows first", () => {
+  test("groups appear in first-seen category order with locked rows first", () => {
     const groups = toolGroups(fixture);
     expect(groups.map((g) => g.topic)).toEqual([
       "locked",
       "core",
       "dev",
-      "code",
-      "duti",
     ]);
     expect(groups[0]!.rows.map((r) => r.id)).toEqual(["zsh-setup", "git-signing", "fzf", "tmux"]);
   });

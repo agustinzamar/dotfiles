@@ -4,14 +4,21 @@
 // or malformed file is a fatal, loud error.
 import { readFile } from "node:fs/promises";
 
-export interface ContextPackage {
-  id: string;
-  topic: string;
-  kind: "brew" | "cask" | "tap" | "topic";
-  area: string;
-  locked: boolean;
-  default: boolean;
-}
+    export interface ContextPackage {
+      id: string;
+      /** Simple display name (tap-qualified rows collapse to the bare tool name). */
+      label?: string;
+      topic: string;
+      /** Display category override for the selector grouping (v1 additive). */
+      category?: string;
+      kind: "brew" | "cask" | "tap" | "topic";
+      area: string;
+      locked: boolean;
+      default: boolean;
+      /** Pre-check signal from `brew list` at emit time (v1 additive field;
+       *  absent on older context files means not pre-checked). */
+      installed?: boolean;
+    }
 
 export interface LinkRow {
   source: string;
@@ -89,18 +96,24 @@ export async function loadContext(path_: string): Promise<InstallContext> {
       typeof row.topic !== "string" ||
       typeof row.area !== "string" ||
       typeof row.locked !== "boolean" ||
-      typeof row.default !== "boolean"
+      typeof row.default !== "boolean" ||
+      (row.installed !== undefined && typeof row.installed !== "boolean") ||
+      (row.label !== undefined && typeof row.label !== "string") ||
+      (row.category !== undefined && typeof row.category !== "string")
     ) {
       throw new Error("invalid context: malformed packages row");
     }
     // Every field was type-checked above; row has exactly ContextPackage's shape.
     return {
       id: row.id,
+      label: row.label,
       topic: row.topic,
+      category: row.category,
       kind: row.kind as ContextPackage["kind"],
       area: row.area,
       locked: row.locked,
       default: row.default,
+      installed: row.installed === true,
     };
   });
 
