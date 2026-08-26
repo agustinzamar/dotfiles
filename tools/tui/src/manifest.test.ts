@@ -154,7 +154,9 @@ describe("toolRows", () => {
 describe("toolRowsGrouped", () => {
   test("flattens toolGroups so identical categories are always contiguous", () => {
     const categories = toolRowsGrouped(fixture).map((r) => r.category);
-    const runs = categories.filter((c, i) => i === 0 || categories[i - 1] !== c);
+    const runs = categories.filter(
+      (c, i) => i === 0 || categories[i - 1] !== c,
+    );
     expect(new Set(runs).size).toBe(runs.length);
   });
 });

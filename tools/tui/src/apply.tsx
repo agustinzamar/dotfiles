@@ -116,7 +116,8 @@ export class ApplyUiBridge implements ApplyUi {
   }
 
   private send(action: ApplyAction): void {
-    if (this.dispatch === null) this.queue.push(action); else this.dispatch(action);
+    if (this.dispatch === null) this.queue.push(action);
+    else this.dispatch(action);
   }
 
   progress(label: string, done: number, total: number): void {
@@ -170,10 +171,8 @@ function percentComplete(state: ApplyState): number {
 }
 
 export function ApplyScreen({ ui }: { ui: ApplyUiBridge }): ReactElement {
-  const [state, dispatch] = useReducer(
-    applyReducer,
-    undefined,
-    () => initialState(),
+  const [state, dispatch] = useReducer(applyReducer, undefined, () =>
+    initialState(),
   );
   const { exit } = useApp();
 
@@ -201,10 +200,7 @@ export function ApplyScreen({ ui }: { ui: ApplyUiBridge }): ReactElement {
         </StatusMessage>
       ))}
       {state.results.map((result) => (
-        <ResultLine
-          key={`${result.status}:${result.label}`}
-          result={result}
-        />
+        <ResultLine key={`${result.status}:${result.label}`} result={result} />
       ))}
       {state.phase === "done" ? (
         <Badge color={state.failed ? "red" : "green"}>
