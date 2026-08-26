@@ -7,7 +7,7 @@
 // exit 10 with zero filesystem writes. Views stay pure-string Ink text.
 import { Text, useApp, useInput, useStdout } from "ink";
 import { useEffect, useReducer, useRef } from "react";
-import type { ContextLink, ContextPackage, InstallContext } from "./context";
+import type { ContextLink, InstallContext } from "./context";
 import {
   offeredLinks,
   toolRows,
@@ -25,8 +25,6 @@ export interface TuiState {
   selected: Record<string, boolean>;
   /** Confirmed link names (step 2), toggled as one unit per multi-target name. */
   checked: Record<string, boolean>;
-  /** Step-2 extra-install rows (code, duti-defaults), gated by step-1 picks. */
-  special: Record<string, boolean>;
   submitted: boolean;
   width: number;
   height: number;
@@ -50,7 +48,6 @@ export function initialState(
     cursor: 0,
     selected: { ...selected, ...initialSelected },
     checked: {},
-    special: {},
     submitted: false,
     // 80x24 dingbat defaults keep the pure views readable before the App
     // dispatches the real terminal size on mount.
@@ -79,31 +76,6 @@ export function toggleLink(state: TuiState, name: string): TuiState {
   return {
     ...state,
     checked: { ...state.checked, [name]: !state.checked[name] },
-  };
-}
-
-/**
- * Step-2 extra-install rows (kind "topic": VS Code extensions, duti default
- * file handlers). Offered only when their prerequisite was picked in step 1:
- * code iff visual-studio-code is selected, duti-defaults iff the duti
- * formula is selected. Never part of step 1.
- */
-export function specialRowsForStep(
-  context: InstallContext,
-  state: TuiState,
-): ContextPackage[] {
-  return context.packages.filter((p) => {
-    if (p.kind !== "topic") return false;
-    if (p.id === "code") return state.selected["visual-studio-code"] === true;
-    if (p.id === "duti-defaults") return state.selected["duti"] === true;
-    return false;
-  });
-}
-
-export function toggleSpecial(state: TuiState, id: string): TuiState {
-  return {
-    ...state,
-    special: { ...state.special, [id]: !state.special[id] },
   };
 }
 
@@ -152,59 +124,26 @@ function linkRowLine(
   return `${cursorMark} ${selectedMark(checked)} ${link.name}${targets}`;
 }
 
-/** Pure string view for Step 2 (filtered links + opt-in agents). */
-/** Ordered step-2 rows: offered links, opt-in agents, gated extra installs. */
-export function stepTwoRows(
-  context: InstallContext,
-  state: TuiState,
-): Array<
-  { kind: "link"; link: ContextLink } | { kind: "special"; pkg: ContextPackage }
-> {
-  const { main, agents } = linkRowsForStep(context, state);
-  const specials = specialRowsForStep(context, state);
-  return [
-    ...main.map((link) => ({ kind: "link" as const, link })),
-    ...agents.map((link) => ({ kind: "link" as const, link })),
-    ...specials.map((pkg) => ({ kind: "special" as const, pkg })),
-  ];
-}
+    /** Step-2 rows: the ADR-3-filtered config links only (no opt-in agents,
+     *  no gated extra installs — extras like code/duti-defaults/dock/macos are
+     *  first-class step-1 rows now). */
+    export function stepTwoRows(
+      context: InstallContext,
+      state: TuiState,
+    ): ContextLink[] {
+      return linkRowsForStep(context, state).main;
+    }
 
 export function linkView(state: TuiState, context: InstallContext): string {
   const rows = stepTwoRows(context, state);
-  const lines: string[] = [
-    state.special && Object.keys(state.special).length > 0
-      ? " dot installer  step 2/2: link configs + extras "
-      : " dot installer  step 2/2: link configs ",
-    "",
-  ];
+  const lines: string[] = [" dot installer  step 2/2: link configs ", ""];
   let cursorRow = 0;
-  let linkIdx = 0;
   for (let i = 0; i < rows.length; i++) {
     if (i === state.cursor) cursorRow = lines.length;
-    const row = rows[i]!;
-    if (row.kind === "link") {
-      const link = row.link;
-      if (linkIdx === linkRowsForStep(context, state).main.length) {
-        lines.push(" opt-in AI agents (unchecked)");
-        if (i <= state.cursor) cursorRow++;
-      }
-      linkIdx++;
-      lines.push(
-        linkRowLine(
-          link,
-          i === state.cursor,
-          state.checked[link.name] === true,
-        ),
-      );
-    } else {
-      if (i > 0 && rows[i - 1]!.kind === "link") {
-        lines.push(" extra installs (from step-1 picks)");
-        if (i <= state.cursor) cursorRow++;
-      }
-      lines.push(
-        `${i === state.cursor ? ">" : " "} ${selectedMark(state.special[row.pkg.id] === true)} ${row.pkg.label ?? row.pkg.id}`,
-      );
-    }
+    const link = rows[i]!;
+    lines.push(
+      linkRowLine(link, i === state.cursor, state.checked[link.name] === true),
+    );
   }
   return (
     viewportOf(lines, cursorRow, state.height) +
@@ -252,14 +191,16 @@ function reduceKey(
   name: string,
   context: InstallContext,
 ): TuiState {
-  const rows: Array<
-    | { kind: "tool"; row: ToolRow }
-    | { kind: "link"; link: ContextLink }
-    | { kind: "special"; pkg: ContextPackage }
-  > =
-    state.step === 1
-      ? toolRowsGrouped(context).map((row) => ({ kind: "tool" as const, row }))
-      : stepTwoRows(context, state);
+      const rows: Array<
+        | { kind: "tool"; row: ToolRow }
+        | { kind: "link"; link: ContextLink }
+      > =
+        state.step === 1
+          ? toolRowsGrouped(context).map((row) => ({ kind: "tool" as const, row }))
+          : stepTwoRows(context, state).map((link) => ({
+              kind: "link" as const,
+              link,
+            }));
 
   switch (name) {
     case "up":
@@ -285,28 +226,18 @@ function reduceKey(
       }
       const entry = rows[state.cursor] as
         | { kind: "link"; link: ContextLink }
-        | { kind: "special"; pkg: ContextPackage }
         | undefined;
-      if (!entry) return state;
-      if (entry.kind === "link") return toggleLink(state, entry.link.name);
-      return toggleSpecial(state, entry.pkg.id);
+      if (!entry || entry.kind !== "link") return state;
+      return toggleLink(state, entry.link.name);
     }
     case "enter":
       if (state.step === 1) {
         return { ...state, step: 2, cursor: 0 };
       }
-      // Confirm: merge step-2 extra installs into the tool selections so
-      // main.ts applies code/duti-defaults exactly like any chosen tool.
-      return {
-        ...state,
-        submitted: true,
-        selected: {
-          ...state.selected,
-          ...Object.fromEntries(
-            Object.entries(state.special).filter(([, v]) => v),
-          ),
-        },
-      };
+      // Confirm: submit as-is. Every installable row (brew/cask/tap/topic)
+      // was already chosen directly in step 1, so there is nothing extra to
+      // merge from a special map.
+      return { ...state, submitted: true };
     default:
       return state;
   }

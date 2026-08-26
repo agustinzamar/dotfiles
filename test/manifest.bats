@@ -179,9 +179,16 @@ EOF
   ctx="$(mktemp)"
   install_context_json "$ctx"
   json="$(cat "$ctx")"
-  [ "$(jq '[.packages[] | select(.kind == "topic")] | length' <<<"$json")" -eq 2 ]
+  # code + duti-defaults (topic rows) + the new System adoptees dock/macos.
+  [ "$(jq '[.packages[] | select(.kind == "topic")] | length' <<<"$json")" -eq 4 ]
   [ "$(jq -r '[.packages[] | select(.id == "code")][0].topic' <<<"$json")" == "code" ]
   [ "$(jq -r '[.packages[] | select(.id == "duti-defaults")][0].topic' <<<"$json")" == "duti" ]
+  [ "$(jq -r '[.packages[] | select(.id == "dock")][0].topic' <<<"$json")" == "system" ]
+  [ "$(jq -r '[.packages[] | select(.id == "macos")][0].topic' <<<"$json")" == "system" ]
+  # Human labels for the delegating rows (they now render in the main list).
+  [ "$(jq -r '[.packages[] | select(.id == "code")][0].label' <<<"$json")" == "VS Code extensions" ]
+  [ "$(jq -r '[.packages[] | select(.id == "dock")][0].label' <<<"$json")" == "Dock defaults" ]
+  [ "$(jq -r '[.packages[] | select(.id == "macos")][0].label' <<<"$json")" == "macOS defaults" ]
   rm -f "$ctx"
 }
 
@@ -259,6 +266,11 @@ EOF
   [ "$(jq -r '[.packages[] | select(.id == "hunk")][0].category' <<<"$json")" == "Git" ]
   [ "$(jq -r '[.packages[] | select(.id == "herd")][0].category' <<<"$json")" == "Services" ]
   [ "$(jq -r '[.packages[] | select(.id == "orbstack")][0].category' <<<"$json")" == "Services" ]
+  # System adoptees + code land in the main selector now.
+  [ "$(jq -r '[.packages[] | select(.id == "duti-defaults")][0].category' <<<"$json")" == "System" ]
+  [ "$(jq -r '[.packages[] | select(.id == "dock")][0].category' <<<"$json")" == "System" ]
+  [ "$(jq -r '[.packages[] | select(.id == "macos")][0].category' <<<"$json")" == "System" ]
+  [ "$(jq -r '[.packages[] | select(.id == "code")][0].category' <<<"$json")" == "Editors" ]
   [ "$(jq -r '[.packages[] | select(.id == "shellcheck")][0].category' <<<"$json")" == "Linters" ]
   [ "$(jq -r '[.packages[] | select(.id == "shfmt")][0].category' <<<"$json")" == "Linters" ]
   [ "$(jq -r '[.packages[] | select(.id == "actionlint")][0].category' <<<"$json")" == "Linters" ]

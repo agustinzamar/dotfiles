@@ -66,7 +66,9 @@ json_escape() {
 area_for_package() {
   case "$1" in
     # Area tokens used directly as link components resolve to themselves.
-    base | shell | git | terminal | vscode | ai | ai-herdr | claude | dev | media | desktop | desktop-*) echo "$1" ;;
+    base | shell | git | terminal | vscode | ai | ai-herdr | claude | dev | media | desktop | system | desktop-*) echo "$1" ;;
+    # --- System settings (dot dock / dot macos apply_defaults scripts) ---
+    dock | macos) echo "system" ;;
     # --- Shell (locked block) ---
     fzf | oh-my-posh | pay-respects | timescam/tap) echo "shell" ;;
     # --- Git ---
@@ -138,6 +140,10 @@ package_rows() {
   # Special-installer topics: one delegating row each.
   printf 'code\ttopic\tcode\n'
   printf 'duti\ttopic\tduti-defaults\n'
+  # System-level adopters that are not brew data: `dot dock` / `dot macos`
+  # run apply_defaults for system/defaults/dock.sh and macos.sh.
+  printf 'system\ttopic\tdock\n'
+  printf 'system\ttopic\tmacos\n'
 }
 
 # Emit the link map verbatim (all_links then optional_links). manifest.sh adds
@@ -155,6 +161,16 @@ _manifest_label() {
   local id=$1 kind=$2
   if [[ "$kind" == tap ]]; then
     printf '%s' "$id"
+  elif [[ "$kind" == topic ]]; then
+    # Delegating rows get a human label; they now render as first-class
+    # step-1 rows instead of being hidden away in a step-2 corner.
+    case "$id" in
+      code) printf 'VS Code extensions' ;;
+      duti-defaults) printf 'Default file handlers' ;;
+      dock) printf 'Dock defaults' ;;
+      macos) printf 'macOS defaults' ;;
+      *) printf '%s' "${id##*/}" ;;
+    esac
   else
     printf '%s' "${id##*/}"
   fi
@@ -167,6 +183,10 @@ _manifest_label() {
 # semantics are untouched). Unknown ids fall back to their topic.
 manifest_category() {
   case "$1" in
+    # --- System settings, file handlers and defaults scripts ---
+    duti-defaults | dock | macos) echo "System" ;;
+    # --- VS Code extensions (`code` delegates to dot install code) ---
+    code) echo "Editors" ;;
     # --- AI agents and AI apps ---
     claude-code@latest | codex | t3-code | anomalyco/tap/opencode | pi-coding-agent | claude | chatgpt | herdr | openusage) echo "AI" ;;
     # --- Browsers ---

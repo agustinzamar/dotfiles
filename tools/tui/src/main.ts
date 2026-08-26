@@ -207,14 +207,32 @@ export async function applyConfirmed(
       label: `link ${link.name}`,
       operation: `dot link ${link.name}`,
     }));
-  const specialSteps: ApplyStep[] = packages
-    .filter((p) => p.kind === "topic")
-    .map((p) => ({
-      id: p.id,
-      label: `install ${p.topic}`,
-      operation: `dot install ${p.topic}`,
-    }));
-  // taps before formulas, then locked pseudo-steps, then links, then specials.
+  // kind "topic" rows (code extensions, duti default handlers, dock/macos
+  // defaults) delegate to a dot subcommand. Skips unknown topic ids quietly
+  // (none exist today; the drift guard would catch an inventoried one).
+  function topicCommandFor(id: string): string | null {
+    switch (id) {
+      case "code":
+        return "dot install code";
+      case "duti-defaults":
+        return "dot install duti";
+      case "dock":
+        return "dot dock";
+      case "macos":
+        return "dot macos";
+      default:
+        return null;
+    }
+  }
+  const topicSteps: ApplyStep[] = [];
+  for (const p of packages) {
+    if (p.kind !== "topic") continue;
+    const operation = topicCommandFor(p.id);
+    if (operation === null) continue;
+    topicSteps.push({ id: p.id, label: `install ${p.id}`, operation });
+  }
+  // taps before formulas, then locked pseudo-steps, then links, then topic
+  // delegating installs.
   const runSteps: ApplyStep[] = [
     // Xcode CLT + Homebrew, installed only now that the user confirmed
     // (never before the selector). PATH-independent: uses the absolute dot
@@ -231,7 +249,7 @@ export async function applyConfirmed(
     ...brewSteps,
     ...pseudoSteps,
     ...linkSteps,
-    ...specialSteps,
+    ...topicSteps,
   ];
 
   // Dry-run: plan only, zero filesystem writes, exit 0.
@@ -474,7 +492,7 @@ export async function runInteractive(
 // as a stale binary and rebuilds from source instead of trusting stale disk
 // state; a version bump is a NO-OP without ALSO bumping bin/dot's own check
 // and the test/tui-resolver.bats fixtures that assert against it.
-export const TUI_VERSION = "dot-tui-context-v2";
+export const TUI_VERSION = "dot-tui-context-v3";
 
 if (import.meta.main) {
   const raw = process.argv.slice(2);

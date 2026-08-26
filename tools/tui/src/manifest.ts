@@ -68,13 +68,13 @@ export function toolRows(context: InstallContext): ToolRow[] {
     });
   }
   for (const p of context.packages) {
-    // kind "topic" rows (code extensions / duti defaults) never render in
-    // step 1: the user picks vscode/duti there and code/duti-defaults are
-    // offered as gated extra rows in step 2. kind "tap" rows are never
-    // directly toggleable either: a user picks a TOOL (yabai, sketchybar),
-    // never "enable this Homebrew tap" — withRequiredTaps() below adds the
-    // tap install automatically whenever a sibling formula is selected.
-    if (p.kind === "topic" || p.kind === "tap") continue;
+    // kind "tap" rows are never directly toggleable: a user picks a TOOL
+    // (yabai, sketchybar), never "enable this Homebrew tap" —
+    // withRequiredTaps() below adds the tap install automatically whenever
+    // a sibling formula is selected. kind "topic" rows (code extensions,
+    // duti default handlers, dock/macos defaults) ARE first-class step-1
+    // rows now.
+    if (p.kind === "tap") continue;
     rows.push({
       id: p.id,
       label: p.label ?? p.id,

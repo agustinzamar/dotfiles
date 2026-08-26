@@ -64,6 +64,7 @@ const fixture: InstallContext = {
     {
       id: "code",
       topic: "code",
+      category: "Editors",
       kind: "topic",
       area: "vscode",
       locked: false,
@@ -72,6 +73,7 @@ const fixture: InstallContext = {
     {
       id: "duti-defaults",
       topic: "duti",
+      category: "System",
       kind: "topic",
       area: "terminal",
       locked: false,
@@ -136,10 +138,10 @@ describe("toolRows", () => {
     expect(opencode.default).toBe(false);
   });
 
-  test("special code/duti delegating rows are NOT step-1 rows", () => {
+  test("code/duti-defaults delegating rows ARE step-1 rows now (kind topic, not filtered)", () => {
     const ids = toolRows(fixture).map((r) => r.id);
-    expect(ids).not.toContain("code");
-    expect(ids).not.toContain("duti-defaults");
+    expect(ids).toContain("code");
+    expect(ids).toContain("duti-defaults");
   });
 
   test("tap rows are NOT step-1 rows (never directly toggleable); sibling formulas still are", () => {
@@ -182,6 +184,8 @@ describe("toolGroups", () => {
       "locked",
       "core",
       "dev",
+      "Editors",
+      "System",
       "desktop",
     ]);
     expect(groups[0]!.rows.map((r) => r.id)).toEqual([

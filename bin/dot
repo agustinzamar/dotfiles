@@ -185,7 +185,7 @@ dot_runtime_path() {
   # current TUI contract. A stale/foreign binary (old pre-delta build) prints
   # nothing or an old marker, so it falls through to a rebuild — a checked-out
   # repo can never silently run an outdated installer UI.
-  if [[ -x "$bin" ]] && [[ "$("$bin" --version 2>/dev/null)" == "dot-tui-context-v2" ]]; then
+  if [[ -x "$bin" ]] && [[ "$("$bin" --version 2>/dev/null)" == "dot-tui-context-v3" ]]; then
     printf '%s\n' "$bin"
     return 0
   fi

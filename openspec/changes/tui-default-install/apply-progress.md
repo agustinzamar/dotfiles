@@ -264,3 +264,51 @@ hardcoded marker — which no source change had bumped.
   which shfmt rejects — re-ran `shfmt -w` before gating.
 - Rebuilt binary (`make build-tui`): `bin/dot-tui --version` → `dot-tui-context-v2`.
   Gate green: bats 86/86, bun 136/136, check/lint clean.
+
+## Work unit 8 — step 2 = pure links; code to the main list; new "System" category
+
+**Status: COMPLETE** · Branch: `main` (post-merge) · Executor: parent inline
+
+Owner request on top of the merged flow:
+
+1. **Step 2 loses the opt-in AI-agents group and the gated extra installs.** The
+   optional links (`agents` from links.sh) are no longer offered in the TUI; step 2
+   is now exactly the ADR-3-filtered config links. `offeredLinks` still returns
+   `agents` for the filter tests, but nothing renders them.
+2. **`code` (VS Code extensions) moved to the main listing** and is no longer a
+   gated step-2 extra. All `kind: "topic"` rows became first-class step-1 rows
+   (`toolRows` only excludes taps now): `code` → category **Editors**, plus human
+   labels ("VS Code extensions", "Default file handlers", "Dock defaults", "macOS
+   defaults") wired in `_manifest_label` since it previously fell back to the bare id.
+3. **New "System" category** for `duti-defaults`, and two brand-new emitted rows
+   `dock`/`macos` (delegating rows kind `topic`, topic `system`) that run
+   `dot dock` / `dot macos`. `area_for_package` gained the `system` area token.
+   Apply side: `topicCommandFor()` maps code/duti-defaults/dock/macos to their
+   subcommands; unknown topic ids are skipped (coverage is implied: the drift guard
+   only inventories link tokens, not topic rows).
+
+The reducer's enter-merge of `special` selections and `specialRowsForStep`/
+`toggleSpecial`/`special` state were deleted; `stepTwoRows` returns plain links.
+
+**Version**: TUI_VERSION bumped v2 → v3 (renders differently now), pinned in
+main.ts + bin/dot + test/tui-resolver.bats fixtures; binary rebuilt (v3).
+
+### Test evidence (RED → GREEN)
+
+All behavioral tests updated as the contract changed: initialState now expects
+code/duti-defaults present-and-unchecked; toolView asserts `[Editors]`/`[System]`
+groups and NO opt-in/extra-install output in step 2; the old "step-2 extras"
+describe was removed; tap-exclusion and category tests keep their meaning. bats
+adds topic-row-count=4 (code, duti-defaults, dock, macos), their topics/labels
+and the System/Editors category assertions.
+
+### Gate evidence (green)
+
+| Gate | Result |
+| --- | --- |
+| `make check` | clean |
+| `make lint` | clean |
+| `bats test/` | 86 pass / 0 fail |
+| `cd tools/tui && bun test` | 134 pass / 0 fail |
+| `tsc --noEmit -p tools/tui` | clean |
+| `bin/dot-tui --version` | `dot-tui-context-v3` |

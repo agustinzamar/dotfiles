@@ -11,7 +11,6 @@ import type { InstallContext } from "./context";
 import { toolRowsGrouped } from "./manifest";
 import {
   App,
-  stepTwoRows,
   initialState,
   linkView,
   mapInkKey,
@@ -88,6 +87,7 @@ const fixtureContext: InstallContext = {
     {
       id: "code",
       topic: "code",
+      category: "Editors",
       kind: "topic",
       area: "vscode",
       locked: false,
@@ -96,6 +96,7 @@ const fixtureContext: InstallContext = {
     {
       id: "duti-defaults",
       topic: "duti",
+      category: "System",
       kind: "topic",
       area: "terminal",
       locked: false,
@@ -268,10 +269,11 @@ describe("initialState", () => {
     expect(state.selected["lazygit"]).toBe(true);
     // …ordinary rows start off.
     expect(state.selected["opencode"]).toBe(false);
-    // code/duti-defaults are step-2 extras, not step-1 rows.
-    expect(state.selected["code"]).toBeUndefined();
+    // Topic delegating rows (code/duti-defaults) are first-class step-1 rows
+    // now: present and unchecked, never step-2 extras.
+    expect(state.selected["code"]).toBe(false);
+    expect(state.selected["duti-defaults"]).toBe(false);
     expect(state.checked).toEqual({});
-    expect(state.special).toEqual({});
   });
 });
 
@@ -293,8 +295,10 @@ describe("toolView (step 1)", () => {
     expect(view).toContain("[x] fzf");
   });
 
-  test("topic groups render from categories; code/duti stay OUT of step 1", () => {
-    const view = toolView(initialState(fixtureContext), fixtureContext);
+  test("topic groups render from categories; code/duti-defaults are step-1 rows under Editors/System", () => {
+    // Tall viewport: initialState's 24-row default clips the bottom groups.
+    const state = { ...initialState(fixtureContext), height: 200 };
+    const view = toolView(state, fixtureContext);
     for (const group of [
       "[core]",
       "[git]",
@@ -302,12 +306,14 @@ describe("toolView (step 1)", () => {
       "[ai]",
       "[media]",
       "[Browsers]",
+      "[Editors]",
+      "[System]",
     ]) {
       expect(view).toContain(group);
     }
-    // Step-2 extras never appear in the tool selector.
-    expect(view).not.toContain("[ ] code");
-    expect(view).not.toContain("[ ] duti-defaults");
+    // The delegating installs appear in the main selector now.
+    expect(view).toContain("[ ] code");
+    expect(view).toContain("[ ] duti-defaults");
   });
 
   test("a category header never repeats, even when its rows are non-contiguous in context order (7zip is topic 'core', declared after Browsers)", () => {
@@ -330,7 +336,8 @@ describe("toolView (step 1)", () => {
   });
 
   test("category headers group rows and tap-qualified rows render their label", () => {
-    const view = toolView(initialState(fixtureContext), fixtureContext);
+    const state = { ...initialState(fixtureContext), height: 200 };
+    const view = toolView(state, fixtureContext);
     expect(view).toContain("[Browsers]");
     // The tap-qualified cask renders its simple label, never the qualified id.
     expect(view).toContain("[ ] castor");
@@ -404,13 +411,15 @@ describe("reducer toggling (step 1)", () => {
 // ---------------------------------------------------------------------------
 
 describe("linkView (step 2)", () => {
-  test("multi-target link name renders as ONE row, then the agents group", () => {
+  test("multi-target link name renders as ONE row; no opt-in agents group", () => {
     const state: TuiState = { ...initialState(fixtureContext), step: 2 };
     const view = linkView(state, fixtureContext);
     // ghostty appears exactly once as a row label (its two targets collapse).
     expect(view).toContain("ghostty");
     expect(view).not.toContain("ghostty.conf");
-    expect(view).toContain("opt-in AI agents");
+    // The opt-in agents group was removed; step 2 is pure config links.
+    expect(view).not.toContain("opt-in AI agents");
+    expect(view).not.toContain("[ ] agents");
     // Multi-target label names its target count.
     expect(view).toContain("ghostty (2 targets)");
   });
@@ -460,53 +469,6 @@ describe("toggleLink (step 2)", () => {
 // ---------------------------------------------------------------------------
 // mapInkKey (unchanged vocabulary)
 // ---------------------------------------------------------------------------
-
-describe("step-2 extras (code/duti-defaults)", () => {
-  const at2 = (partial: Partial<TuiState>): TuiState => ({
-    ...initialState(fixtureContext),
-    step: 2,
-    ...partial,
-  });
-
-  test("hidden until their step-1 prerequisite is selected", () => {
-    // Nothing selected that gates them: no special rows, no header.
-    let view = linkView(at2({}), fixtureContext);
-    expect(view).not.toContain("extra installs");
-    expect(view).not.toContain("code");
-    expect(view).not.toContain("duti-defaults");
-    // Pick the duti formula: only duti-defaults appears.
-    view = linkView(at2({ selected: { duti: true } }), fixtureContext);
-    expect(view).toContain("extra installs");
-    expect(view).toContain("duti-defaults");
-    expect(view).not.toContain("code");
-    // Pick VS Code instead: only the extensions row appears.
-    view = linkView(
-      at2({ selected: { "visual-studio-code": true } }),
-      fixtureContext,
-    );
-    expect(view).toContain("code");
-    expect(view).not.toContain("duti-defaults");
-  });
-
-  test("space toggles a special row; enter merges it into the tool selections", () => {
-    let state = at2({ selected: { duti: true } });
-    // Find the duti-defaults row among the gated step-2 extras.
-    const idx = stepTwoRows(fixtureContext, state).findIndex(
-      (r) => r.kind === "special" && r.pkg.id === "duti-defaults",
-    );
-    state = reducer({ ...state, cursor: idx }, key("space"), fixtureContext);
-    expect(state.special["duti-defaults"]).toBe(true);
-    state = reducer(state, key("enter"), fixtureContext);
-    expect(state.submitted).toBe(true);
-    expect(state.selected["duti-defaults"]).toBe(true);
-    // Unmerging never happens: special:false ids are dropped at confirm.
-    state = at2({ selected: { duti: true } });
-    state = reducer(state, key("space"), fixtureContext); // on
-    state = reducer(state, key("space"), fixtureContext); // off
-    state = reducer(state, key("enter"), fixtureContext);
-    expect(state.selected["duti-defaults"]).toBeUndefined();
-  });
-});
 
 describe("mapInkKey", () => {
   test("maps Ink input pairs onto the key vocabulary", () => {
@@ -563,8 +525,9 @@ describe("frame: two-step flow", () => {
     }
     expect(frame).toContain("[ ] zsh");
     expect(frame).not.toContain("[ ] opencode"); // ai area inactive
-    expect(frame).toContain("opt-in AI agents");
-    expect(frame).toContain("[ ] agents");
+    // Step 2 is pure config links now: no opt-in agents, no extras.
+    expect(frame).not.toContain("opt-in AI agents");
+    expect(frame).not.toContain("extra installs");
     expect(frame).toContain("space toggle  enter apply  q quit");
     // Multi-target renders once.
     expect((frame.match(/ghostty/g) ?? []).length).toBeGreaterThanOrEqual(1);
