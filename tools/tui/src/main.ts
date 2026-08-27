@@ -2,9 +2,10 @@
 // seams). `--context FILE` supplies the v1 context JSON emitted by
 // install/manifest.sh; exit codes are 0 success, 10 aborted-by-user (zero
 // writes), any other non-zero a loud error. Confirmed apply follows the design
-// sequence: atomic profile write -> planned brew installs -> `dot link <name>`
-// per checked link -> `dot install code`/`dot install duti` when selected, with
-// the locked pseudo-steps (`dot zsh`, `dot git`) always applied. Headless
+// sequence: atomic profile write -> planned brew installs -> the locked
+// pseudo-step (`dot zsh`, always applied) -> `dot link <name>` per checked
+// link -> `dot git` when the opt-in git-signing step-2 option is checked ->
+// `dot install code`/`dot install duti` when selected. Headless
 // `-apply -profile` consumes the SAME context JSON + area-level profile through
 // the identical applyConfirmed path — the two modes cannot diverge, and no UI
 // mounts. Mid-apply interruption prints a loud ❌ completed-vs-pending summary.
@@ -16,6 +17,7 @@ import {
   activeProfileAreas,
   LOCKED_PSEUDO_STEPS,
   offeredLinks,
+  OPTIONAL_PSEUDO_STEPS,
   selectedPackages,
   withRequiredTaps,
 } from "./manifest";
@@ -34,9 +36,6 @@ export const EXIT_ABORTED = 10;
 export const EXIT_ERROR = 1;
 
 // --- String contract (pinned by main.test.ts; kept from the Go-era port).
-
-export const skipLine = (componentId: string, reason: string): string =>
-  `skip ${componentId}: ${reason}`;
 
 export const taskLine = (label: string, operation: string): string =>
   `${label}: ${operation}`;
@@ -186,18 +185,15 @@ export async function applyConfirmed(
   const packages = selectedPackages(context, selectedIds);
 
   const brewSteps: ApplyStep[] = [];
-  for (const p of packages) {
-    const command = brewCommandFor(p);
-    if (command !== null && p.kind !== "tap") {
-      brewSteps.push({ id: p.id, label: p.id, operation: command });
-    }
-  }
   const tapSteps: ApplyStep[] = [];
   for (const p of packages) {
     const command = brewCommandFor(p);
-    if (command !== null && p.kind === "tap") {
-      tapSteps.push({ id: p.id, label: p.id, operation: command });
-    }
+    if (command === null) continue;
+    (p.kind === "tap" ? tapSteps : brewSteps).push({
+      id: p.id,
+      label: p.id,
+      operation: command,
+    });
   }
   const pseudoSteps: ApplyStep[] = LOCKED_PSEUDO_STEPS.map((s) => ({
     id: s.id,
@@ -211,6 +207,11 @@ export async function applyConfirmed(
       label: `link ${link.name}`,
       operation: `dot link ${link.name}`,
     }));
+  // Opt-in pseudo-steps (today: git signing) are step-2 checkbox options,
+  // not links — same `checked` map, only queued when the user checked them.
+  const optionalPseudoSteps: ApplyStep[] = OPTIONAL_PSEUDO_STEPS.filter(
+    (s) => selection.checked[s.id],
+  ).map((s) => ({ id: s.id, label: s.label, operation: s.command }));
   // kind "topic" rows (code extensions, duti default handlers, dock/macos
   // defaults) delegate to a dot subcommand. Skips unknown topic ids quietly
   // (none exist today; the drift guard would catch an inventoried one).
@@ -253,6 +254,7 @@ export async function applyConfirmed(
     ...brewSteps,
     ...pseudoSteps,
     ...linkSteps,
+    ...optionalPseudoSteps,
     ...topicSteps,
   ];
 
@@ -565,7 +567,7 @@ async function runApplyRound(
 // as a stale binary and rebuilds from source instead of trusting stale disk
 // state; a version bump is a NO-OP without ALSO bumping bin/dot's own check
 // and the test/tui-resolver.bats fixtures that assert against it.
-export const TUI_VERSION = "dot-tui-context-v6";
+export const TUI_VERSION = "dot-tui-context-v12";
 
 if (import.meta.main) {
   const raw = process.argv.slice(2);

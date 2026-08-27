@@ -7,8 +7,8 @@
 // profile-area derivation.
 import type { ContextLink, ContextPackage, InstallContext } from "./context";
 
-/** Locked informational rows rendered at the top of the selector. They always
- *  run at apply time, mapped onto bin/dot's sub_zsh / sub_git. */
+/** Locked informational row rendered at the top of the selector. Always runs
+ *  at apply time, mapped onto bin/dot's sub_zsh. */
 export const LOCKED_PSEUDO_STEPS: Array<{
   id: string;
   label: string;
@@ -21,6 +21,18 @@ export const LOCKED_PSEUDO_STEPS: Array<{
     area: "shell",
     command: "dot zsh",
   },
+];
+
+/** Opt-in pseudo-step, offered as an ordinary step-2 option (never mandatory,
+ *  never in the locked block): applying it runs `dot git` (SSH key signing
+ *  setup), mapped onto bin/dot's sub_git. Tracked in the SAME `checked` map
+ *  as config links — the id namespaces never collide with a link name. */
+export const OPTIONAL_PSEUDO_STEPS: Array<{
+  id: string;
+  label: string;
+  area: string;
+  command: string;
+}> = [
   {
     id: "git-signing",
     label: "Git signing config",
@@ -197,7 +209,7 @@ export function selectedPackages(
  * file is a confirmed selection (Homebrew Bundle semantics: a topic's taps
  * cover every formula/cask declared in that same file). Returns a NEW set
  * that is `selected` plus every such tap id, so callers can feed it straight
- * into `selectedPackages`/`planBrewCommands` without a separate tap step.
+ * into `selectedPackages` without a separate tap step.
  */
 export function withRequiredTaps(
   context: InstallContext,

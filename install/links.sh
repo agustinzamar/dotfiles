@@ -30,7 +30,6 @@ all_links() {
 		hunk|config/hunk/config.toml|$HOME/.config/hunk/config.toml||git|hunk
 		lazygit|config/lazygit/config.yml|$HOME/.config/lazygit/config.yml||git|lazygit
 		git|config/git/ignore|$HOME/.config/git/ignore||git|git
-		opencode|config/opencode/opencode.jsonc|$HOME/.config/opencode/opencode.jsonc||ai
 		claude|config/claude/statusline-command.sh|$HOME/.claude/statusline-command.sh||ai|claude
 	EOF
 }
@@ -44,6 +43,7 @@ optional_links() {
 	agents|ai/AGENTS.md|$HOME/.claude/CLAUDE.md|||ai
 	agents|ai/AGENTS.md|$HOME/.agents/AGENTS.md|||ai
 	agents|ai/AGENTS.md|$HOME/.config/opencode/AGENTS.md|||ai
+	opencode|config/opencode/opencode.jsonc|$HOME/.config/opencode/opencode.jsonc|||ai
 	agents|ai/rules/general.md|$HOME/.agents/rules/general.md|||ai
 	agents|ai/rules/general.md|$HOME/.claude/rules/general.md|||ai
 	EOF

@@ -25,8 +25,12 @@ cask "pearcleaner"
 tap "timescam/tap"
 brew "pay-respects"
 
-# --- Prompt ---
+# --- Prompt (oh-my-posh is the active theme; starship/powerlevel10k are
+# dormant alternatives — config lives in config/starship, config/p10k but
+# .zshrc doesn't source either yet) ---
 brew "oh-my-posh"
+brew "starship"
+brew "powerlevel10k"
 
 # --- Multiplexers and terminals ---
 brew "tmux"

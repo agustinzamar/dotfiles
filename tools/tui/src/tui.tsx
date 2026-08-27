@@ -1,21 +1,25 @@
-// Two-step installer flow on @inkjs/ui MultiSelect (design §2, ADR-1..6):
-// Step 1 is a component tool selector with an inert always-checked LockedBlock
-// (shell/git essentials: zsh, fzf, git, gh, tmux + Zinit/Git-signing pseudo
-// steps) rendered ABOVE the MultiSelect — locked rows are NEVER options (the
-// installed MultiSelect has no per-option disabled; ADR-1). Former baseline
-// rows render pre-checked via defaultValue and CAN be unchecked. Step 2 is a
-// checkbox list of the ADR-3/4-filtered .main config links (agents pruned),
-// all unchecked, one row per multi-target NAME (value = name). App owns ONLY
-// the quit keys (q / ctrl+c, ADR-2): quitting submits nothing — main.ts maps
-// that to exit 10 with zero filesystem writes. Selected/checked values cross
-// into main.ts through thin adapters (adaptStepOne/adaptStepTwo) that reinsert
-// locked ids as always-true (applyConfirmed-critical, ADR-3).
+// Two-step installer flow (design §2, ADR-1..7):
+// Step 1 is a hand-rolled collapsible tool selector: an inert always-checked
+// LockedBlock (shell/git essentials) renders ABOVE the list — locked rows are
+// NEVER options (ADR-1). Tools are grouped under per-category headers that
+// start expanded and collapse independently (ADR-7); App owns ALL step-1 keys
+// (arrows navigate, space toggles a focused tool, enter expands/collapses a
+// focused header or submits the step from a focused tool row) since no
+// library component supports mixed header/checkbox rows. Step 2 stays on
+// @inkjs/ui MultiSelect: a checkbox list of the ADR-3/4-filtered .main config
+// links (agents pruned), all unchecked, one row per multi-target NAME (value
+// = name). App owns ONLY the quit keys on step 2 (q / ctrl+c, ADR-2): quitting
+// submits nothing — main.ts maps that to exit 10 with zero filesystem writes.
+// Selected/checked values cross into main.ts through thin adapters
+// (adaptStepOne/adaptStepTwo) that reinsert locked ids as always-true
+// (applyConfirmed-critical, ADR-3).
 import { Box, Text, useApp, useInput, useStdout, type Key } from "ink";
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { MultiSelect } from "@inkjs/ui";
 import type { ContextLink, InstallContext } from "./context";
 import {
   offeredLinks,
+  OPTIONAL_PSEUDO_STEPS,
   toolRows,
   toolRowsGrouped,
   type LinkGrouping,
@@ -29,10 +33,17 @@ export interface TuiState {
   /** Confirmed link names (step 2), toggled as one unit per multi-target name. */
   checked: Record<string, boolean>;
   submitted: boolean;
+  /** Step-1 category collapse state (ADR-7): `false` = collapsed, anything
+   *  else (including absent) = expanded — every category starts open. */
+  expanded: Record<string, boolean>;
+  /** Step-1 focused row: a stable index into `step1Rows(context)` (the FULL
+   *  list, not the filtered-visible one), so collapsing/expanding a category
+   *  elsewhere never invalidates it. */
+  step1Cursor: number;
 }
 
-/** Seeds every locked/default row checked, every other row unchecked. Cursor
- *  and viewport bookkeeping are gone — the component owns focus/scroll. */
+/** Seeds every locked/default row checked, every other row unchecked, every
+ *  category expanded, focus on the first row. */
 export function initialState(
   context: InstallContext,
   initialSelected: Record<string, boolean> = {},
@@ -46,6 +57,8 @@ export function initialState(
     selected: { ...selected, ...initialSelected },
     checked: {},
     submitted: false,
+    expanded: {},
+    step1Cursor: 0,
   };
 }
 
@@ -83,21 +96,87 @@ export function toggleableRowsForStep(context: InstallContext): ToolRow[] {
   return toolRowsGrouped(context).filter((row) => !row.locked && !row.pseudo);
 }
 
-/** Step-1 component defaultValue: the pre-checked set = TOGGLEABLE rows where
- *  `row.default || row.installed`, plus the `initialSelected` test seam
- *  (truthy entries appended). Locked/pseudo ids never appear (they are not
- *  options); unchecked defaults are omitted so the user can un-check them. */
-export function defaultValuesFor(
-  context: InstallContext,
-  initialSelected: Record<string, boolean> = {},
-): string[] {
-  const ids = toggleableRowsForStep(context)
-    .filter((row) => row.default || row.installed === true)
-    .map((row) => row.id);
-  for (const [id, on] of Object.entries(initialSelected)) {
-    if (on && !ids.includes(id)) ids.push(id);
+/** Step-1 display row: one collapsible header per category (first-seen
+ *  order — same grouping as toggleableRowsForStep), followed by that
+ *  category's tool rows. Headers are focusable/collapsible (ADR-7); the tool
+ *  rows are the exact same set/order as toggleableRowsForStep. */
+export type Step1Row =
+  { kind: "header"; category: string } | { kind: "tool"; row: ToolRow };
+
+export function step1Rows(context: InstallContext): Step1Row[] {
+  const rows: Step1Row[] = [];
+  let previousCategory: string | null = null;
+  for (const row of toggleableRowsForStep(context)) {
+    if (row.category !== previousCategory) {
+      rows.push({ kind: "header", category: row.category });
+      previousCategory = row.category;
+    }
+    rows.push({ kind: "tool", row });
   }
-  return ids;
+  return rows;
+}
+
+/** A header is always visible; a tool row is visible iff its category isn't
+ *  explicitly collapsed (ADR-7: absent/true = expanded, only `false` hides). */
+export function isStep1RowVisible(
+  row: Step1Row,
+  expanded: Record<string, boolean>,
+): boolean {
+  return row.kind === "header" || expanded[row.row.category] !== false;
+}
+
+export function visibleStep1Rows(
+  rows: Step1Row[],
+  expanded: Record<string, boolean>,
+): Step1Row[] {
+  return rows.filter((row) => isStep1RowVisible(row, expanded));
+}
+
+/** Moves the step-1 cursor to the next/previous VISIBLE row, skipping any
+ *  row hidden by a collapsed category. Clamps at both ends — no wraparound,
+ *  matching the component-driven MultiSelect's edge behavior on step 2. */
+export function moveStep1Cursor(
+  rows: Step1Row[],
+  expanded: Record<string, boolean>,
+  cursor: number,
+  delta: 1 | -1,
+): number {
+  let next = cursor;
+  for (let i = 0; i < rows.length; i++) {
+    next += delta;
+    if (next < 0 || next >= rows.length) return cursor;
+    if (isStep1RowVisible(rows[next]!, expanded)) return next;
+  }
+  return cursor;
+}
+
+/** Flips one category's collapsed state (Enter on a focused header, ADR-7). */
+export function toggleCategory(
+  expanded: Record<string, boolean>,
+  category: string,
+): Record<string, boolean> {
+  const isOpen = expanded[category] !== false;
+  return { ...expanded, [category]: !isOpen };
+}
+
+/** Windows the VISIBLE step-1 rows around the cursor's position WITHIN that
+ *  visible list, so a small terminal scrolls instead of overflowing — the
+ *  hand-rolled equivalent of MultiSelect's own internal viewport. */
+export function step1Window(
+  visibleCount: number,
+  visibleCursorIndex: number,
+  optionCount: number,
+): { start: number; end: number } {
+  const count = Math.max(1, optionCount);
+  const start = Math.max(
+    0,
+    Math.min(
+      visibleCursorIndex - Math.floor(count / 2),
+      Math.max(visibleCount - count, 0),
+    ),
+  );
+  const end = Math.min(start + count, visibleCount);
+  return { start, end };
 }
 
 /**
@@ -133,10 +212,16 @@ export function quitRequested(input: string, key: Partial<Key>): boolean {
   return input === "q" && !key.ctrl && !key.meta;
 }
 
+/** Banner height in terminal rows: bordered box is top border + content +
+ *  bottom border, always 3 for our single-line titles. Exported so
+ *  `visibleOptionsFor`'s reserved-chrome math and its tests share one
+ *  source of truth instead of a duplicated magic number. */
+export const BANNER_HEIGHT = 3;
+
 /**
  * Visible options the MultiSelect should show, derived from the form's
- * available height. reserveres the chrome of the current step — step 1:
- * header + locked block + hint + margin; step 2: header + hint + margin —
+ * available height. Reserves the chrome of the current step — step 1:
+ * banner + locked block + hint + margin; step 2: banner + hint + margin —
  * and clamps to [3, 20] so tiny terminals stay usable and huge ones don't
  * render an unwieldy list.
  */
@@ -145,7 +230,8 @@ export function visibleOptionsFor(
   step: 1 | 2,
   lockedCount: number,
 ): number {
-  const reserved = step === 1 ? 2 + lockedCount + 1 : 3;
+  const reserved =
+    step === 1 ? BANNER_HEIGHT + 2 + lockedCount : BANNER_HEIGHT + 2;
   return Math.max(3, Math.min(height - reserved, 20));
 }
 
@@ -159,6 +245,20 @@ export interface AppProps {
   onSubmit?: (state: TuiState) => void;
 }
 
+/** Bigger, boxed step title — a bordered banner instead of a single line of
+ *  text, so the current step reads clearly even in a scrolled/noisy
+ *  terminal. Fixed 3-row height (BANNER_HEIGHT): top border, one content
+ *  row, bottom border — never wraps for our short titles. */
+function Banner({ children }: { children: string }): React.ReactElement {
+  return (
+    <Box borderStyle="round" borderColor="cyan" paddingX={1}>
+      <Text bold color="cyan">
+        {children}
+      </Text>
+    </Box>
+  );
+}
+
 /** Inert always-checked row block ABOVE the step-1 MultiSelect (ADR-1): the
  *  locked essentials are visible and permanently selected, but never appear in
  *  the component's options — space/enter cannot reach them by construction. */
@@ -168,6 +268,64 @@ function LockedBlock({ rows }: { rows: ToolRow[] }): React.ReactElement {
       {rows.map((row) => (
         <Text key={row.id}>✔ {row.label}</Text>
       ))}
+    </Box>
+  );
+}
+
+/** Hand-rolled, windowed, collapsible tool list (ADR-7). One line per
+ *  visible row: a bold category header (▾ open / ▸ collapsed) or an indented
+ *  tool row (green when checked, blue when focused, tick when checked).
+ *  `focusedRow` is compared by reference — callers always pass an element
+ *  straight out of the SAME `rows` array, never a reconstructed copy. */
+function Step1List({
+  rows,
+  expanded,
+  selected,
+  focusedRow,
+  optionCount,
+}: {
+  rows: Step1Row[];
+  expanded: Record<string, boolean>;
+  selected: Record<string, boolean>;
+  focusedRow: Step1Row | undefined;
+  optionCount: number;
+}): React.ReactElement {
+  const visible = visibleStep1Rows(rows, expanded);
+  const cursorIndex = focusedRow ? visible.indexOf(focusedRow) : -1;
+  const { start, end } = step1Window(
+    visible.length,
+    Math.max(cursorIndex, 0),
+    optionCount,
+  );
+  const windowed = visible.slice(start, end);
+  return (
+    <Box flexDirection="column">
+      {start > 0 && <Text dimColor>↑ more</Text>}
+      {windowed.map((entry) => {
+        const isFocused = entry === focusedRow;
+        if (entry.kind === "header") {
+          const isOpen = expanded[entry.category] !== false;
+          return (
+            <Text
+              key={`header:${entry.category}`}
+              bold
+              color={isFocused ? "blue" : "cyan"}
+            >
+              {isFocused ? "❯ " : "  "}
+              {isOpen ? "▾" : "▸"} {entry.category}
+            </Text>
+          );
+        }
+        const checked = selected[entry.row.id] === true;
+        const color = isFocused ? "blue" : checked ? "green" : undefined;
+        return (
+          <Text key={entry.row.id} color={color}>
+            {isFocused ? `❯ ${entry.row.label}` : `  ${entry.row.label}`}
+            {checked ? " ✔" : ""}
+          </Text>
+        );
+      })}
+      {end < visible.length && <Text dimColor>↓ more</Text>}
     </Box>
   );
 }
@@ -194,12 +352,55 @@ export function App({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state.submitted, exit]);
 
-  // App owns ONLY the quit keys (ADR-2): arrows/space/enter belong to the
-  // mounted MultiSelect. Quitting submits nothing; main.ts maps that to exit
-  // 10 with zero writes, from either step.
+  // Quitting submits nothing on either step; main.ts maps that to exit 10
+  // with zero writes (ADR-2). Step 1 has no library component to delegate
+  // to (mixed header/checkbox rows), so App owns ALL of its keys: arrows
+  // move the cursor across visible rows, space toggles a focused tool,
+  // enter expands/collapses a focused header or submits from a focused
+  // tool row (ADR-7). Step 2's arrows/space/enter stay MultiSelect's.
   useInput((input, key) => {
     if (quitRequested(input, key)) {
       exit();
+      return;
+    }
+    if (stateRef.current.step !== 1) return;
+    if (key.upArrow || key.downArrow) {
+      const delta = key.upArrow ? -1 : 1;
+      setState((s) => ({
+        ...s,
+        step1Cursor: moveStep1Cursor(rows1, s.expanded, s.step1Cursor, delta),
+      }));
+      return;
+    }
+    if (input === " ") {
+      setState((s) => {
+        const focused = rows1[s.step1Cursor];
+        if (!focused || focused.kind !== "tool") return s;
+        return {
+          ...s,
+          selected: {
+            ...s.selected,
+            [focused.row.id]: !s.selected[focused.row.id],
+          },
+        };
+      });
+      return;
+    }
+    if (key.return) {
+      setState((s) => {
+        const focused = rows1[s.step1Cursor];
+        if (!focused) return s;
+        if (focused.kind === "header") {
+          return {
+            ...s,
+            expanded: toggleCategory(s.expanded, focused.category),
+          };
+        }
+        // Focused a tool row: submit step 1 (ADR-1/3 locked reinsertion) and
+        // flip to step 2.
+        const value = Object.keys(s.selected).filter((id) => s.selected[id]);
+        return { ...s, selected: adaptStepOne(value, context), step: 2 };
+      });
     }
   });
 
@@ -207,32 +408,36 @@ export function App({
   // deep-inequal options array from a parent re-render (which resets it to
   // defaultValue). Step 1 unmounts before step 2 mounts, so the two selections
   // never co-live.
+
+  // Locked PACKAGE rows (fzf/zoxide/eza/poppler) are force-selected —
+  // still locked=true, toolRows/initialState never change — but deliberately
+  // never RENDERED: every one is silent plumbing another visible tool
+  // depends on (fzf's keybindings, the ls/z aliases, yazi's PDF preview),
+  // never a real user decision. Only pseudo-steps show here.
   const lockedRows = useMemo(
-    () => toolRowsGrouped(context).filter((row) => row.locked || row.pseudo),
+    () => toolRowsGrouped(context).filter((row) => row.pseudo),
     [context],
   );
-  const step1Options = useMemo(
-    () =>
-      toggleableRowsForStep(context).map((row) => ({
-        label: row.label,
-        value: row.id,
-      })),
-    [context],
-  );
-  const step1Defaults = useMemo(
-    () => defaultValuesFor(context, initialSelected),
-    [context, initialSelected],
-  );
+  const rows1 = useMemo(() => step1Rows(context), [context]);
   const step2Options = useMemo(
     () =>
       state.step === 2
-        ? stepTwoRows(context, state).map((link) => ({
-            label:
-              link.rows.length > 1
-                ? `${link.name} (${link.rows.length} targets)`
-                : link.name,
-            value: link.name,
-          }))
+        ? [
+            ...stepTwoRows(context, state).map((link) => ({
+              label:
+                link.rows.length > 1
+                  ? `${link.name} (${link.rows.length} targets)`
+                  : link.name,
+              value: link.name,
+            })),
+            // Opt-in pseudo-steps (today: git signing) are actions, not
+            // config links, but share step 2's checkbox list and the same
+            // `checked` map — always offered, never auto-checked.
+            ...OPTIONAL_PSEUDO_STEPS.map((step) => ({
+              label: step.label,
+              value: step.id,
+            })),
+          ]
         : [],
     [context, state.step, state.selected],
   );
@@ -247,30 +452,23 @@ export function App({
     <Box flexDirection="column">
       {state.step === 1 ? (
         <Fragment>
-          <Text bold> dot installer step 1/2: choose tools </Text>
+          <Banner>Step 1: Select tools</Banner>
           <LockedBlock rows={lockedRows} />
-          <MultiSelect
-            options={step1Options}
-            defaultValue={step1Defaults}
-            visibleOptionCount={visibleOptionCount}
-            onSubmit={(value) => {
-              // The adapter reinserts every locked/pseudo id as true (ADR-1/3)
-              // and flips to step 2; step-1 MultiSelect unmounts.
-              setState((s) => ({
-                ...s,
-                selected: adaptStepOne(value, context),
-                step: 2,
-              }));
-            }}
+          <Step1List
+            rows={rows1}
+            expanded={state.expanded}
+            selected={state.selected}
+            focusedRow={rows1[state.step1Cursor]}
+            optionCount={visibleOptionCount}
           />
           <Text dimColor>
             {" "}
-            ↑/↓ navigate · space toggle · enter submit · q quit{" "}
+            ↑/↓ navigate · space toggle · enter select/expand · q quit{" "}
           </Text>
         </Fragment>
       ) : (
         <Fragment>
-          <Text bold> dot installer step 2/2: link configs </Text>
+          <Banner>Step 2: Link configs</Banner>
           <MultiSelect
             options={step2Options}
             defaultValue={[]}

@@ -9,6 +9,7 @@ import { describe, expect, test } from "bun:test";
 import type { InstallContext } from "./context";
 import {
   LOCKED_PSEUDO_STEPS,
+  OPTIONAL_PSEUDO_STEPS,
   activeProfileAreas,
   selectedPackages,
   toolGroups,
@@ -100,12 +101,9 @@ const fixture: InstallContext = {
 };
 
 describe("LOCKED_PSEUDO_STEPS", () => {
-  test("both steps are locked, informational, and map to sub_zsh/sub_git", () => {
-    expect(LOCKED_PSEUDO_STEPS).toHaveLength(2);
-    expect(LOCKED_PSEUDO_STEPS.map((s) => s.command)).toEqual([
-      "dot zsh",
-      "dot git",
-    ]);
+  test("the sole step is locked, informational, and maps to sub_zsh", () => {
+    expect(LOCKED_PSEUDO_STEPS).toHaveLength(1);
+    expect(LOCKED_PSEUDO_STEPS.map((s) => s.command)).toEqual(["dot zsh"]);
     for (const step of LOCKED_PSEUDO_STEPS) {
       expect(typeof step.label).toBe("string");
       expect(step.label.length).toBeGreaterThan(0);
@@ -113,15 +111,23 @@ describe("LOCKED_PSEUDO_STEPS", () => {
   });
 });
 
+describe("OPTIONAL_PSEUDO_STEPS", () => {
+  test("git-signing is opt-in and maps to sub_git", () => {
+    expect(OPTIONAL_PSEUDO_STEPS).toHaveLength(1);
+    expect(OPTIONAL_PSEUDO_STEPS[0]!.id).toBe("git-signing");
+    expect(OPTIONAL_PSEUDO_STEPS[0]!.command).toBe("dot git");
+  });
+});
+
 describe("toolRows", () => {
-  test("pseudo-steps come first, then locked packages pinned under 'locked'", () => {
+  test("the pseudo-step comes first, then locked packages pinned under 'locked'", () => {
     const rows = toolRows(fixture);
     expect(rows[0]!.id).toBe("zsh-setup");
     expect(rows[0]!.area).toBe("shell");
     expect(rows[0]!.pseudo).toBe(true);
-    expect(rows[1]!.id).toBe("git-signing");
-    // fzf is locked: pinned under category 'locked' immediately after
-    // pseudo-steps (its topic stays 'core').
+    expect(rows[1]!.id).toBe("fzf");
+    // fzf is locked: pinned under category 'locked' immediately after the
+    // pseudo-step (its topic stays 'core').
     const fzf = rows.find((r) => r.id === "fzf")!;
     expect(fzf.category).toBe("locked");
     expect(fzf.topic).toBe("core");
@@ -192,7 +198,6 @@ describe("toolGroups", () => {
     ]);
     expect(groups[0]!.rows.map((r) => r.id)).toEqual([
       "zsh-setup",
-      "git-signing",
       "fzf",
       "tmux",
     ]);
@@ -213,16 +218,17 @@ describe("activeProfileAreas", () => {
   test("locked areas union the areas of confirmed rows", () => {
     const areas = activeProfileAreas(fixture, new Set(["ghostty", "opencode"]));
     // base+shell from locked; shell again from zsh-setup; terminal from ghostty;
-    // ai from opencode.
+    // ai from opencode. git-signing is opt-in (step 2) now, not a locked
+    // pseudo-step, so it never contributes an area here.
     expect(new Set(areas)).toEqual(
-      new Set(["base", "shell", "git", "terminal", "ai"]),
+      new Set(["base", "shell", "terminal", "ai"]),
     );
   });
 
   test("locked areas only when nothing is selected", () => {
     const areas = activeProfileAreas(fixture, new Set());
-    // base from locked; shell from locked + zsh-setup step; git from git-signing.
+    // base from locked; shell from locked + zsh-setup step.
     // Locked package rows (fzf, tmux) are not "selected", so terminal stays out.
-    expect(new Set(areas)).toEqual(new Set(["base", "shell", "git"]));
+    expect(new Set(areas)).toEqual(new Set(["base", "shell"]));
   });
 });

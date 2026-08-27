@@ -9,14 +9,14 @@ Per-change specs remain in `openspec/changes/…`; canonical archiving is deferr
 
 ## Review Workload Forecast
 
-| Field | Value |
-| ------- | ------- |
-| Estimated changed lines (additions + deletions) | ~800–1100 total: Phase 1 ~200–300, Phase 2 ~550–750, Phase 3 ~8–14 |
-| 400-line budget risk | High |
-| Chained PRs recommended | Yes |
-| Suggested split | PR 1 (unit layer) → PR 2 (component swap + frame rework) → PR 3 (markers + rebuild + gates) |
-| Delivery strategy | auto-chain |
-| Chain strategy | feature-branch-chain (PR 2 is a flagged size exception; see notes) |
+| Field                                           | Value                                                                                       |
+| ----------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Estimated changed lines (additions + deletions) | ~800–1100 total: Phase 1 ~200–300, Phase 2 ~550–750, Phase 3 ~8–14                          |
+| 400-line budget risk                            | High                                                                                        |
+| Chained PRs recommended                         | Yes                                                                                         |
+| Suggested split                                 | PR 1 (unit layer) → PR 2 (component swap + frame rework) → PR 3 (markers + rebuild + gates) |
+| Delivery strategy                               | auto-chain                                                                                  |
+| Chain strategy                                  | feature-branch-chain (PR 2 is a flagged size exception; see notes)                          |
 
 ```text
 Decision needed before apply: Yes

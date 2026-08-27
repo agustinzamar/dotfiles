@@ -1,19 +1,16 @@
 // Planner tests for the context-driven pipeline (tasks 2.3/2.8 RED first):
-// planBrewCommands maps context package rows to brew commands (taps first,
+// brewCommandFor maps context package rows to brew commands (taps first,
 // `brew install x` / `brew install --cask x`, topic rows delegated elsewhere).
-// Executor/summarize/shellRunner tests are preserved verbatim from the merge —
+// Executor/shellRunner tests are preserved verbatim from the merge —
 // their behavior is unchanged by the catalog retirement.
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import * as path from "node:path";
 import { chmod } from "node:fs/promises";
-import type { ContextPackage } from "./context";
 import {
   executeWithProgress,
-  planBrewCommands,
   shellRunner,
-  summarize,
   type Runner,
   type Task,
 } from "./plan";
@@ -21,18 +18,6 @@ import {
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-
-function pkg(id: string, args: Partial<ContextPackage> = {}): ContextPackage {
-  return {
-    id,
-    topic: "core",
-    kind: "brew",
-    area: "terminal",
-    locked: false,
-    default: false,
-    ...args,
-  };
-}
 
 /** Fake runner recording every operation it was asked to execute. */
 function recordingRunner(
@@ -52,71 +37,6 @@ afterAll(async () => {
   for (const dir of tempDirs) {
     await rm(dir, { recursive: true, force: true });
   }
-});
-
-// ---------------------------------------------------------------------------
-// Brew planning from context package rows
-// ---------------------------------------------------------------------------
-
-describe("planBrewCommands", () => {
-  test("brew rows become `brew install x`, cask rows `brew install --cask x`", () => {
-    const commands = planBrewCommands(
-      [pkg("fzf"), pkg("ghostty", { kind: "cask" })],
-      new Set(["fzf", "ghostty"]),
-    );
-    expect(commands).toEqual([
-      "brew install fzf",
-      "brew install --cask ghostty",
-    ]);
-  });
-
-  test("taps are ordered before all formulas regardless of row order", () => {
-    const commands = planBrewCommands(
-      [
-        pkg("koekeishiya/formulae", { kind: "tap" }),
-        pkg("fzf"),
-        pkg("FelixKratz/formulae", { kind: "tap" }),
-      ],
-      new Set(["koekeishiya/formulae", "fzf", "FelixKratz/formulae"]),
-    );
-    expect(commands).toEqual([
-      "brew tap koekeishiya/formulae",
-      "brew tap FelixKratz/formulae",
-      "brew install fzf",
-    ]);
-  });
-
-  test("unselected rows produce no commands", () => {
-    const commands = planBrewCommands(
-      [pkg("fzf"), pkg("ghostty", { kind: "cask" })],
-      new Set(["ghostty"]),
-    );
-    expect(commands).toEqual(["brew install --cask ghostty"]);
-  });
-
-  test("topic rows (special installers) are never emitted as brew commands", () => {
-    const commands = planBrewCommands(
-      [pkg("code", { kind: "topic", topic: "code" }), pkg("fzf")],
-      new Set(["code", "fzf"]),
-    );
-    expect(commands).toEqual(["brew install fzf"]);
-  });
-
-  test("tap ordering is stable relative to other taps (first-seen order)", () => {
-    const commands = planBrewCommands(
-      [pkg("a/tap", { kind: "tap" }), pkg("b/tap", { kind: "tap" }), pkg("x")],
-      new Set(["a/tap", "b/tap", "x"]),
-    );
-    expect(commands).toEqual([
-      "brew tap a/tap",
-      "brew tap b/tap",
-      "brew install x",
-    ]);
-  });
-
-  test("empty selection plans nothing", () => {
-    expect(planBrewCommands([pkg("fzf")], new Set())).toEqual([]);
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -256,110 +176,6 @@ describe("execution", () => {
       expect(r.finished).toBeInstanceOf(Date);
       expect(r.finished.getTime()).toBeGreaterThanOrEqual(r.started.getTime());
     }
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Summarize — installer-execute per-component roll-up (unchanged)
-// ---------------------------------------------------------------------------
-
-describe("summarize", () => {
-  function result(
-    task: Task,
-    status: "installed" | "failed" | "skipped",
-    output: string,
-  ) {
-    return {
-      task,
-      status,
-      output,
-      started: new Date(0),
-      finished: new Date(0),
-    };
-  }
-
-  test("one failed command fails the whole component", () => {
-    const tasks: Task[] = [
-      { componentId: "c", label: "C", operation: "first", dependencies: [] },
-      { componentId: "c", label: "C", operation: "second", dependencies: [] },
-    ];
-    const summary = summarize([
-      result(tasks[0], "installed", ""),
-      result(tasks[1], "failed", "boom2"),
-    ]);
-    expect(summary).toHaveLength(1);
-    expect(summary[0]).toMatchObject({
-      componentId: "c",
-      label: "C",
-      status: "failed",
-    });
-    expect(summary[0].output).toContain("boom2");
-  });
-
-  test("all tasks installed means component installed", () => {
-    const summary = summarize([
-      result(
-        { componentId: "c", label: "C", operation: "a", dependencies: [] },
-        "installed",
-        "",
-      ),
-    ]);
-    expect(summary).toEqual([
-      { componentId: "c", label: "C", status: "installed", output: "" },
-    ]);
-  });
-
-  test("skipped-only component reports the skip reason", () => {
-    const summary = summarize([
-      result(
-        { componentId: "x", label: "X", operation: "a", dependencies: ["d"] },
-        "skipped",
-        "dependency failed",
-      ),
-    ]);
-    expect(summary).toEqual([
-      {
-        componentId: "x",
-        label: "X",
-        status: "skipped",
-        output: "dependency failed",
-      },
-    ]);
-  });
-
-  test("multiple failures concatenate per component with newlines, never across", () => {
-    const a1: Task = {
-      componentId: "a",
-      label: "A",
-      operation: "a1",
-      dependencies: [],
-    };
-    const b1: Task = {
-      componentId: "b",
-      label: "B",
-      operation: "b1",
-      dependencies: [],
-    };
-    const a2: Task = {
-      componentId: "a",
-      label: "A",
-      operation: "a2",
-      dependencies: [],
-    };
-    const summary = summarize([
-      result(a1, "failed", "err-a1"),
-      result(b1, "failed", "err-b1"),
-      result(a2, "failed", "err-a2"),
-    ]);
-    const byId = Object.fromEntries(summary.map((s) => [s.componentId, s]));
-    expect(byId["a"].status).toBe("failed");
-    expect(byId["a"].output).toBe("err-a1\nerr-a2");
-    expect(byId["b"].status).toBe("failed");
-    expect(byId["b"].output).toBe("err-b1");
-  });
-
-  test("components with no results produce no summary entry", () => {
-    expect(summarize([])).toEqual([]);
   });
 });
 

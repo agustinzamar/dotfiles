@@ -19,7 +19,6 @@ import {
   progressLine,
   roundExitCode,
   runFlagMode,
-  skipLine,
   skippedLine,
   taskLine,
   TUI_VERSION,
@@ -171,7 +170,7 @@ function recordingRunner(
 
 describe("TUI_VERSION binary contract", () => {
   test("matches the marker dot_runtime_path in bin/dot gates on", () => {
-    expect(TUI_VERSION).toBe("dot-tui-context-v6");
+    expect(TUI_VERSION).toBe("dot-tui-context-v12");
   });
 });
 
@@ -242,13 +241,6 @@ describe("flag parsing accepts Go-style single-dash forms", () => {
 });
 
 describe("stdout string contract (verbatim from main.go Printf formats)", () => {
-  // dot-cli-bootstrap: "print one `skip <id>: <reason>` line per skip entry"
-  test("skip lines precede task lines: `skip %s: %s`", () => {
-    expect(skipLine("git", "Homebrew is not installed")).toBe(
-      "skip git: Homebrew is not installed",
-    );
-  });
-
   // dot-cli-bootstrap: "print one `<label>: <command>` line per planned task"
   test("plan lines: `%s: %s`", () => {
     expect(taskLine("Git", "brew install git")).toBe("Git: brew install git");
@@ -518,6 +510,57 @@ describe("applyConfirmed — one code path for interactive and headless", () => 
     expect(pseudoZsh).toBeGreaterThan(-1);
   });
 
+  test("git signing (opt-in pseudo-step) only runs when checked; runs after links when it is", async () => {
+    const dir = await makeTempDir();
+    const profilePath = path.join(dir, "profile.json");
+    const context: InstallContext = {
+      version: 1,
+      locked: [],
+      packages: [],
+      links: [
+        {
+          name: "zsh",
+          optional: false,
+          component: "shell",
+          requirement: "",
+          rows: [{ source: "a", target: "b", mode: "" }],
+        },
+      ],
+    };
+    const unchecked: string[] = [];
+    await applyConfirmed(
+      context,
+      { selected: {}, checked: {} },
+      {
+        profilePath,
+        dryRun: false,
+        run: recordingRunner(unchecked),
+        linkRunner: async (name: string) => {
+          unchecked.push(`dot link ${name}`);
+        },
+      },
+    );
+    expect(unchecked).not.toContain("dot git");
+
+    const checked: string[] = [];
+    await applyConfirmed(
+      context,
+      { selected: {}, checked: { zsh: true, "git-signing": true } },
+      {
+        profilePath,
+        dryRun: false,
+        run: recordingRunner(checked),
+        linkRunner: async (name: string) => {
+          checked.push(`dot link ${name}`);
+        },
+      },
+    );
+    expect(checked).toContain("dot git");
+    expect(checked.indexOf("dot git")).toBeGreaterThan(
+      checked.indexOf("dot link zsh"),
+    );
+  });
+
   test("a tap is installed automatically when a sibling formula is selected, even though the tap itself is never in `selected`", async () => {
     const dir = await makeTempDir();
     const profilePath = path.join(dir, "profile.json");
@@ -737,11 +780,11 @@ describe("applyConfirmed — component-driven ui seam (@inkjs/ui)", () => {
     );
     expect(exit).toBe(EXIT_OK);
     // Planned order: bootstrap, then brew steps (ghostty), then the
-    // always-run locked pseudo-steps (Zinit/Zsh setup, Git signing config).
-    expect(events[0]).toBe("progress:0/4:Bootstrap (Xcode CLT + Homebrew)");
-    expect(events[1]).toBe("progress:1/4:ghostty");
-    expect(events[2]).toBe("progress:2/4:Zinit/Zsh setup");
-    expect(events[3]).toBe("progress:3/4:Git signing config");
+    // always-run locked pseudo-step (Zinit/Zsh setup). Git signing is
+    // opt-in (step 2) now and unchecked here, so it's never queued.
+    expect(events[0]).toBe("progress:0/3:Bootstrap (Xcode CLT + Homebrew)");
+    expect(events[1]).toBe("progress:1/3:ghostty");
+    expect(events[2]).toBe("progress:2/3:Zinit/Zsh setup");
     expect(events).toContain("result:installed:ghostty:ok");
     expect(events[events.length - 1]).toBe("finished:true");
   });

@@ -76,7 +76,6 @@ fixture_all_links() {
 		ghostty|config/ghostty/config|$HOME/Library/Application "Sup"port\ghostty.conf||terminal
 		vscode|config/vscode/settings.json|$HOME/Library/Application Support/Code/User/settings.json||vscode|code
 		hunk|config/hunk/config.toml|$HOME/.config/hunk/config.toml||git|hunk
-		opencode|config/opencode/opencode.jsonc|$HOME/.config/opencode/opencode.jsonc||ai
 	EOF
 }
 
@@ -84,6 +83,7 @@ fixture_optional_links() {
   cat <<-EOF
 		agents|ai/AGENTS.md|$HOME/.claude/CLAUDE.md|||ai
 		agents|ai/AGENTS.md|$HOME/.config/opencode/AGENTS.md|||ai
+		opencode|config/opencode/opencode.jsonc|$HOME/.config/opencode/opencode.jsonc|||ai
 	EOF
 }
 
@@ -117,14 +117,14 @@ golden_json() {
       "rows": [
         { "source": "config/hunk/config.toml", "target": "$HOME/.config/hunk/config.toml", "mode": "" }
       ] },
-    { "name": "opencode", "optional": false, "component": "ai", "requirement": "",
-      "rows": [
-        { "source": "config/opencode/opencode.jsonc", "target": "$HOME/.config/opencode/opencode.jsonc", "mode": "" }
-      ] },
     { "name": "agents", "optional": true, "component": "ai", "requirement": "",
       "rows": [
         { "source": "ai/AGENTS.md", "target": "$HOME/.claude/CLAUDE.md", "mode": "" },
         { "source": "ai/AGENTS.md", "target": "$HOME/.config/opencode/AGENTS.md", "mode": "" }
+      ] },
+    { "name": "opencode", "optional": true, "component": "ai", "requirement": "",
+      "rows": [
+        { "source": "config/opencode/opencode.jsonc", "target": "$HOME/.config/opencode/opencode.jsonc", "mode": "" }
       ] }
   ]
 }
@@ -161,12 +161,16 @@ EOF
   ctx="$(mktemp)"
   install_context_json "$ctx"
   json="$(cat "$ctx")"
-  for id in fzf git gh; do
+  # fzf: sub_zsh's post-install step only wires up an already-installed fzf.
+  # zoxide/eza: the .zshrc z/ls aliases assume they exist. poppler: yazi's
+  # PDF-preview dependency. All four: always installed, never a TUI row.
+  for id in fzf zoxide eza poppler; do
     [ "$(jq -r --arg id "$id" '[.packages[] | select(.id == $id)][0].locked' <<<"$json")" == "true" ]
   done
-  # tmux is a real preference (some people don't want a multiplexer forced on)
-  # -- pre-checked like the other former-baseline tools, but toggleable.
-  for id in lazygit hunk yazi neovim ghostty tmux; do
+  # tmux is a real preference (some people don't want a multiplexer forced on).
+  # git/gh moved here from the locked block: pre-checked, toggleable, grouped
+  # under the Git category alongside lazygit/hunk in the TUI.
+  for id in lazygit hunk yazi neovim ghostty tmux git gh; do
     [ "$(jq -r --arg id "$id" '[.packages[] | select(.id == $id)][0].default' <<<"$json")" == "true" ]
     [ "$(jq -r --arg id "$id" '[.packages[] | select(.id == $id)][0].locked' <<<"$json")" == "false" ]
   done
@@ -275,9 +279,17 @@ EOF
   [ "$(jq -r '[.packages[] | select(.id == "shfmt")][0].category' <<<"$json")" == "Linters" ]
   [ "$(jq -r '[.packages[] | select(.id == "actionlint")][0].category' <<<"$json")" == "Linters" ]
   [ "$(jq -r '[.packages[] | select(.id == "swiftformat")][0].category' <<<"$json")" == "Linters" ]
-  [ "$(jq -r '[.packages[] | select(.id == "oh-my-posh")][0].category' <<<"$json")" == "Prompt" ]
+  # Prompt merged into Terminals (oh-my-posh active; starship/powerlevel10k
+  # dormant alternatives, both now real installable packages).
+  [ "$(jq -r '[.packages[] | select(.id == "oh-my-posh")][0].category' <<<"$json")" == "Terminals" ]
+  [ "$(jq -r '[.packages[] | select(.id == "starship")][0].category' <<<"$json")" == "Terminals" ]
+  [ "$(jq -r '[.packages[] | select(.id == "powerlevel10k")][0].category' <<<"$json")" == "Terminals" ]
   [ "$(jq -r '[.packages[] | select(.id == "poppler")][0].category' <<<"$json")" == "Filesystem" ]
   [ "$(jq -r '[.packages[] | select(.id == "dockutil")][0].category' <<<"$json")" == "Utilities" ]
+  # direnv joined Dev; pay-respects/timescam-tap/fzf/zoxide joined Terminals
+  # — the standalone Shell category is gone.
+  [ "$(jq -r '[.packages[] | select(.id == "direnv")][0].category' <<<"$json")" == "Dev" ]
+  [ "$(jq -r '[.packages[] | select(.id == "pay-respects")][0].category' <<<"$json")" == "Terminals" ]
   # No toggleable package (kind brew/cask/tap) may ever fall back to a raw
   # lowercase topic name (core/desktop/dev/media) — every real package gets
   # an explicit category, so the selector never mixes cased headers with

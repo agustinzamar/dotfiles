@@ -405,7 +405,7 @@ EOF
   local known_gaps="config/herdr/workspace-layout"
 
   local sources
-  sources=$(DOTFILES_DIR="$DOTFILES_DIR" bash -c '. "$0/install/links.sh"; all_links' "$DOTFILES_DIR" |
+  sources=$(DOTFILES_DIR="$DOTFILES_DIR" bash -c '. "$0/install/links.sh"; all_links; optional_links' "$DOTFILES_DIR" |
     cut -d'|' -f2)
 
   local file rel check covered missing=0
