@@ -73,32 +73,15 @@ fetch() {
   curl -fSL --max-time 60 --progress-bar "$url" -o "$out"
 }
 
-maybe_chsh() {
-  local zsh_bin ans
+set_zsh_default() {
+  local zsh_bin
   zsh_bin="$(command -v zsh || true)"
   [[ -n "$zsh_bin" ]] || return 0
   [[ "$SHELL" == "$zsh_bin" ]] && return 0
-
-  local cmd="$SUDO chsh -s \"$zsh_bin\" \"${USER:-$(id -un)}\""
-  printf 'Set zsh (%s) as your default shell? [y/N] ' "$zsh_bin"
-
-  if [[ -t 0 ]]; then
-    # Direct run (`bash ./script.sh`): stdin is the terminal, a plain read works.
-    read -r ans
-  elif [[ -r /dev/tty ]] && read -r ans < /dev/tty 2>/dev/null; then
-    :
-  else
-    # Piped (`curl | bash`) with no usable terminal: hand over the command.
-    log ""
-    log "skipping interactive shell change; to set zsh as default, run:"
-    log "  $cmd"
-    return 0
+  log "setting zsh ($zsh_bin) as default shell"
+  if ! $SUDO chsh -s "$zsh_bin" "${USER:-$(id -un)}"; then
+    warn "chsh failed; set it manually: $SUDO chsh -s \"$zsh_bin\""
   fi
-
-  case "$ans" in
-    y|Y) eval "$cmd" ;;
-    *) log "leaving default shell unchanged" ;;
-  esac
 }
 
 main() {
@@ -128,7 +111,7 @@ main() {
   log "downloading oh-my-posh theme -> $THEME_TARGET"
   fetch "$BASE_URL/$THEME_SRC" "$THEME_TARGET"
 
-  maybe_chsh
+  set_zsh_default
 
   log "done. start a new shell: zsh"
 }

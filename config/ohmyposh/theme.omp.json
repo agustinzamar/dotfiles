@@ -12,7 +12,7 @@
           "type": "session",
           "style": "plain",
           "foreground": "yellow",
-          "template": " {{ .UserName }}{{ if .SSHSession }}@{{ .HostName }}{{ end }}"
+          "template": "{{ .UserName }}{{ if .SSHSession }}@{{ .HostName }}{{ end }}"
         },
         {
           "type": "path",
