@@ -50,7 +50,12 @@ install_zsh() {
 
 install_oh_my_posh() {
   mkdir -p "$OMP_BIN_DIR"
-  curl -fsSL https://ohmyposh.dev/install.sh | bash -s -- -d "$OMP_BIN_DIR"
+  curl -fSL --max-time 180 --progress-bar https://ohmyposh.dev/install.sh -o /tmp/omp-install.sh
+  if command -v timeout >/dev/null 2>&1; then
+    timeout 300 bash /tmp/omp-install.sh -d "$OMP_BIN_DIR"
+  else
+    bash /tmp/omp-install.sh -d "$OMP_BIN_DIR"
+  fi
 }
 
 backup_if_exists() {
@@ -65,7 +70,7 @@ backup_if_exists() {
 fetch() {
   local url="$1" out="$2"
   mkdir -p "$(dirname "$out")"
-  curl -fsSL "$url" -o "$out"
+  curl -fSL --max-time 60 --progress-bar "$url" -o "$out"
 }
 
 maybe_chsh() {
@@ -96,7 +101,9 @@ main() {
 
   if ! command -v "$OMP_BIN_DIR/oh-my-posh" >/dev/null 2>&1 && ! command -v oh-my-posh >/dev/null 2>&1; then
     log "installing oh-my-posh"
-    install_oh_my_posh
+    if ! install_oh_my_posh; then
+      warn "oh-my-posh install failed; prompt will be skipped until it is installed"
+    fi
   else
     log "oh-my-posh already present"
   fi
