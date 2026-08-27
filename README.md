@@ -28,6 +28,22 @@ bin/dot install
 once the shell configs are linked and the shell has been restarted. A bare
 `make` runs the full install.
 
+## Server (Linux/VPS)
+
+A separate one-liner installs only a lean zsh setup on a remote box — zsh,
+Oh My Posh (using the same `theme.omp.json` as the desktop config), and native
+completions. No Homebrew, TUI, zinit, or macOS aliases are touched:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/agustinzamar/dotfiles/main/remote-install-server.sh | bash
+```
+
+It detects `apt`, `dnf`, `yum`, `pacman`, or `apk` to install `zsh`, and uses
+the official script to install Oh My Posh into `~/.local/bin`. Existing
+`~/.zshrc` and theme are backed up to `~/.dotfiles-backup/<timestamp>/` first.
+Re-running is safe. The script asks before changing your default shell, and
+never does so non-interactively. Pin a branch with `DOTFILES_REF`.
+
 Bare `dot install` (and bare `make`) opens the **interactive installer** and
 needs a TTY. Scripted or CI installs, or piping the one-liner without flags,
 should use the headless paths instead — bare `dot install` under non-TTY stdin

@@ -1,0 +1,28 @@
+# Managed by dotfiles remote-install-server.sh (Linux/VPS lean config).
+# Self-contained: no repo clone, no zinit, no Homebrew. Just a prompt + completions.
+
+export LANG="${LANG:-en_US.UTF-8}"
+export PATH="$HOME/.local/bin:$PATH"
+
+# History
+HISTFILE="$HOME/.zsh_history"
+HISTSIZE=5000
+SAVEHIST=5000
+setopt appendhistory sharehistory hist_ignore_dups hist_save_no_dups hist_ignore_space
+
+# Editor: prefer nvim, then vim, then vi (commands is a zsh associative array).
+export EDITOR="${EDITOR:-${commands[nvim]:-${commands[vim]:-vi}}}"
+export VISUAL="$EDITOR"
+
+# Native completions
+autoload -Uz compinit
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z-_}={A-Za-z_-}' 'r:|=*' 'l:|=* r:|=*'
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+compinit
+
+# Prompt
+if command -v oh-my-posh >/dev/null 2>&1; then
+  eval "$(oh-my-posh init zsh --config "$HOME/.config/oh-my-posh/theme.omp.json")"
+else
+  print -u2 "oh-my-posh not found on PATH; prompt skipped"
+fi
