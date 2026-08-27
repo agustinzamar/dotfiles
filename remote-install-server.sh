@@ -74,15 +74,23 @@ fetch() {
 }
 
 maybe_chsh() {
-  local zsh_bin omp
+  local zsh_bin omp ans
   zsh_bin="$(command -v zsh || true)"
   [[ -n "$zsh_bin" ]] || return 0
   [[ -t 1 ]] || return 0
   [[ "$SHELL" != "$zsh_bin" ]] || return 0
   omp="$(command -v oh-my-posh || true)"
   [[ -n "$omp" ]] || omp="$OMP_BIN_DIR/oh-my-posh"
-  printf 'Set zsh (%s) as your default shell? [y/N] ' "$zsh_bin"
-  local ans; read -r ans
+  # When piped (`curl | bash`), stdin is the script, so read from the terminal.
+  if [[ -r /dev/tty ]]; then
+    exec 3</dev/tty
+    printf 'Set zsh (%s) as your default shell? [y/N] ' "$zsh_bin"
+    read -r ans <&3
+    exec 3<&-
+  else
+    printf 'Set zsh (%s) as your default shell? [y/N] ' "$zsh_bin"
+    read -r ans
+  fi
   case "$ans" in
     y|Y) $SUDO chsh -s "$zsh_bin" "${USER:-$(id -un)}" ;;
     *) log "leaving default shell unchanged" ;;
