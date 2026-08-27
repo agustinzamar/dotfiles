@@ -2,7 +2,10 @@
 # Self-contained: no repo clone, no zinit, no Homebrew. Just a prompt + completions.
 
 export LANG="${LANG:-en_US.UTF-8}"
-export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.local/bin:$HOME/.opencode/bin:$PATH"
+
+# User-local overrides (not committed, machine-specific)
+for f in "${HOME}"/.dotfiles-custom/exports/*.zsh(N); do source "$f"; done
 
 # History
 HISTFILE="$HOME/.zsh_history"
