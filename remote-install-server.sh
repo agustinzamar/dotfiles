@@ -74,25 +74,29 @@ fetch() {
 }
 
 maybe_chsh() {
-  local zsh_bin omp ans
+  local zsh_bin ans
   zsh_bin="$(command -v zsh || true)"
   [[ -n "$zsh_bin" ]] || return 0
-  [[ -t 1 ]] || return 0
-  [[ "$SHELL" != "$zsh_bin" ]] || return 0
-  omp="$(command -v oh-my-posh || true)"
-  [[ -n "$omp" ]] || omp="$OMP_BIN_DIR/oh-my-posh"
-  # When piped (`curl | bash`), stdin is the script, so read from the terminal.
-  if [[ -r /dev/tty ]]; then
-    exec 3</dev/tty
-    printf 'Set zsh (%s) as your default shell? [y/N] ' "$zsh_bin"
-    read -r ans <&3
-    exec 3<&-
-  else
-    printf 'Set zsh (%s) as your default shell? [y/N] ' "$zsh_bin"
+  [[ "$SHELL" == "$zsh_bin" ]] && return 0
+
+  local cmd="$SUDO chsh -s \"$zsh_bin\" \"${USER:-$(id -un)}\""
+  printf 'Set zsh (%s) as your default shell? [y/N] ' "$zsh_bin"
+
+  if [[ -t 0 ]]; then
+    # Direct run (`bash ./script.sh`): stdin is the terminal, a plain read works.
     read -r ans
+  elif [[ -r /dev/tty ]] && read -r ans < /dev/tty 2>/dev/null; then
+    :
+  else
+    # Piped (`curl | bash`) with no usable terminal: hand over the command.
+    log ""
+    log "skipping interactive shell change; to set zsh as default, run:"
+    log "  $cmd"
+    return 0
   fi
+
   case "$ans" in
-    y|Y) $SUDO chsh -s "$zsh_bin" "${USER:-$(id -un)}" ;;
+    y|Y) eval "$cmd" ;;
     *) log "leaving default shell unchanged" ;;
   esac
 }
