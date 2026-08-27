@@ -15,11 +15,12 @@ background-blur-radius = 30
 
 # --- MACOS ---
 macos-titlebar-style = native
+macos-window-buttons = visible
 macos-dock-drop-behavior = window
 macos-option-as-alt = left
 
 # --- Windows ---
-window-decoration = none
+window-decoration = auto
 window-padding-color = extend
 window-step-resize = false
 window-padding-balance = true
