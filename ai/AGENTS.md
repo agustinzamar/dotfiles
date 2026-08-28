@@ -15,6 +15,32 @@ Do not use for: refactoring, writing scripts from scratch, debugging business lo
 
 Read `~/.agents/rules/*.md` before you start work in any repository. The folder links to `~/dotfiles/ai/rules`.
 
+## Subagent Model Selection
+
+Prefer a free model for every subagent delegation to reduce cost.
+
+### How to find a free model
+
+List available models and filter for free tiers:
+
+```bash
+opencode models | grep free
+```
+
+The `opencode` provider exposes free models. List them all with:
+
+```bash
+opencode models | grep opencode
+```
+
+If neither command works, consult the OpenCode provider documentation or the active provider list in your environment to identify free-tier models.
+
+### Rules
+
+- Use a free model for subagents unless the user asks for a specific paid provider.
+- If no free model is available, use one from OpenCode Go.
+- Do not use `anthropic` or `openai` providers unless the user explicitly asks for them.
+
 <!-- laravel-boost-begin -->
 ## Laravel Boost Enforcement
 
