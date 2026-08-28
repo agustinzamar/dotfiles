@@ -1,6 +1,9 @@
 # skhd configuration — Gentleman.Dots style (migrated from AeroSpace)
 
-# Focus windows (alt + ctrl + hjkl) - stay in current space
+# Quickly restart the yabai launch agent
+shift + ctrl + alt + cmd - r : launchctl kickstart -k "gui/${UID}/homebrew.mxcl.yabai"
+
+# Focus windows
 alt - h : yabai -m window --focus west
 alt - j : yabai -m window --focus south
 alt - k : yabai -m window --focus north
@@ -8,35 +11,33 @@ alt - l : yabai -m window --focus east
 
 # Explicit focus rescue for the current space (alt + ctrl + space)
 # Use this when macOS/yabai leaves focus on the desktop after closing/moving windows.
-alt + ctrl - space : ~/.config/yabai/focus-current-space-window.sh
+alt + shift + ctrl + cmd - space : ~/.config/yabai/focus-current-space-window.sh
 
-# Move windows (alt + shift + hjkl)
+# Move windows
 alt + shift - h : yabai -m window --swap west
 alt + shift - j : yabai -m window --swap south
 alt + shift - k : yabai -m window --swap north
 alt + shift - l : yabai -m window --swap east
 
-# Resize windows (alt + -/=)
-alt - 0x1B : yabai -m window --resize left:-50:0; yabai -m window --resize right:-50:0
-alt - 0x18 : yabai -m window --resize right:50:0; yabai -m window --resize left:50:0
+# send window to desktop and follow focus
+alt + shift - 1 : yabai -m window --space  1; yabai -m space --focus 1
+alt + shift - 2 : yabai -m window --space  2; yabai -m space --focus 2
+alt + shift - 3 : yabai -m window --space  3; yabai -m space --focus 3
+alt + shift - 4 : yabai -m window --space  4; yabai -m space --focus 4
+alt + shift - 5 : yabai -m window --space  5; yabai -m space --focus 5
+alt + shift - 6 : yabai -m window --space  6; yabai -m space --focus 6
+alt + shift - 7 : yabai -m window --space  7; yabai -m space --focus 7
 
-# Resize with arrow keys (alt + arrow keys)
+# Resize with arrow keys
 alt - left : yabai -m window --resize left:-50:0; yabai -m window --resize right:-50:0
 alt - right : yabai -m window --resize right:50:0; yabai -m window --resize left:50:0
 alt - up : yabai -m window --resize top:0:-50; yabai -m window --resize bottom:0:-50
 alt - down : yabai -m window --resize bottom:0:50; yabai -m window --resize top:0:50
 
-# Rotate layout 90/270 degrees (alt + r)
-alt - r : yabai -m space --rotate 90
-
-# Flip layout horizontally/vertically (alt + x/y)
-alt - x : yabai -m space --mirror x-axis
-alt - y : yabai -m space --mirror y-axis
-
-# Toggle split type for focused window (alt + e)
+# Toggle split type for focused window
 alt - e : yabai -m window --toggle split
 
-# Switch to workspace (alt + number) - native yabai space switching (requires SIP partially disabled)
+# Switch to workspace
 alt - 1 : yabai -m space --focus 1
 alt - 2 : yabai -m space --focus 2
 alt - 3 : yabai -m space --focus 3
@@ -45,33 +46,29 @@ alt - 5 : yabai -m space --focus 5
 alt - 6 : yabai -m space --focus 6
 alt - 7 : yabai -m space --focus 7
 
-# Move window to workspace and follow (alt + shift + number)
-alt + shift - 1 : ~/.config/yabai/move-window-to-space.sh 1
-alt + shift - 2 : ~/.config/yabai/move-window-to-space.sh 2
-alt + shift - 3 : ~/.config/yabai/move-window-to-space.sh 3
-alt + shift - 4 : ~/.config/yabai/move-window-to-space.sh 4
-alt + shift - 5 : ~/.config/yabai/move-window-to-space.sh 5
-alt + shift - 6 : ~/.config/yabai/move-window-to-space.sh 6
-alt + shift - 7 : ~/.config/yabai/move-window-to-space.sh 7
+# create desktop, move window and follow focus
+shift + cmd - n : yabai -m space --create && \
+                  index="$(yabai -m query --spaces --display | jq 'map(select(."native-fullscreen" == 0))[-1].index')" && \
+                  yabai -m window --space "${index}" && \
+                  yabai -m space --focus "${index}"
 
-# Create new desktop (alt + shift + n)
-alt + shift - n : osascript ~/.config/yabai/new-desktop.applescript
+# create desktop and follow focus
+shift + alt - n : yabai -m space --create && \
+                  index="$(yabai -m query --spaces --display | jq 'map(select(."native-fullscreen" == 0))[-1].index')" && \
+                  yabai -m space --focus "${index}"
 
 # Fullscreen (alt + shift + f)
 alt + shift - f : yabai -m window --toggle zoom-fullscreen
 
 # Layout switching
-alt - 0x2C : yabai -m space --layout bsp
-alt - 0x2B : yabai -m space --layout stack
+alt + ctrl - b : yabai -m space --layout bsp
+alt + ctrl - s : yabai -m space --layout stack
 
 # Workspace back and forth (alt + tab)
 alt - tab : yabai -m space --focus recent
 
 # Move window to next monitor (alt + shift + tab)
 alt + shift - tab : yabai -m window --display next; yabai -m display --focus next
-
-# Reload config (alt + ctrl + shift + r)
-alt + ctrl + shift - r : /bin/launchctl kickstart -k gui/$(/usr/bin/id -u)/com.koekeishiya.yabai; skhd --restart-service
 
 # Balance layout (alt + shift + b)
 alt + shift - b : yabai -m space --balance

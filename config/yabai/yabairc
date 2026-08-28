@@ -21,15 +21,14 @@ sudo yabai --load-sa 2>/dev/null
 # Global layout
 # -----------------------------------------------------------------------------
 yabai -m config layout            bsp
-yabai -m config top_padding       12
-yabai -m config bottom_padding    12
-yabai -m config left_padding      12
-yabai -m config right_padding     12
-yabai -m config window_gap        10
+yabai -m config top_padding       6
+yabai -m config bottom_padding    6
+yabai -m config left_padding      6
+yabai -m config right_padding     6
+yabai -m config window_gap        6
 yabai -m config split_ratio       0.50
 yabai -m config split_type        auto
 yabai -m config auto_balance      on
-
 
 # Mouse
 yabai -m config mouse_follows_focus  on
@@ -58,17 +57,24 @@ yabai -m config window_shadow            float
 yabai -m rule --add app="^System Settings$" manage=off
 yabai -m rule --add app="^Calculator$" manage=off
 yabai -m rule --add app="^Finder$" title="^$" manage=off
-yabai -m rule --add app="^Spotify$" manage=off
 yabai -m rule --add app="^Raycast$" manage=off
 yabai -m rule --add app="^1Password" manage=off
+
+yabai -m rule --add app=Chrome   space=1 native-fullscreen=on
+yabai -m rule --add app=Ghostty  space=2 native-fullscreen=on
+yabai -m rule --add app=VSCode   space=3 native-fullscreen=on
+yabai -m rule --add app=Discord  space=4
+yabai -m rule --add app=Slack    space=4
+yabai -m rule --add app=Zoom     space=4
+yabai -m rule --add app=WhatsApp space=4
 
 # -----------------------------------------------------------------------------
 # Space labels
 # -----------------------------------------------------------------------------
-yabai -m space 1 --label social       2>/dev/null || true
-yabai -m space 2 --label work         2>/dev/null || true
-yabai -m space 3 --label development  2>/dev/null || true
-yabai -m space 4 --label browser      2>/dev/null || true
+yabai -m space 1 --label browser      2>/dev/null || true
+yabai -m space 2 --label terminal     2>/dev/null || true
+yabai -m space 3 --label editor       2>/dev/null || true
+yabai -m space 4 --label social       2>/dev/null || true
 yabai -m space 5 --label other        2>/dev/null || true
 
 # Ghostty native tabs surface as separate windows through macOS' Accessibility API,
