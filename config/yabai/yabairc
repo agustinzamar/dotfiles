@@ -54,19 +54,17 @@ yabai -m config window_shadow            float
 # -----------------------------------------------------------------------------
 # Rules
 # -----------------------------------------------------------------------------
-yabai -m rule --add app="^System Settings$" manage=off
 yabai -m rule --add app="^Calculator$" manage=off
-yabai -m rule --add app="^Finder$" title="^$" manage=off
 yabai -m rule --add app="^Raycast$" manage=off
 yabai -m rule --add app="^1Password" manage=off
 
-yabai -m rule --add app=Chrome   space=1 native-fullscreen=on
-yabai -m rule --add app=Ghostty  space=2 native-fullscreen=on
-yabai -m rule --add app=VSCode   space=3 native-fullscreen=on
-yabai -m rule --add app=Discord  space=4
-yabai -m rule --add app=Slack    space=4
-yabai -m rule --add app=Zoom     space=4
-yabai -m rule --add app=WhatsApp space=4
+yabai -m rule --add app="^Chrome$"   space=1 native-fullscreen=on
+yabai -m rule --add app="^Ghostty$"  space=2 native-fullscreen=on
+yabai -m rule --add app="^VSCode$"   space=3 native-fullscreen=on
+yabai -m rule --add app="^Discord$"  space=4
+yabai -m rule --add app="^Slack$"    space=4
+yabai -m rule --add app="^Zoom$"     space=4
+yabai -m rule --add app="^WhatsApp$" space=4
 
 # -----------------------------------------------------------------------------
 # Space labels
@@ -80,7 +78,7 @@ yabai -m space 5 --label other        2>/dev/null || true
 # Ghostty native tabs surface as separate windows through macOS' Accessibility API,
 # so yabai tiles each new tab and breaks the layout. Re-apply the bsp layout whenever
 # a Ghostty window appears or disappears to re-normalise the space (official workaround).
-yabai -m signal --add app='^Ghostty$' event=window_created action='yabai -m space --layout bsp'
+yabai -m signal --add app="^Ghostty$" event=window_created action='yabai -m space --layout bsp'
 yabai -m signal --add app='^Ghostty$' event=window_destroyed action='yabai -m space --layout bsp'
 
 echo "yabai configuration loaded"

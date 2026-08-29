@@ -109,10 +109,7 @@
             "enabled" : false
           }
         },
-        "speed" : {
-          "horizontal" : 0,
-          "vertical" : 33.23
-        }
+        "speed" : 0
       }
     }
   ]
