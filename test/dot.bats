@@ -400,7 +400,10 @@ EOF
 # some way, so a newly-added orphan fails loudly instead of sitting silent.
 @test "every tracked config file is wired into an install path" {
   # Consumed directly by their own install/*.sh, not through links.sh.
-  local handled="config/git/config"
+  # .zshrc.server is fetched and linked by remote-install-server.sh:16 — the
+  # standalone `curl | bash` server lane, which has no repo and cannot use
+  # links.sh.
+  local handled="config/git/config config/zsh/.zshrc.server"
   # Installed via `herdr plugin link` (see herder.toml), not the dot map.
   local known_gaps="config/herdr/workspace-layout"
 
