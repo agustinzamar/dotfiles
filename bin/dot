@@ -321,7 +321,7 @@ sub_ai() {
 sub_full() {
   log "Full install"
   local phase failures=()
-  for phase in bootstrap brew link zsh code macos duti git; do
+  for phase in bootstrap brew link zsh code macos duti dock git; do
     "sub_$phase" || failures+=("$phase")
   done
 
@@ -442,7 +442,21 @@ sub_code() {
 sub_duti() {
   if is_executable duti; then
     log "Setting default apps for file types"
-    run duti -v "$DOTFILES_DIR/install/topics/duti" 2>&1 | grep -v "error -50" || true
+    # ponytail: only register apps that are actually installed. A stale LaunchServices
+    # registration (e.g. an uninstalled VLC) makes duti prompt a Gatekeeper "keep this
+    # program?" dialog. Filter the topic to installed bundle ids before handing it to duti.
+    local tmp
+    tmp=$(mktemp)
+    while read -r bid rest; do
+      app=$(mdfind "kMDItemCFBundleIdentifier == '$bid'" 2>/dev/null | head -1)
+      if [ -n "$app" ]; then
+        printf '%s %s\n' "$bid" "$rest" >>"$tmp"
+      else
+        echo "⚠️ $bid not installed; skipping" >&2
+      fi
+    done <"$DOTFILES_DIR/install/topics/duti"
+    run duti -v "$tmp" 2>&1 | grep -v "error -50" || true
+    rm -f "$tmp"
   else
     echo "⚠️ duti not installed; skipping default app setup" >&2
   fi
