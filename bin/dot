@@ -530,8 +530,15 @@ sub_doctor() {
     }
   }
 
-  # jq reads the ai/ manifests; without it `dot ai` cannot run at all.
-  for command in brew git jq; do check "$command"; done
+  # jq reads the ai/ manifests; without it `dot ai` cannot run at all. git, jq
+  # and `dot` on PATH (below) are universal — every OS family, `unknown` too.
+  for command in git jq; do check "$command"; done
+  # Homebrew is the manager this repo installs through, and only on macOS.
+  # Gating on os_family rather than on os_pkg_manager is deliberate: the latter
+  # reports what is PRESENT, so it would silence the check exactly on the
+  # machine that is missing brew. check_link needs no such branch — all_links
+  # already yields only the rows that apply here.
+  if [[ "$(os_family)" == macos ]]; then check brew; fi
   is_executable dot || {
     echo "not on PATH: dot (run \`dot link\` then restart your shell; the repo must live at ~/dotfiles)"
     failed=1
