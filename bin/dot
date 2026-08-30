@@ -22,6 +22,8 @@ set -- ${args[@]+"${args[@]}"}
 
 # shellcheck source=../install/common.sh
 . "$DOTFILES_DIR/install/common.sh"
+# shellcheck source=../install/platform.sh
+. "$DOTFILES_DIR/install/platform.sh"
 # shellcheck source=../install/components.sh
 . "$DOTFILES_DIR/install/components.sh"
 # shellcheck source=../install/links.sh
