@@ -21,7 +21,15 @@ setup() {
 
   # A PATH that contains neither bun nor go unless a stub adds one. /usr/bin
   # and /bin keep dirname/sort/mktemp working inside bin/dot itself.
-  BASE_PATH="/usr/bin:/bin"
+  #
+  # It leads with a `uname` stub reporting Darwin: `dot install` refuses to
+  # install packages off macOS (test/doctor.bats), and these tests are about
+  # the installer's binary-resolution contract, not about the host running the
+  # suite. Declaring the platform keeps them asserting the same thing on both.
+  mkdir -p "$SANDBOX/os"
+  printf '#!/bin/sh\necho Darwin\n' >"$SANDBOX/os/uname"
+  chmod +x "$SANDBOX/os/uname"
+  BASE_PATH="$SANDBOX/os:/usr/bin:/bin"
   # Path-first bun lookup only: this machine has a real bun at a known
   # location that would otherwise defeat the fake-bun stubs below.
   export DOT_RUNTIME_BUN_LOOKUP=path

@@ -83,6 +83,18 @@ resolve_install_target() {
   fi
 }
 
+# Refuse an entry point that installs packages when this host has no Homebrew
+# to install them with. Refusing up front beats failing halfway through a phase
+# list, and beats a dry run that prints brew commands this machine can never
+# run. Only the package-installing entry points call this: `dot install macos`,
+# `code` and `duti` have their own installers and stay available everywhere.
+_reject_package_install() {
+  [[ "$(os_family)" != macos ]] || return 0
+  echo "refusing: \`dot $*\` installs packages with Homebrew, which this repo only supports on macOS (detected: $(os_family))." >&2
+  echo "dot link, dot unlink, dot doctor and dot git work here." >&2
+  return 1
+}
+
 # Run every phase, then report failures. One broken phase should not
 # prevent later ones from running.
 sub_install() {
@@ -90,12 +102,14 @@ sub_install() {
   shift 2>/dev/null || true
 
   if [[ "$cmd" == --profile ]]; then
+    _reject_package_install install --profile || return 1
     run_profile_install "${1:-${XDG_CONFIG_HOME:-$HOME/.config}/dot/profile.json}"
     return $?
   fi
 
   case "$cmd" in
     --all | -a)
+      _reject_package_install install "$cmd" || return 1
       sub_full
       return $?
       ;;
@@ -108,13 +122,17 @@ sub_install() {
       return 1
       ;;
     "")
+      _reject_package_install install || return 1
       run_interactive_install
       ;;
     *)
       local target
       if target=$(resolve_install_target "$cmd"); then
         case "$target" in
-          topic:*) install_topic "${target#topic:}" ;;
+          topic:*)
+            _reject_package_install install "$cmd" || return 1
+            install_topic "${target#topic:}"
+            ;;
           *) "$target" ;;
         esac
       else

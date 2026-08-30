@@ -3,6 +3,14 @@
 setup() {
   DOTFILES_DIR="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
   DOT="$DOTFILES_DIR/bin/dot"
+
+  # `dot install` refuses to install packages off macOS (test/doctor.bats), so
+  # the tests below that assert the installer's own behaviour declare their
+  # platform with a stub instead of inheriting whichever OS runs the suite.
+  MACOS_BIN="$BATS_TEST_TMPDIR/macos-bin"
+  mkdir -p "$MACOS_BIN"
+  printf '#!/bin/sh\necho Darwin\n' >"$MACOS_BIN/uname"
+  chmod +x "$MACOS_BIN/uname"
 }
 
 @test "dot with no arguments prints usage" {
@@ -46,7 +54,7 @@ setup() {
       echo "topic '$topic' missing from the install <topic> help line"
       exit 1
     }
-    run "$DOT" install "$topic" --dry-run
+    PATH="$MACOS_BIN:$PATH" run "$DOT" install "$topic" --dry-run
     { [ "$status" -eq 0 ] && { grep -q "^sub_${topic}()" "$DOT" || [[ "$output" == *"--file=$DOTFILES_DIR/install/topics/$topic "* ]]; }; } || {
       echo "install $topic failed: status=$status output=$output"
       exit 1
@@ -125,7 +133,7 @@ setup() {
     # The real PATH is required: install_git calls `brew --prefix`, so a brew-less
     # PATH would fail the git phase for an unrelated reason.
     @test "install --all dry-runs headlessly and never opens a UI" {
-      HOME="$(mktemp -d)" run "$DOT" install --all --dry-run
+      HOME="$(mktemp -d)" PATH="$MACOS_BIN:$PATH" run "$DOT" install --all --dry-run
       [ "$status" -eq 0 ]
       [[ "$output" == *"Full install"* ]]
       [[ "$output" != *"dot-tui"* ]]
@@ -342,11 +350,11 @@ EOF
 # bin/dot brew/link/etc used to only dispatch through `dot install <name>`;
 # the README documents them as top-level commands in their own right.
 @test "install subcommands and topics work as bare top-level commands" {
-  run "$DOT" brew --dry-run
+  PATH="$MACOS_BIN:$PATH" run "$DOT" brew --dry-run
   [ "$status" -eq 0 ]
   [[ "$output" == *"install/topics/core"* ]]
 
-  run "$DOT" core --dry-run
+  PATH="$MACOS_BIN:$PATH" run "$DOT" core --dry-run
   [ "$status" -eq 0 ]
   [[ "$output" == *"install/topics/core"* ]]
 
