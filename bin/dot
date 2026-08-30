@@ -54,18 +54,14 @@ sub_help() {
   echo "Install (each also works as \`dot <name>\`, no \`install\` needed):"
   echo "   install              Open the interactive installer — requires a TTY"
   echo "   install --all        Install every standard phase headlessly; AI stays opt-in"
-  echo "   install --profile PATH  Apply a saved component profile headlessly"
-  echo "   install --dry-run --profile PATH  Preview a saved component profile"
   echo "   install <topic>      Install a topic: $(topic_names)"
   echo
   echo "AI extras (opt-in — no install phase runs these):"
   echo "   ai                   Open the AI picker (skills/plugins selector)"
   echo "   ai <agent>           Limit to one agent: $(ai_agent_names)"
   echo "   ai --all             Install every skill/plugin for every detected agent"
-  echo "   ai --profile P       Replay a saved selection headlessly"
   echo "   ai --skills          Skills only (add --plugins for plugins only)"
   echo "   ai --dry-run         Compose with the above: print commands, run none"
-  echo "   link agents          Point the agent CLIs at ai/AGENTS.md"
 }
 
 # Resolve an `install` subcommand or topic name to what runs it. Echoes the
@@ -103,12 +99,6 @@ _reject_package_install() {
 sub_install() {
   local cmd="${1:-}"
   shift 2>/dev/null || true
-
-  if [[ "$cmd" == --profile ]]; then
-    _reject_package_install install --profile || return 1
-    run_profile_install "${1:-${XDG_CONFIG_HOME:-$HOME/.config}/dot/profile.json}"
-    return $?
-  fi
 
   case "$cmd" in
     --all | -a)
@@ -158,7 +148,7 @@ sub_install() {
 # launching shell runs a bare macOS GUI PATH.
 run_interactive_install() {
   if [[ ! -t 0 ]]; then
-    echo "stdin is not a TTY — use \`dot install --all\` or \`dot install --profile <path>\`" >&2
+    echo "stdin is not a TTY — use \`dot install --all\` or \`dot install <topic>\`" >&2
     return 1
   fi
 
@@ -167,7 +157,7 @@ run_interactive_install() {
   # AFTER resolving the runtime so the resolver sees the caller's environment.
   local bin ctx exit_code=0
   bin=$(dot_runtime_path) || {
-    echo "TUI unavailable — use \`dot install --all\` or \`dot install --profile <path>\` for a headless install" >&2
+    echo "TUI unavailable — use \`dot install --all\` or \`dot install <topic>\` for a headless install" >&2
     return 1
   }
   export PATH="$HOME/.bun/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
@@ -257,26 +247,23 @@ sub_baseline() {
   sub_git
 }
 
-# dot ai [--all] [--profile P] [<agent>...] [--skills|--plugins]
+# dot ai [--all] [<agent>...] [--skills|--plugins]
 #
 # Opt-in: no install phase calls this. Bare `dot ai` opens the picker TUI
 # (tools/tui/src/ai.tsx). `--all` keeps the old headless behavior (install
 # everything for every detected agent). A named agent limits to that agent.
-# `--profile P` replays a saved selection headlessly. `--skills`/`--plugins`
-# still install for every detected agent, just like before. `--dry-run`
-# composes with all of the above (printed by bin/dot before dispatch).
+# `--skills`/`--plugins` still install for every detected agent, just like
+# before. `--dry-run` composes with all of the above (printed by bin/dot before dispatch).
 sub_ai() {
   local do_skills=false do_plugins=false agents=() arg failures=()
-  local do_all=false do_profile=false profile_path="" next_is_profile=false explicit_kind=false
+  local do_all=false explicit_kind=false
   for arg in "$@"; do
-    if $next_is_profile; then profile_path="$arg"; next_is_profile=false; continue; fi
     case "$arg" in
       --skills) do_skills=true; explicit_kind=true ;;
       --plugins) do_plugins=true; explicit_kind=true ;;
       --all) do_all=true ;;
-      --profile) do_profile=true; next_is_profile=true ;;
       -*)
-        echo "Usage: dot ai [--all] [--profile P] [<agent>] [--skills|--plugins]" >&2
+        echo "Usage: dot ai [--all] [<agent>] [--skills|--plugins]" >&2
         return 1
         ;;
       *)
@@ -291,14 +278,9 @@ sub_ai() {
   $do_skills || $do_plugins || { do_skills=true; do_plugins=true; }
 
   # Bare `dot ai` (nothing requested) opens the picker.
-  if ! $do_all && ! $do_profile && ((${#agents[@]} == 0)) && ! $explicit_kind; then
+  if ! $do_all && ((${#agents[@]} == 0)) && ! $explicit_kind; then
     ai_open_picker || return $?
     return 0
-  fi
-
-  if $do_profile; then
-    ai_replay "${profile_path:-}" || return $?
-    return $?
   fi
 
   # --all, or a --skills/--plugins-only call, installs for every detected agent.
@@ -314,7 +296,6 @@ sub_ai() {
     echo "❌ Finished with failures: ${failures[*]}" >&2
     return 1
   fi
-  $DRY_RUN || ai_write_profile
   return 0
 }
 
@@ -511,45 +492,6 @@ version_at_least() {
   [[ $(printf '%s\n' "$1" "$2" | sort -V | head -n1) == "$2" ]]
 }
 
-# Launch the dot-tui installer binary in the documented resolution order
-# (dot-cli-bootstrap spec):
-#   1. a prebuilt/local binary at bin/dot-tui — needs neither Go nor Bun;
-#   2. Bun >= the .bun-version pin: build the binary from source, then run it;
-#   3. otherwise print actionable bootstrap guidance and fail loudly.
-# resolve_dot_tui echoes the resolved binary path (or fails loudly);
-# run_dot_tui launches it and returns its exit code so callers can map the
-# 0/10/error contract (never exec: the caller still owns the temp context
-# file and the exit-code mapping).
-resolve_dot_tui() {
-  # Single resolver (PATH-independent; see dot_runtime_path). Headless
-  # --profile builds use the same prebuilt-or-build lookup as interactive.
-  dot_runtime_path
-}
-
-run_dot_tui() {
-  local bin
-  bin=$(resolve_dot_tui) || return 1
-  "$bin" "$@"
-}
-
-# Headless profile install: same context JSON the interactive path emits
-# (the TUI refuses to run without it) plus -apply -profile. No TTY guard —
-# scripts and CI never have one, and the TUI's apply mode mounts no UI.
-run_profile_install() {
-  local profile="$1"
-  local ctx exit_code=0
-  ctx=$(mktemp) || return 1
-  install_context_json "$ctx" || {
-    rm -f "$ctx"
-    return 1
-  }
-  local args=(-apply -profile "$profile" --context "$ctx")
-  "$DRY_RUN" && args+=(--dry-run)
-  run_dot_tui "${args[@]}" || exit_code=$?
-  rm -f "$ctx"
-  return "$exit_code"
-}
-
 sub_unlink() {
   log "Removing symlinks"
   unlink_all
@@ -579,8 +521,6 @@ sub_doctor() {
     local source=$1 target=$2 mode=${3:-}
     # An app-writable target is a live file on purpose, never a symlink.
     [[ "$mode" == app-writable ]] && return 0
-    # A filtered target is a generated file, never a symlink into the repo.
-    [[ "$mode" == filtered ]] && return 0
     [[ -L "$target" && "$(readlink "$target")" == "$DOTFILES_DIR/$source" ]] || {
       echo "broken: $target"
       failed=1

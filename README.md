@@ -104,7 +104,6 @@ CLI is idempotent, so these are safe to re-run:
 ```bash
 dot ai                             # every agent CLI found on this machine
 dot ai opencode --plugins          # one agent, plugins only
-dot link agents                    # point the agents at ai/AGENTS.md
 ```
 
 An `install` value is a shell command, run as you, with network access. That

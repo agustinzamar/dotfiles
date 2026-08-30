@@ -127,13 +127,6 @@ link_file() {
     fi
   fi
 
-  # A `filtered` target is a generated file, not a symlink: hand it to the
-  # generator and return before any symlink/backup logic runs.
-  if [[ "$mode" == filtered ]]; then
-    link_filtered "$source" "$target"
-    return
-  fi
-
   current=$(readlink "$target" 2>/dev/null || true)
   [[ "$current" == "$source" ]] && return 0
 

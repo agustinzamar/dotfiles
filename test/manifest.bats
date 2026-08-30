@@ -81,8 +81,6 @@ fixture_all_links() {
 
 fixture_optional_links() {
   cat <<-EOF
-		agents|ai/AGENTS.md|$HOME/.claude/CLAUDE.md|||ai
-		agents|ai/AGENTS.md|$HOME/.config/opencode/AGENTS.md|||ai
 		opencode|config/opencode/opencode.jsonc|$HOME/.config/opencode/opencode.jsonc|||ai
 	EOF
 }
@@ -116,11 +114,6 @@ golden_json() {
     { "name": "hunk", "optional": false, "component": "git", "requirement": "hunk",
       "rows": [
         { "source": "config/hunk/config.toml", "target": "$HOME/.config/hunk/config.toml", "mode": "" }
-      ] },
-    { "name": "agents", "optional": true, "component": "ai", "requirement": "",
-      "rows": [
-        { "source": "ai/AGENTS.md", "target": "$HOME/.claude/CLAUDE.md", "mode": "" },
-        { "source": "ai/AGENTS.md", "target": "$HOME/.config/opencode/AGENTS.md", "mode": "" }
       ] },
     { "name": "opencode", "optional": true, "component": "ai", "requirement": "",
       "rows": [
@@ -202,9 +195,6 @@ EOF
   [[ "$(os_family)" == macos ]] && ghostty_rows=2
   [ "$(jq '[.links[] | select(.name == "ghostty")][0].rows | length' <<<"$json")" -eq "$ghostty_rows" ]
   [ "$(jq '[.links[] | select(.name == "yazi")][0].rows | length' <<<"$json")" -eq 3 ]
-  # `agents` now lives in all_links (work item 3): its instruction files are
-  # re-asserted on every `dot link`, so the collapsed entry is non-optional.
-  [ "$(jq '[.links[] | select(.name == "agents")][0].optional' <<<"$json")" == "false" ]
   rm -f "$ctx"
 }
 
@@ -354,27 +344,6 @@ source_ai() {
   local n
   n="$(jq -r '[.plugins[] | select(.id == "gentle-ai" or .name == "gentle-ai") | select(.interactive == true)] | length' "$plugins")"
   [ "$n" -ge 1 ] || fail "plugins.json has no interactive gentle-ai entry"
-}
-
-@test "AI profile: ai_write_profile emits the versioned items map" {
-  source_ai
-  # Point the profile writer at a temp XDG tree so it never touches $HOME.
-  export XDG_CONFIG_HOME="$BATS_TEST_TMPDIR/xdg"
-  AI_PROFILE_ROWS=("gentle-ai|claude-code codex")
-  ai_write_profile
-  local prof="$XDG_CONFIG_HOME/dot/ai-profile.json"
-  [ -s "$prof" ]
-  # The profile schema: { "version": 1, "items": { "<id>": ["<agent>", ...] } }.
-  local expected
-  expected="$BATS_TEST_TMPDIR/expected-profile.json"
-  jq -n '{ version: 1, items: { "gentle-ai": ["claude-code", "codex"] } }' >"$expected"
-  run bash -c 'diff <(jq -S "$1") <(jq -S "$2")' _ "$prof" "$expected"
-  [ "$status" -eq 0 ] || fail "ai-profile.json did not match the schema:
-$output"
-  # Replays must be able to read it back: every recorded id maps to a
-  # non-empty agent array.
-  [ "$(jq -r '.version' "$prof")" == "1" ]
-  [ "$(jq -r '[.items | to_entries[] | select((.key | length == 0) or (.value | length == 0))] | length' "$prof")" == "0" ]
 }
 
 @test "AI agents: AI_AGENTS declares pi:pi" {
