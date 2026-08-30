@@ -321,7 +321,7 @@ sub_ai() {
 sub_full() {
   log "Full install"
   local phase failures=()
-  for phase in bootstrap brew link zsh code macos duti dock git; do
+  for phase in bootstrap brew link zsh code macos duti git; do
     "sub_$phase" || failures+=("$phase")
   done
 

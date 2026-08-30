@@ -47,12 +47,14 @@ If neither command works, consult the OpenCode provider documentation or the act
 
 <!-- /dot:section -->
 
+<!-- dot:section communication-style -->
 ## Communication Style
 
 - Write in **ASD-STE100 Simplified Technical English**: one idea per sentence, active voice, present tense, approved words only, max ~20 words per sentence. No idioms, no synonyms for the same concept — reuse the same word.
 - Present information in **tables** whenever the content has 2+ items with shared attributes (options, files, tradeoffs, steps, results). Prose only when a table does not fit.
 - Use **emojis** as visual anchors: ✅ done / ❌ failed / ⚠️ warning / 📁 file / 🔧 command / 💡 note. One per line at most. Do not decorate.
 - Exception: code stays in normal technical English. Commits and PR bodies use ASD-STE100 English. All three use no emojis.
+<!-- /dot:section -->
 
 ## Git Commits and Pull Requests
 

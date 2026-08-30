@@ -228,6 +228,9 @@ ai_install() {
   for l in "${normal[@]:-}" "${inter[@]:-}"; do
     [[ -n "$l" ]] || continue
     IFS=$'\x1f' read -r id item cmd interactive agents <<<"$l"
+    # Gentle AI is a separate installer, not a per-agent plugin. Skip it here;
+    # the picker offers `gentle-ai install` as a final step instead.
+    [[ "$interactive" == 1 ]] && continue
     ai_run_line "$id" "$item" "$cmd" "$interactive" "$agents" || failures+=("$item")
   done
 
