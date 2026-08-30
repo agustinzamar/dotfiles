@@ -212,15 +212,15 @@ export async function applyConfirmed(
   const optionalPseudoSteps: ApplyStep[] = OPTIONAL_PSEUDO_STEPS.filter(
     (s) => selection.checked[s.id],
   ).map((s) => ({ id: s.id, label: s.label, operation: s.command }));
-  // kind "topic" rows (code extensions, duti default handlers, dock/macos
-  // defaults) delegate to a dot subcommand. Skips unknown topic ids quietly
-  // (none exist today; the drift guard would catch an inventoried one).
+  // kind "topic" rows (code extensions) delegate to a dot subcommand.
+  // Skips unknown topic ids quietly (the drift guard would catch an
+  // inventoried one). dock/macos/duti use their own bin/dot subcommands.
   function topicCommandFor(id: string): string | null {
     switch (id) {
       case "code":
         return "dot install code";
-      case "duti-defaults":
-        return "dot install duti";
+      case "duti":
+        return "dot duti";
       case "dock":
         return "dot dock";
       case "macos":

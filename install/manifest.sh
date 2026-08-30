@@ -145,12 +145,8 @@ package_rows() {
     done <"$file"
   done
   # Special-installer topics: one delegating row each.
+  # (dock/macos/duti use their own bin/dot subcommands, not `dot install`.)
   printf 'code\ttopic\tcode\n'
-  printf 'duti\ttopic\tduti-defaults\n'
-  # System-level adopters that are not brew data: `dot dock` / `dot macos`
-  # run apply_defaults for system/defaults/dock.sh and macos.sh.
-  printf 'system\ttopic\tdock\n'
-  printf 'system\ttopic\tmacos\n'
 }
 
 # Emit the link map verbatim (all_links then optional_links). manifest.sh adds
