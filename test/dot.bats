@@ -805,6 +805,11 @@ EOF
   [[ "$output" != *"bootstrap"* ]]
   run "$DOT" --dry-run bootstrap
   [ "$status" -eq 0 ]
+  # bootstrap provisions the Xcode CLT and Homebrew: macOS-only by design.
+  # Everywhere else the dry run correctly reports both as still to install, so
+  # only the satisfied-state wording is Darwin-specific. Dispatch and exit 0
+  # above stay universal.
+  [[ "$(uname -s)" == Darwin ]] || skip "bootstrap provisions macOS-only toolchains"
   [[ "$output" == *"already installed"* ]]
 }
 
