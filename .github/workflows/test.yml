@@ -16,14 +16,19 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      # Lint runs on macOS only, so Linux needs the test runner and nothing else.
       - name: Install shell tooling (macOS)
         if: runner.os == 'macOS'
         run: brew install shellcheck shfmt bats-core
 
+      # Lint runs on macOS only, so Linux needs the test runner plus the two
+      # interpreters the suite shells out to: zsh for the completion and
+      # .zshrc checks, pnpm for the skills CLI assertions.
       - name: Install shell tooling (Linux)
         if: runner.os == 'Linux'
-        run: sudo apt-get update && sudo apt-get install -y bats
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y bats zsh
+          npm install --global pnpm
 
       - uses: oven-sh/setup-bun@v2
         with:
