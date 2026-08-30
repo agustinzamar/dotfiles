@@ -29,7 +29,7 @@
 # The one place an agent is declared: `<manifest name>:<executable>`, where the
 # executable is what proves the agent is on this machine. Adding an agent is
 # adding one entry here. bash 3.2 ships no associative arrays, hence the pairs.
-AI_AGENTS=(claude-code:claude codex:codex opencode:opencode)
+AI_AGENTS=(claude-code:claude codex:codex opencode:opencode pi:pi)
 
 ai_agent_cli() {
   local pair
@@ -61,53 +61,77 @@ ai_agent_names() {
 # useful default: every entry spells out its own per-agent command. Lines use
 # a unit-separator instead of `|` so a command containing `||` reads back
 # intact.
+#
+# The `components` key, when present, gates the entry the same way the link map
+# gates rows: an entry whose `components` none are selected is dropped before
+# any per-agent resolution runs.
+ai_selected_components() {
+  local profile="${DOT_PROFILE:-${XDG_CONFIG_HOME:-$HOME/.config}/dot/profile.json}"
+  if [[ -f "$profile" ]] && is_executable jq; then
+    jq -r '.components | to_entries[] | select(.value == true) | .key' "$profile" 2>/dev/null
+  fi
+  printf '%s\n' base shell git terminal
+}
+
 ai_manifest_lines() {
   local kind="$1" agents="$2"
+  local selected
+  selected=$(ai_selected_components | jq -R -s 'split("\n") | map(select(length > 0))')
   case "$kind" in
-    skills)
-      jq -r --arg agents "$agents" --arg all "$(ai_agent_names)" '
+  skills)
+    jq -r --arg agents "$agents" --arg all "$(ai_agent_names)" --argjson selected "$selected" '
         ($agents | split(" ")) as $want
         | ($all | split(" ")) as $everyone
         | .skills
         | .[]
         | . as $e
+        | (($e.components // []) as $ec | $ec | length == 0 or ($ec | map(. as $c | $selected | index($c)) | any)) as $component_ok
+        | select($component_ok)
         | (($e.skills // []) + (if $e.skill then [$e.skill] else [] end)) as $sk
         | ($sk | map(" --skill " + .) | join("")) as $sf
         | ($want | map(select(($e.agents // $everyone) | index(.)))) as $targets
         | select($targets | length > 0)
+        | ($e.id // $e.name // $e.source) as $id
+        | ($e.source + (if ($sk | length) > 0 then "/" + ($sk | join(",")) else "" end)) as $item
         | if (($e.install // {}) | length == 0)
           then
-            [ $e.source,
+            [ $id, $item,
               ("pnpm dlx skills@latest add " + $e.source + $sf
                + ($targets | map(" --agent " + .) | join(""))
-               + " --global --yes") ]
+               + " --global --yes"),
+              "0", ($targets | join(" ")) ]
             | join("\u001f")
           else
             ($targets | map(select($e.install[.] == null))) as $defaults
             | ($targets | map(select($e.install[.] != null))) as $overrides
-            | ($e.source + (if ($sk | length) > 0 then "/" + ($sk | join(",")) else "" end)) as $item
             | if ($defaults | length) > 0
-              then [ $item,
+              then [ $id, $item,
                      ("pnpm dlx skills@latest add " + $e.source + $sf
                       + ($defaults | map(" --agent " + .) | join(""))
-                      + " --global --yes") ]
-                   | join("\u001f")
+                      + " --global --yes"),
+                     "0", ($defaults | join(" ")) ]
+                    | join("\u001f")
               else empty
               end,
-              ($overrides[] | [ $item + " [" + . + "]",
-                                $e.install[.] ] | join("\u001f"))
+              ($overrides[] | [ $id, ($item + " [" + . + "]"),
+                                $e.install[.], "0", . ] | join("\u001f"))
           end' "$DOTFILES_DIR/ai/skills.json"
-      ;;
-    plugins)
-      jq -r --arg agents "$agents" '
+    ;;
+  plugins)
+    jq -r --arg agents "$agents" --argjson selected "$selected" '
         ($agents | split(" ")) as $want
         | .plugins[]
         | . as $e
+        | (($e.components // []) as $ec | $ec | length == 0 or ($ec | map(. as $c | $selected | index($c)) | any)) as $component_ok
+        | select($component_ok)
         | $want[]
         | select($e.install[.] != null)
-        | [ $e.name + " [" + . + "]",
-            $e.install[.] ] | join("\u001f")' "$DOTFILES_DIR/ai/plugins.json"
-      ;;
+        | [ ($e.id // $e.name),
+            (($e.label // $e.name) + " [" + . + "]"),
+            $e.install[.],
+            (if $e.interactive then "1" else "0" end),
+            . ] | join("\u001f")' "$DOTFILES_DIR/ai/plugins.json"
+    ;;
   esac
 }
 
@@ -138,13 +162,38 @@ ai_ensure_pnpm() {
   run brew install pnpm
 }
 
+# ai_run_line <id> <item> <cmd> <interactive> <agents>
+#
+# Run one resolved manifest command. Honors DRY_RUN (print, do not run) and
+# `interactive`: interactive entries keep stdin (the CLI opens its own TUI),
+# non-interactive entries get `</dev/null` so a missing TTY can't wedge them.
+# Records the id→agents pairing so the post-run snapshot can be written.
+ai_run_line() {
+  local id="$1" item="$2" cmd="$3" interactive="$4" agents="$5"
+  [[ -n "$cmd" ]] || return 0
+  echo "-- $item"
+  if "$DRY_RUN"; then
+    echo "+ $cmd"
+  else
+    if [[ "$interactive" == 1 ]]; then
+      eval "$cmd" || return 1
+    else
+      eval "$cmd" </dev/null || return 1
+    fi
+  fi
+  AI_PROFILE_ROWS+=("$id|$agents")
+  return 0
+}
+
 # ai_install <skills|plugins> <agent...>
 #
 # Agents whose CLI is missing are skipped; the rest share one manifest pass.
+# Interactive entries are queued LAST so a long interactive installer never
+# blocks the batch.
 ai_install() {
   local kind="$1"
   shift
-  local agent cli present=() lines item cmd failures=()
+  local agent cli present=() lines item cmd id interactive agents failures=()
 
   for agent in "$@"; do
     cli=$(ai_agent_cli "$agent") || {
@@ -170,15 +219,17 @@ ai_install() {
   fi
 
   log "Installing $kind for ${present[*]}"
-  while IFS=$'\x1f' read -r item cmd; do
-    [[ -n "$cmd" ]] || continue
-    echo "-- $item"
-    if "$DRY_RUN"; then
-      echo "+ $cmd"
-    else
-      eval "$cmd" </dev/null || failures+=("$item")
-    fi
+  local normal=() inter=() l
+  while IFS= read -r l; do
+    [[ -n "$l" ]] || continue
+    if [[ "$l" == *$'\x1f'1 ]]; then inter+=("$l"); else normal+=("$l"); fi
   done <<<"$lines"
+
+  for l in "${normal[@]:-}" "${inter[@]:-}"; do
+    [[ -n "$l" ]] || continue
+    IFS=$'\x1f' read -r id item cmd interactive agents <<<"$l"
+    ai_run_line "$id" "$item" "$cmd" "$interactive" "$agents" || failures+=("$item")
+  done
 
   [[ "$kind" == skills && " ${present[*]} " == *" claude-code "* ]] && ai_link_local_skills
 
@@ -188,4 +239,80 @@ ai_install() {
     return 1
   fi
   return 0
+}
+
+# Write the resolved selection to ~/.config/dot/ai-profile.json. Merges with an
+# existing file (id → agent list is unioned) so re-runs accumulate, not clobber.
+ai_write_profile() {
+  ((${#AI_PROFILE_ROWS[@]})) || return 0
+  local prof="${XDG_CONFIG_HOME:-$HOME/.config}/dot/ai-profile.json"
+  local dir new_json merged rows
+  dir=$(dirname "$prof")
+  mkdir -p "$dir" || return 1
+  rows=$(mktemp) || return 1
+  printf '%s\n' "${AI_PROFILE_ROWS[@]}" > "$rows"
+  new_json=$(jq -R -s '
+    [ split("\n")[] | select(length > 0) | split("|") as $p
+      | { id: $p[0], agents: ($p[1] | split(" ") | map(select(length > 0))) } ]
+    | group_by(.id)
+    | map({ key: .[0].id, value: (map(.agents[]) | unique) })
+    | from_entries' "$rows") || { rm -f "$rows"; return 1; }
+  rm -f "$rows"
+  if [[ -f "$prof" ]]; then
+    merged=$(jq -n --argjson new "$new_json" --slurpfile old "$prof" '
+      ($old[0].items // {}) as $olditems
+      | ($new // {}) as $newitems
+      | { version: 1, items: (
+          reduce (($newitems + $olditems) | to_entries[]) as $e ({};
+            .[$e.key] = ((($newitems[$e.key] // []) + ($olditems[$e.key] // [])) | unique)) ) }' ) || return 1
+  else
+    merged=$(jq -n --argjson new "$new_json" '{ version: 1, items: $new }') || return 1
+  fi
+  printf '%s\n' "$merged" > "$prof"
+}
+
+# Replay a saved selection headlessly. Reads the single profile file
+# (~/.config/dot/ai-profile.json) and runs only the recorded id→agent pairs.
+ai_replay() {
+  local prof="${1:-${XDG_CONFIG_HOME:-$HOME/.config}/dot/ai-profile.json}"
+  [[ -f "$prof" ]] || { echo "no AI profile at $prof" >&2; return 1; }
+  local pairs failures=()
+  pairs=$(jq -r '.items | to_entries[] | .key as $id | .value[] | ($id + "|" + .)' "$prof") || return 1
+  [[ -n "$pairs" ]] || { echo "AI profile is empty" >&2; return 1; }
+
+  local agents_uniq agent out want_ids lid litem lcmd linter lagents
+  agents_uniq=$(printf '%s\n' "$pairs" | cut -d'|' -f2 | sort -u)
+  while IFS= read -r agent; do
+    [[ -n "$agent" ]] || continue
+    out=$( { ai_manifest_lines skills "$agent"; ai_manifest_lines plugins "$agent"; } 2>/dev/null)
+    want_ids=$(printf '%s\n' "$pairs" | awk -F'|' -v a="$agent" '$2 == a { print $1 }' | sort -u)
+    while IFS=$'\x1f' read -r lid litem lcmd linter lagents; do
+      [[ -n "$lid" ]] || continue
+      printf '%s\n' "$want_ids" | grep -qx "$lid" || continue
+      [[ -n "$lcmd" ]] || continue
+      ai_run_line "$lid" "$litem" "$lcmd" "$linter" "$lagents" || failures+=("$litem")
+    done <<<"$out"
+  done <<<"$agents_uniq"
+
+  if ((${#failures[@]})); then
+    echo "==> replay failed for:" >&2
+    printf '    %s\n' "${failures[@]}" >&2
+    return 1
+  fi
+  return 0
+}
+
+# Open the AI picker TUI (tools/tui/src/ai.tsx). The picker is built by a
+# separate step; here we only locate bun and launch it, then propagate its exit.
+ai_open_picker() {
+  local bun_bin=""
+  for candidate in "$HOME/.bun/bin/bun" /opt/homebrew/bin/bun /usr/local/bin/bun; do
+    [[ -x "$candidate" ]] && bun_bin=$candidate
+  done
+  [[ -z "$bun_bin" ]] && bun_bin=$(command -v bun 2>/dev/null || true)
+  [[ -n "$bun_bin" ]] || {
+    echo "bun not found — cannot open the AI picker; use \`dot ai --all\` for the headless path" >&2
+    return 1
+  }
+  "$bun_bin" "$DOTFILES_DIR/tools/tui/src/ai.tsx" || return $?
 }

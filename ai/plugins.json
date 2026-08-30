@@ -1,7 +1,10 @@
 {
   "plugins": [
     {
+      "id": "ponytail",
       "name": "ponytail",
+      "label": "Ponytail",
+      "description": "Lazy senior dev mode: simplest solution that works.",
       "repo": "DietrichGebert/ponytail",
       "homepage": "https://github.com/DietrichGebert/ponytail",
       "install": {
@@ -11,7 +14,10 @@
       }
     },
     {
+      "id": "superpowers",
       "name": "superpowers",
+      "label": "Superpowers",
+      "description": "Agent plugin suite from obra/superpowers.",
       "repo": "obra/superpowers",
       "homepage": "https://github.com/obra/superpowers",
       "install": {
@@ -21,7 +27,10 @@
       }
     },
     {
+      "id": "opencode-dcp",
       "name": "opencode-dcp",
+      "label": "OpenCode DCP",
+      "description": "Dynamic context pruning for OpenCode.",
       "repo": "Opencode-DCP/opencode-dynamic-context-pruning",
       "homepage": "https://github.com/Opencode-DCP/opencode-dynamic-context-pruning",
       "install": {
@@ -29,11 +38,26 @@
       }
     },
     {
+      "id": "background-agents",
       "name": "background-agents",
+      "label": "Background Agents",
+      "description": "Run OpenCode background agents.",
       "repo": "kdcokenny/opencode-background-agents",
       "homepage": "https://github.com/kdcokenny/opencode-background-agents",
       "install": {
         "opencode": "[ -f \"$HOME/.config/opencode/ocx.jsonc\" ] || ocx init --global --quiet; ocx add kdco/background-agents --from https://registry.kdco.dev --global"
+      }
+    },
+    {
+      "id": "gentle-ai",
+      "label": "Gentle AI",
+      "description": "SDD orchestration and receipt-driven review. Runs its own installer TUI.",
+      "interactive": true,
+      "install": {
+        "claude-code": "gentle-ai install claude",
+        "codex": "gentle-ai install codex",
+        "opencode": "gentle-ai install opencode",
+        "pi": "gentle-ai install pi"
       }
     }
   ]

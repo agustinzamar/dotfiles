@@ -1,0 +1,30 @@
+# Portable Codex template. Seeded via the app-writable link mode; ${HOME} is expanded at install time.
+
+approval_policy = "never"
+sandbox_mode = "danger-full-access"
+personality = "pragmatic"
+notify = ["${HOME}/.codex/computer-use/Codex Computer Use.app/Contents/SharedSupport/SkyComputerUseClient.app/Contents/MacOS/SkyComputerUseClient", "turn-ended"]
+model = "gpt-5.6-sol"
+model_reasoning_effort = "medium"
+
+[agents]
+max_threads = 4
+enabled = true
+max_depth = 2
+max_concurrent_threads_per_session = 10
+default_subagent_model = "gpt-5.6-luna"
+default_subagent_reasoning_effort = "max"
+
+[tui]
+theme = "catppuccin-frappe"
+
+[mcp_servers.codegraph]
+command = "codegraph"
+args = ["serve", "--mcp"]
+
+[mcp_servers.context7]
+url = "https://mcp.context7.com/mcp"
+
+[mcp_servers.engram]
+command = "/opt/homebrew/bin/engram"
+args = ["mcp", "--tools=agent"]

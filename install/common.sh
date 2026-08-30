@@ -98,6 +98,21 @@ backup_path() {
   printf '%s/%s' "$BACKUP_DIR" "${rel#/}"
 }
 
+# Seed an app-writable target by copying the repo source and expanding any
+# literal `$HOME` (or `${HOME}`) placeholder to the real home directory. A plain
+# symlink would leave the literal `$HOME` in place, which the app cannot
+# interpret, so app-writable files are copied and expanded at seed time.
+seed_app_writable() {
+  local source="$1" target="$2"
+  run mkdir -p "$(dirname "$target")"
+  if "$DRY_RUN"; then
+    echo "seed $target (expand \$HOME)"
+    return 0
+  fi
+  sed -e "s|\$HOME|$HOME|g" -e "s|\${HOME}|$HOME|g" "$source" >"$target.tmp" \
+    && run mv "$target.tmp" "$target"
+}
+
 # link_file <repo-relative-source> <absolute-target> [mode]
 link_file() {
   local source="$DOTFILES_DIR/$1" target=$2 mode=${3:-} current backup
@@ -112,26 +127,44 @@ link_file() {
     fi
   fi
 
+  # A `filtered` target is a generated file, not a symlink: hand it to the
+  # generator and return before any symlink/backup logic runs.
+  if [[ "$mode" == filtered ]]; then
+    link_filtered "$source" "$target"
+    return
+  fi
+
   current=$(readlink "$target" 2>/dev/null || true)
   [[ "$current" == "$source" ]] && return 0
 
-  if [[ "$mode" == app-writable && -f "$target" && ! -L "$target" ]]; then
-    # The app maintains this file itself, so never overwrite or replace it
-    # with a symlink: a future app write would just orphan the symlink. Back up
-    # the live copy and leave it in place — the user can adopt the repo version
-    # by hand (delete the live file, then re-run). A backup is only needed when
-    # the live and tracked copies differ.
-    if ! cmp -s "$source" "$target"; then
-      backup=$(backup_path "$target")
-      run mkdir -p "$(dirname "$backup")"
-      run cp "$target" "$backup"
-      printf '\nConfig conflict:\n  live: %s\n  repo: %s\n' "$target" "$source" >&2
-      [[ "$DRY_RUN" == false ]] &&
-        printf '  kept the live file; a copy was saved to %s\n' "$backup" >&2
-      printf '  re-run after editing %s to match, or remove it to adopt the repo version.\n' "$target" >&2
+  if [[ "$mode" == app-writable ]]; then
+    # The app maintains this file itself, so we never point it at a symlink: a
+    # future app write would orphan the symlink. On first install the target does
+    # not exist, so seed it from the repo source — copying (not symlinking) and
+    # expanding any literal `$HOME` placeholder to the real home directory.
+    if [[ ! -e "$target" && ! -L "$target" ]]; then
+      seed_app_writable "$source" "$target"
+      return 0
     fi
-    return 0
-  elif [[ -e "$target" || -L "$target" ]]; then
+    if [[ -f "$target" && ! -L "$target" ]]; then
+      # A live copy exists: never overwrite it. Back it up only when it differs
+      # from the tracked copy so the user can adopt the repo version by hand
+      # (delete the live file, then re-run).
+      if ! cmp -s "$source" "$target"; then
+        backup=$(backup_path "$target")
+        run mkdir -p "$(dirname "$backup")"
+        run cp "$target" "$backup"
+        printf '\nConfig conflict:\n  live: %s\n  repo: %s\n' "$target" "$source" >&2
+        [[ "$DRY_RUN" == false ]] &&
+          printf '  kept the live file; a copy was saved to %s\n' "$backup" >&2
+        printf '  re-run after editing %s to match, or remove it to adopt the repo version.\n' "$target" >&2
+      fi
+      return 0
+    fi
+    # The target is a symlink or other special entry: fall through to replace it.
+  fi
+
+  if [[ -e "$target" || -L "$target" ]]; then
     backup=$(backup_path "$target")
     run mkdir -p "$(dirname "$backup")"
     run mv "$target" "$backup"

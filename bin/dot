@@ -59,9 +59,12 @@ sub_help() {
   echo "   install <topic>      Install a topic: $(topic_names)"
   echo
   echo "AI extras (opt-in — no install phase runs these):"
-  echo "   ai                   Install skills and plugins for every agent CLI found"
+  echo "   ai                   Open the AI picker (skills/plugins selector)"
   echo "   ai <agent>           Limit to one agent: $(ai_agent_names)"
+  echo "   ai --all             Install every skill/plugin for every detected agent"
+  echo "   ai --profile P       Replay a saved selection headlessly"
   echo "   ai --skills          Skills only (add --plugins for plugins only)"
+  echo "   ai --dry-run         Compose with the above: print commands, run none"
   echo "   link agents          Point the agent CLIs at ai/AGENTS.md"
 }
 
@@ -254,20 +257,26 @@ sub_baseline() {
   sub_git
 }
 
-# dot ai [agent...] [--skills|--plugins]
+# dot ai [--all] [--profile P] [<agent>...] [--skills|--plugins]
 #
-# Opt-in: no install phase calls this. Named agents win; otherwise every agent
-# whose CLI is on this machine gets its share of the manifests. Neither flag
-# runs both kinds. All named agents share one pass per kind, so the skills CLI
-# runs once per entry with a comma-joined --agent set.
+# Opt-in: no install phase calls this. Bare `dot ai` opens the picker TUI
+# (tools/tui/src/ai.tsx). `--all` keeps the old headless behavior (install
+# everything for every detected agent). A named agent limits to that agent.
+# `--profile P` replays a saved selection headlessly. `--skills`/`--plugins`
+# still install for every detected agent, just like before. `--dry-run`
+# composes with all of the above (printed by bin/dot before dispatch).
 sub_ai() {
   local do_skills=false do_plugins=false agents=() arg failures=()
+  local do_all=false do_profile=false profile_path="" next_is_profile=false explicit_kind=false
   for arg in "$@"; do
+    if $next_is_profile; then profile_path="$arg"; next_is_profile=false; continue; fi
     case "$arg" in
-      --skills) do_skills=true ;;
-      --plugins) do_plugins=true ;;
+      --skills) do_skills=true; explicit_kind=true ;;
+      --plugins) do_plugins=true; explicit_kind=true ;;
+      --all) do_all=true ;;
+      --profile) do_profile=true; next_is_profile=true ;;
       -*)
-        echo "Usage: dot ai [$(ai_agent_names)] [--skills|--plugins]" >&2
+        echo "Usage: dot ai [--all] [--profile P] [<agent>] [--skills|--plugins]" >&2
         return 1
         ;;
       *)
@@ -279,12 +288,25 @@ sub_ai() {
         ;;
     esac
   done
-  $do_skills || $do_plugins || {
-    do_skills=true
-    do_plugins=true
-  }
-  ((${#agents[@]})) || read -ra agents <<<"$(ai_agent_names)"
+  $do_skills || $do_plugins || { do_skills=true; do_plugins=true; }
 
+  # Bare `dot ai` (nothing requested) opens the picker.
+  if ! $do_all && ! $do_profile && ((${#agents[@]} == 0)) && ! $explicit_kind; then
+    ai_open_picker || return $?
+    return 0
+  fi
+
+  if $do_profile; then
+    ai_replay "${profile_path:-}" || return $?
+    return $?
+  fi
+
+  # --all, or a --skills/--plugins-only call, installs for every detected agent.
+  if $do_all || ((${#agents[@]} == 0)); then
+    read -ra agents <<<"$(ai_agent_names)"
+  fi
+
+  AI_PROFILE_ROWS=()
   if $do_skills; then ai_install skills "${agents[@]}" || failures+=("skills"); fi
   if $do_plugins; then ai_install plugins "${agents[@]}" || failures+=("plugins"); fi
 
@@ -292,6 +314,7 @@ sub_ai() {
     echo "❌ Finished with failures: ${failures[*]}" >&2
     return 1
   fi
+  $DRY_RUN || ai_write_profile
   return 0
 }
 
@@ -542,6 +565,8 @@ sub_doctor() {
     local source=$1 target=$2 mode=${3:-}
     # An app-writable target is a live file on purpose, never a symlink.
     [[ "$mode" == app-writable ]] && return 0
+    # A filtered target is a generated file, never a symlink into the repo.
+    [[ "$mode" == filtered ]] && return 0
     [[ -L "$target" && "$(readlink "$target")" == "$DOTFILES_DIR/$source" ]] || {
       echo "broken: $target"
       failed=1

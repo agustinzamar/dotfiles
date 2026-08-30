@@ -84,10 +84,7 @@ all_links_raw() { _emit_links; }
 # cleans them up.
 optional_links() {
   cat <<-EOF
-	agents|ai/AGENTS.md|$HOME/.claude/CLAUDE.md|||ai
-	agents|ai/AGENTS.md|$HOME/.agents/AGENTS.md|||ai
-	agents|ai/AGENTS.md|$HOME/.config/opencode/AGENTS.md|||ai
-	opencode|config/opencode/opencode.jsonc|$HOME/.config/opencode/opencode.jsonc|||ai
+opencode|config/opencode/opencode.jsonc|$HOME/.config/opencode/opencode.jsonc|||ai
 	agents|ai/rules/general.md|$HOME/.agents/rules/general.md|||ai
 	agents|ai/rules/general.md|$HOME/.claude/rules/general.md|||ai
 	EOF
@@ -138,9 +135,10 @@ link_named() {
     if "$map" | cut -d'|' -f1 | grep -qx "$name"; then
       log "Linking $name"
       _walk_links "$map" link_file "$name"
-      return 0
+      found=1
     fi
   done
+  [[ "$found" -eq 1 ]] && return 0
   echo "no such link: $name — try: $(link_names)" >&2
   return 1
 }

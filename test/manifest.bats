@@ -207,7 +207,9 @@ EOF
   [[ "$(os_family)" == macos ]] && ghostty_rows=2
   [ "$(jq '[.links[] | select(.name == "ghostty")][0].rows | length' <<<"$json")" -eq "$ghostty_rows" ]
   [ "$(jq '[.links[] | select(.name == "yazi")][0].rows | length' <<<"$json")" -eq 3 ]
-  [ "$(jq '[.links[] | select(.name == "agents")][0].optional' <<<"$json")" == "true" ]
+  # `agents` now lives in all_links (work item 3): its instruction files are
+  # re-asserted on every `dot link`, so the collapsed entry is non-optional.
+  [ "$(jq '[.links[] | select(.name == "agents")][0].optional' <<<"$json")" == "false" ]
   rm -f "$ctx"
 }
 
@@ -321,4 +323,69 @@ EOF
   json="$(cat "$ctx")"
   [ "$(jq -r '[.packages[] | select(.id == "unar")] | length' <<<"$json")" == "1" ]
   rm -f "$ctx"
+}
+
+# ---------------------------------------------------------------------------
+# AI assets manifest (install/ai.sh, ai/skills.json, ai/plugins.json)
+# ---------------------------------------------------------------------------
+
+# Source the AI module without pulling in the rest of the installer. At source
+# time ai.sh only defines functions plus the AI_AGENTS array; the helpers it
+# calls from those functions (is_executable/log/run) are not needed by the
+# bits this suite exercises, so a bare source is enough.
+source_ai() {
+  # shellcheck source=../install/ai.sh
+  . "$DOTFILES_DIR/install/ai.sh"
+}
+
+@test "AI manifest schema: skills.json and plugins.json parse and every entry has an id and an install mechanism" {
+  source_ai
+  local skills="$DOTFILES_DIR/ai/skills.json"
+  local plugins="$DOTFILES_DIR/ai/plugins.json"
+  [ -f "$skills" ] && [ -f "$plugins" ]
+  # Both files must be valid JSON.
+  jq empty "$skills" || fail "ai/skills.json is not valid JSON"
+  jq empty "$plugins" || fail "ai/plugins.json is not valid JSON"
+  # Every entry needs an id (or name) plus a resolvable install mechanism.
+  # Plugins carry an explicit `install` map. Skills resolve through the default
+  # skills CLI command keyed by `source`, so `install` is absent by design.
+  local bad
+  bad="$(jq -r '.skills[] | select(((.id == null) and (.name == null)) or ((.install == null) and (.source == null))) | (.id // .name // "<entry>")' "$skills")"
+  [ -z "$bad" ] || fail "skills.json entry missing id/name or install mechanism: $bad"
+  bad="$(jq -r '.plugins[] | select(((.id == null) and (.name == null)) or (.install == null)) | (.id // .name // "<entry>")' "$plugins")"
+  [ -z "$bad" ] || fail "plugins.json entry missing id/name or install map: $bad"
+}
+
+@test "AI manifest: plugins.json declares gentle-ai as interactive" {
+  source_ai
+  local plugins="$DOTFILES_DIR/ai/plugins.json"
+  local n
+  n="$(jq -r '[.plugins[] | select(.id == "gentle-ai" or .name == "gentle-ai") | select(.interactive == true)] | length' "$plugins")"
+  [ "$n" -ge 1 ] || fail "plugins.json has no interactive gentle-ai entry"
+}
+
+@test "AI profile: ai_write_profile emits the versioned items map" {
+  source_ai
+  # Point the profile writer at a temp XDG tree so it never touches $HOME.
+  export XDG_CONFIG_HOME="$BATS_TEST_TMPDIR/xdg"
+  AI_PROFILE_ROWS=("gentle-ai|claude-code codex")
+  ai_write_profile
+  local prof="$XDG_CONFIG_HOME/dot/ai-profile.json"
+  [ -s "$prof" ]
+  # The profile schema: { "version": 1, "items": { "<id>": ["<agent>", ...] } }.
+  local expected
+  expected="$BATS_TEST_TMPDIR/expected-profile.json"
+  jq -n '{ version: 1, items: { "gentle-ai": ["claude-code", "codex"] } }' >"$expected"
+  run bash -c 'diff <(jq -S "$1") <(jq -S "$2")' _ "$prof" "$expected"
+  [ "$status" -eq 0 ] || fail "ai-profile.json did not match the schema:
+$output"
+  # Replays must be able to read it back: every recorded id maps to a
+  # non-empty agent array.
+  [ "$(jq -r '.version' "$prof")" == "1" ]
+  [ "$(jq -r '[.items | to_entries[] | select((.key | length == 0) or (.value | length == 0))] | length' "$prof")" == "0" ]
+}
+
+@test "AI agents: AI_AGENTS declares pi:pi" {
+  source_ai
+  printf '%s\n' "${AI_AGENTS[@]}" | grep -qx 'pi:pi' || fail "AI_AGENTS is missing pi:pi"
 }

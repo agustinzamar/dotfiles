@@ -40,7 +40,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash '/Users/agustin/.claude/hooks/herdr-agent-state.sh' session",
+            "command": "bash '$HOME/.claude/hooks/herdr-agent-state.sh' session",
             "timeout": 10
           }
         ]
@@ -102,7 +102,7 @@
   "autoMode": {
     "soft_deny": [
       "$defaults",
-      "Bash(rm:-rf /Users/agustin/Documents/crystal/feedlot/storage/*)"
+      "Bash(rm:-rf $HOME/Documents/crystal/feedlot/storage/*)"
     ]
   }
 }

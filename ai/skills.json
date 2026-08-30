@@ -1,21 +1,36 @@
 {
   "skills": [
     {
+      "id": "mattpocock-skills",
+      "label": "Matt Pocock Skills",
+      "description": "mattpocock/skills",
       "source": "mattpocock/skills"
     },
     {
+      "id": "shadcn-ui",
+      "label": "shadcn/ui",
+      "description": "shadcn/ui",
       "source": "shadcn/ui",
       "skills": ["shadcn"]
     },
     {
+      "id": "vercel-labs-skills",
+      "label": "Vercel Labs Skills",
+      "description": "vercel-labs/skills",
       "source": "vercel-labs/skills",
       "skills": ["find-skills"]
     },
     {
+      "id": "vercel-labs-open-agents",
+      "label": "Vercel Open Agents",
+      "description": "vercel-labs/open-agents",
       "source": "vercel-labs/open-agents",
       "skills": ["agent-browser", "vercel-react-best-practices"]
     },
     {
+      "id": "vercel-labs-agent-skills",
+      "label": "Vercel Agent Skills",
+      "description": "vercel-labs/agent-skills",
       "source": "vercel-labs/agent-skills",
       "skills": [
         "vercel-composition-patterns",
@@ -24,26 +39,44 @@
       ]
     },
     {
+      "id": "humanlayer-skills",
+      "label": "Humanlayer Skills",
+      "description": "humanlayer/skills",
       "source": "humanlayer/skills",
       "skills": ["show-me"]
     },
     {
+      "id": "anthropics-skills",
+      "label": "Anthropic Skills",
+      "description": "anthropics/skills",
       "source": "anthropics/skills",
       "skills": ["frontend-design", "skill-creator"]
     },
     {
+      "id": "supabase-agent-skills",
+      "label": "Supabase Agent Skills",
+      "description": "supabase/agent-skills",
       "source": "supabase/agent-skills",
       "skills": ["supabase-postgres-best-practices"]
     },
     {
+      "id": "ui-ux-pro-max",
+      "label": "UI/UX Pro Max",
+      "description": "nextlevelbuilder/ui-ux-pro-max-skill",
       "source": "nextlevelbuilder/ui-ux-pro-max-skill",
       "skills": ["ui-ux-pro-max"]
     },
     {
+      "id": "antfu-skills",
+      "label": "Anthony Fu Skills",
+      "description": "antfu/skills",
       "source": "antfu/skills",
       "skills": ["vite", "pnpm"]
     },
     {
+      "id": "wshobson-agents",
+      "label": "wshobson Agents",
+      "description": "wshobson/agents",
       "source": "wshobson/agents",
       "skills": ["tailwind-design-system", "typescript-advanced-types"]
     }
