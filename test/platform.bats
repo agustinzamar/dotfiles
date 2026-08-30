@@ -208,8 +208,9 @@ global_git_snapshot() {
 
 # The primitives are useless unless the CLI has them. Ordering matters: the
 # module is sourced after common.sh, alongside every other install/ module.
-# Behavioural coverage lives in test/git.bats — dropping this line makes
-# `dot git` die with `os_family: command not found`.
+# Behavioural coverage lives in test/git.bats: dropping this line silently
+# degrades every family check to the empty string, so the macOS branch of
+# `dot git` stops firing. Silent degradation is why this is asserted directly.
 @test "bin/dot sources the platform module after common.sh" {
   local dot="$DOTFILES_DIR/bin/dot" common platform
   common=$(grep -n 'install/common\.sh"$' "$dot" | head -1 | cut -d: -f1)

@@ -411,12 +411,20 @@ sub_git() {
   log "Configuring git"
   install_git
 
+  # --apple-use-keychain is a macOS-only ssh-add flag; anywhere else it is an
+  # unknown option and the key never gets registered. Empty array plus the `+`
+  # expansion so `set -u` tolerates the non-macOS case.
+  local -a flags=()
+  if [[ "$(os_family)" == macos ]]; then
+    flags=(--apple-use-keychain)
+  fi
+
   # `|| continue` rather than `&&`: as a function body under `set -e`, a final
   # falsy test would abort the whole install run.
   for key in "$HOME"/.ssh/id_*; do
     case "$key" in *.pub | *.revoked) continue ;; esac
     [[ -f "$key" ]] || continue
-    run ssh-add --apple-use-keychain "$key"
+    run ssh-add ${flags[@]+"${flags[@]}"} "$key"
   done
 }
 
