@@ -65,34 +65,34 @@ json_escape() {
 # the drift-guard test catches renames.
 area_for_package() {
   case "$1" in
-  # Area tokens used directly as link components resolve to themselves.
-  base | shell | git | terminal | vscode | ai | ai-herdr | claude | dev | media | desktop | system | desktop-*) echo "$1" ;;
-  # --- System settings (dot dock / dot macos apply_defaults scripts) ---
-  dock | macos) echo "system" ;;
-  # --- Shell (locked block; also p10k/starship link component) ---
-  fzf | zoxide | oh-my-posh | pay-respects | timescam/tap | powerlevel10k | starship) echo "shell" ;;
-  # --- Git ---
-  gh | lazygit | hunk) echo "git" ;;
-  # --- Terminal / core CLI ---
-  eza | fd | yazi | poppler | ripgrep | grip | watch | btop | procs | topgrade | dust | dockutil | mole | 7zip | bat | jq | jless | yq | unar | tmux | duti | ghostty | neovim | font-jetbrains-mono-nerd-font | duti-defaults | 'we"ird\name') echo "terminal" ;;
-  # --- VS Code ---
-  visual-studio-code | code) echo "vscode" ;;
-  # --- AI ---
-  opencode | anomalyco/tap/opencode | pi-coding-agent | claude-code@latest | codex | t3-code) echo "ai" ;;
-  herdr) echo "ai-herdr" ;;
-  # --- Dev ---
-  make | go | node | python@3.14 | pnpm | bun | npm-check-updates | pipx | rust | shellcheck | shfmt | bats-core | act | sshpass | phpstorm | actionlint | swiftformat | mysql | mysql-client | postgresql | redis | sqlite | herd | orbstack | openusage | direnv) echo "dev" ;;
-  # --- Desktop (subareas match links.sh component tokens) ---
-  linearmouse) echo "desktop-linearmouse" ;;
-  aerospace) echo "desktop-aerospace" ;;
-  sketchybar) echo "desktop-sketchybar" ;;
-  yabai) echo "desktop-yabai" ;;
-  skhd) echo "desktop-skhd" ;;
-  borders) echo "desktop-borders" ;;
-  pearcleaner | google-chrome | firefox | brave-browser | discord | telegram | whatsapp | slack | raycast | finetune | typewhisper | rectangle | localsend | hyperkey | alt-tab | chatgpt | koekeishiya/formulae | FelixKratz/formulae | FelixKratz/JankyBorders) echo "desktop" ;;
-  # --- Media ---
-  ffmpeg | ffmpegthumbnailer | imagemagick | webp | spotify | stremio | vlc | stupside/tap/castor | castor) echo "media" ;;
-  *) return 1 ;;
+    # Area tokens used directly as link components resolve to themselves.
+    base | shell | git | terminal | vscode | ai | ai-herdr | claude | dev | media | desktop | system | desktop-*) echo "$1" ;;
+    # --- System settings (dot dock / dot macos apply_defaults scripts) ---
+    dock | macos) echo "system" ;;
+    # --- Shell (locked block; also p10k/starship link component) ---
+    fzf | zoxide | oh-my-posh | pay-respects | timescam/tap | powerlevel10k | starship) echo "shell" ;;
+    # --- Git ---
+    gh | lazygit | hunk) echo "git" ;;
+    # --- Terminal / core CLI ---
+    eza | fd | yazi | poppler | ripgrep | grip | watch | btop | procs | topgrade | dust | dockutil | mole | 7zip | bat | jq | jless | yq | unar | tmux | duti | ghostty | neovim | font-jetbrains-mono-nerd-font | duti-defaults | 'we"ird\name') echo "terminal" ;;
+    # --- VS Code ---
+    visual-studio-code | code) echo "vscode" ;;
+    # --- AI ---
+    opencode | anomalyco/tap/opencode | pi-coding-agent | claude-code@latest | codex | t3-code) echo "ai" ;;
+    herdr) echo "ai-herdr" ;;
+    # --- Dev ---
+    make | go | node | python@3.14 | pnpm | bun | npm-check-updates | pipx | rust | shellcheck | shfmt | bats-core | act | sshpass | phpstorm | actionlint | swiftformat | mysql | mysql-client | postgresql | redis | sqlite | herd | orbstack | openusage | direnv) echo "dev" ;;
+    # --- Desktop (subareas match links.sh component tokens) ---
+    linearmouse) echo "desktop-linearmouse" ;;
+    aerospace) echo "desktop-aerospace" ;;
+    sketchybar) echo "desktop-sketchybar" ;;
+    yabai) echo "desktop-yabai" ;;
+    skhd) echo "desktop-skhd" ;;
+    borders) echo "desktop-borders" ;;
+    pearcleaner | google-chrome | firefox | brave-browser | discord | telegram | whatsapp | slack | raycast | finetune | typewhisper | rectangle | localsend | hyperkey | alt-tab | chatgpt | koekeishiya/formulae | FelixKratz/formulae | FelixKratz/JankyBorders) echo "desktop" ;;
+    # --- Media ---
+    ffmpeg | ffmpegthumbnailer | imagemagick | webp | spotify | stremio | vlc | stupside/tap/castor | castor) echo "media" ;;
+    *) return 1 ;;
   esac
 }
 
@@ -104,8 +104,8 @@ area_for_package() {
 # exist. poppler: yazi's PDF-preview dependency.
 manifest_is_locked() {
   case "$1" in
-  fzf | zoxide | eza | poppler) return 0 ;;
-  *) return 1 ;;
+    fzf | zoxide | eza | poppler) return 0 ;;
+    *) return 1 ;;
   esac
 }
 
@@ -115,8 +115,8 @@ manifest_is_locked() {
 # category alongside lazygit/hunk instead of the inert always-on block.
 manifest_is_default() {
   case "$1" in
-  lazygit | hunk | yazi | neovim | ghostty | tmux | git | gh) return 0 ;;
-  *) return 1 ;;
+    lazygit | hunk | yazi | neovim | ghostty | tmux | git | gh) return 0 ;;
+    *) return 1 ;;
   esac
 }
 
@@ -131,7 +131,7 @@ package_rows() {
   for file in "$MANIFEST_TOPIC_DIR"/*; do
     topic=$(basename "$file")
     case "$topic" in
-    code | duti) continue ;;
+      code | duti) continue ;;
     esac
     while IFS= read -r line; do
       line=${line%%#*}
@@ -172,11 +172,11 @@ _manifest_label() {
     # Delegating rows get a human label; they now render as first-class
     # step-1 rows instead of being hidden away in a step-2 corner.
     case "$id" in
-    code) printf 'VS Code extensions' ;;
-    duti-defaults) printf 'Default file handlers' ;;
-    dock) printf 'Dock defaults' ;;
-    macos) printf 'macOS defaults' ;;
-    *) printf '%s' "${id##*/}" ;;
+      code) printf 'VS Code extensions' ;;
+      duti-defaults) printf 'Default file handlers' ;;
+      dock) printf 'Dock defaults' ;;
+      macos) printf 'macOS defaults' ;;
+      *) printf '%s' "${id##*/}" ;;
     esac
   else
     printf '%s' "${id##*/}"
@@ -190,54 +190,54 @@ _manifest_label() {
 # semantics are untouched). Unknown ids fall back to their topic.
 manifest_category() {
   case "$1" in
-  # --- System settings, file handlers and defaults scripts ---
-  duti-defaults | dock | macos) echo "System" ;;
-  # --- VS Code extensions (`code` delegates to dot install code) ---
-  code) echo "Editors" ;;
-  # --- AI agents and AI apps ---
-  claude-code@latest | codex | t3-code | anomalyco/tap/opencode | pi-coding-agent | claude | chatgpt | herdr | openusage) echo "AI" ;;
-  # --- Browsers ---
-  google-chrome | firefox | brave-browser) echo "Browsers" ;;
-  # --- Communication ---
-  discord | telegram | whatsapp | slack) echo "Communication" ;;
-  # --- Desktop / window managers (the tiling stack) ---
-  yabai | skhd | sketchybar | aerospace | borders | koekeishiya/formulae | FelixKratz/formulae | FelixKratz/JankyBorders) echo "Desktop" ;;
-  # --- Tweakers (input, window and bar tweaks) ---
-  linearmouse | finetune | rectangle | hyperkey | alt-tab | typewhisper) echo "Tweakers" ;;
-  # --- Utilities ---
-  raycast | localsend | mole | pearcleaner | topgrade | dockutil | duti) echo "Utilities" ;;
-  # --- Archives ---
-  7zip | unar) echo "Archives" ;;
-  # --- Monitoring ---
-  btop | procs | watch) echo "Monitoring" ;;
-  # --- Filesystem navigation (poppler previews yazi's PDFs; both eza and
-  # poppler stay listed here for data consistency even though they're locked
-  # and never rendered — see manifest_is_locked) ---
-  eza | fd | dust | yazi | poppler) echo "Filesystem" ;;
-  # --- Terminals: emulator/multiplexer/font, prompts (oh-my-posh is active;
-  # starship/powerlevel10k are dormant alternatives — config exists but
-  # .zshrc doesn't source them yet), command correction, and the locked
-  # fzf/zoxide (never rendered, kept here for data consistency) ---
-  ghostty | tmux | font-jetbrains-mono-nerd-font | oh-my-posh | starship | powerlevel10k | pay-respects | timescam/tap | fzf | zoxide) echo "Terminals" ;;
-  # --- Text and search ---
-  ripgrep | bat | jq | jless | yq | grip) echo "Text" ;;
-  # --- Git and GitHub ---
-  git | gh | lazygit | hunk) echo "Git" ;;
-  # --- Editors and IDEs ---
-  neovim | visual-studio-code | phpstorm) echo "Editors" ;;
-  # --- Dev languages, runtimes and CLI tools (direnv: per-project env) ---
-  make | go | node | python@3.14 | pnpm | bun | npm-check-updates | pipx | rust | bats-core | act | sshpass | direnv) echo "Dev" ;;
-  # --- Linters and formatters ---
-  shellcheck | shfmt | actionlint | swiftformat) echo "Linters" ;;
-  # --- Local dev environments and service runtimes ---
-  herd | orbstack) echo "Services" ;;
-  # --- Databases ---
-  mysql | mysql-client | postgresql | redis | sqlite) echo "Databases" ;;
-  # --- Media processing ---
-  ffmpeg | ffmpegthumbnailer | imagemagick | webp) echo "Media tools" ;;
-  # --- Entertainment ---
-  spotify | stremio | vlc | stupside/tap/castor) echo "Entertainment" ;;
-  *) echo "pin-topic" ;;
+    # --- System settings, file handlers and defaults scripts ---
+    duti-defaults | dock | macos) echo "System" ;;
+    # --- VS Code extensions (`code` delegates to dot install code) ---
+    code) echo "Editors" ;;
+    # --- AI agents and AI apps ---
+    claude-code@latest | codex | t3-code | anomalyco/tap/opencode | pi-coding-agent | claude | chatgpt | herdr | openusage) echo "AI" ;;
+    # --- Browsers ---
+    google-chrome | firefox | brave-browser) echo "Browsers" ;;
+    # --- Communication ---
+    discord | telegram | whatsapp | slack) echo "Communication" ;;
+    # --- Desktop / window managers (the tiling stack) ---
+    yabai | skhd | sketchybar | aerospace | borders | koekeishiya/formulae | FelixKratz/formulae | FelixKratz/JankyBorders) echo "Desktop" ;;
+    # --- Tweakers (input, window and bar tweaks) ---
+    linearmouse | finetune | rectangle | hyperkey | alt-tab | typewhisper) echo "Tweakers" ;;
+    # --- Utilities ---
+    raycast | localsend | mole | pearcleaner | topgrade | dockutil | duti) echo "Utilities" ;;
+    # --- Archives ---
+    7zip | unar) echo "Archives" ;;
+    # --- Monitoring ---
+    btop | procs | watch) echo "Monitoring" ;;
+    # --- Filesystem navigation (poppler previews yazi's PDFs; both eza and
+    # poppler stay listed here for data consistency even though they're locked
+    # and never rendered — see manifest_is_locked) ---
+    eza | fd | dust | yazi | poppler) echo "Filesystem" ;;
+    # --- Terminals: emulator/multiplexer/font, prompts (oh-my-posh is active;
+    # starship/powerlevel10k are dormant alternatives — config exists but
+    # .zshrc doesn't source them yet), command correction, and the locked
+    # fzf/zoxide (never rendered, kept here for data consistency) ---
+    ghostty | tmux | font-jetbrains-mono-nerd-font | oh-my-posh | starship | powerlevel10k | pay-respects | timescam/tap | fzf | zoxide) echo "Terminals" ;;
+    # --- Text and search ---
+    ripgrep | bat | jq | jless | yq | grip) echo "Text" ;;
+    # --- Git and GitHub ---
+    git | gh | lazygit | hunk) echo "Git" ;;
+    # --- Editors and IDEs ---
+    neovim | visual-studio-code | phpstorm) echo "Editors" ;;
+    # --- Dev languages, runtimes and CLI tools (direnv: per-project env) ---
+    make | go | node | python@3.14 | pnpm | bun | npm-check-updates | pipx | rust | bats-core | act | sshpass | direnv) echo "Dev" ;;
+    # --- Linters and formatters ---
+    shellcheck | shfmt | actionlint | swiftformat) echo "Linters" ;;
+    # --- Local dev environments and service runtimes ---
+    herd | orbstack) echo "Services" ;;
+    # --- Databases ---
+    mysql | mysql-client | postgresql | redis | sqlite) echo "Databases" ;;
+    # --- Media processing ---
+    ffmpeg | ffmpegthumbnailer | imagemagick | webp) echo "Media tools" ;;
+    # --- Entertainment ---
+    spotify | stremio | vlc | stupside/tap/castor) echo "Entertainment" ;;
+    *) echo "pin-topic" ;;
   esac
 }
 
