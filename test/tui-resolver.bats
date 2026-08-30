@@ -176,9 +176,22 @@ teardown() {
 # no prebuilt binary): exits non-zero naming the headless alternatives — never
 # silent, never falls back to the old baseline. The bats harness has no TTY, so
 # `script` allocates one to get past the TTY guard to the runtime bootstrap.
+#
+# `script`'s argv is not portable. BSD/macOS takes the typescript file first
+# and the command as trailing argv; util-linux takes the command as one string
+# via -c and the file last, and rejects the BSD form outright ("unexpected
+# number of arguments"), so the command never ran and the assertions below
+# could not pass on Linux. Both branches run the same command and assert the
+# same behaviour.
 @test "interactive install with an unlaunchable runtime fails naming the headless flags" {
-  run script -q /dev/null env PATH="$BASE_PATH" HOME="$(mktemp -d)" \
-    "$DOT" install --dry-run
+  local scratch_home
+  scratch_home="$(mktemp -d)"
+  if [[ "$(uname -s)" == Darwin ]]; then
+    run script -q /dev/null env PATH="$BASE_PATH" HOME="$scratch_home" \
+      "$DOT" install --dry-run
+  else
+    run script -qec "env PATH='$BASE_PATH' HOME='$scratch_home' '$DOT' install --dry-run" /dev/null
+  fi
   [ "$status" -ne 0 ]
   [[ "$output" == *"TUI unavailable"* ]]
   [[ "$output" == *"--all"* && "$output" == *"--profile"* ]]
