@@ -381,6 +381,8 @@ EOF
 
 # Deleting a config without removing its line from the map leaves the target a
 # dangling symlink after `dot link`. That is how ~/.claude/skills broke.
+# all_links_raw, not all_links: a source only a macOS-only row points at must
+# still exist when the suite runs on Linux.
 @test "every source in the link map exists" {
   local source target missing=0
   while IFS='|' read -r name source target mode; do
@@ -389,7 +391,7 @@ EOF
       echo "missing source: $source"
       missing=1
     }
-  done < <(DOTFILES_DIR="$DOTFILES_DIR" bash -c '. "$0/install/links.sh"; all_links' "$DOTFILES_DIR")
+  done < <(DOTFILES_DIR="$DOTFILES_DIR" bash -c '. "$0/install/links.sh"; all_links_raw' "$DOTFILES_DIR")
   [ "$missing" -eq 0 ]
 }
 
@@ -408,7 +410,9 @@ EOF
   local known_gaps="config/herdr/workspace-layout"
 
   local sources
-  sources=$(DOTFILES_DIR="$DOTFILES_DIR" bash -c '. "$0/install/links.sh"; all_links; optional_links' "$DOTFILES_DIR" |
+  # Unfiltered: an orphan guard that only sees the rows applicable to the
+  # machine running it would call every macOS-only config an orphan on Linux.
+  sources=$(DOTFILES_DIR="$DOTFILES_DIR" bash -c '. "$0/install/links.sh"; all_links_raw; optional_links' "$DOTFILES_DIR" |
     cut -d'|' -f2)
 
   local file rel check covered missing=0
@@ -459,15 +463,17 @@ EOF
   [ -z "$(find "$home" -mindepth 1)" ]
 }
 
+# Both components here are portable, so the assertion is about the profile
+# filter and never about which OS family the suite happens to run on.
 @test "profile-aware link selects individual components" {
   local home profile
   home="$(mktemp -d)"
   profile="$home/profile.json"
-  printf '{"components":{"desktop-aerospace":true}}\n' >"$profile"
+  printf '{"components":{"ai-herdr":true}}\n' >"$profile"
   HOME="$home" DOT_PROFILE="$profile" run "$DOT" link --dry-run
   [ "$status" -eq 0 ]
-  [[ "$output" == *"config/aerospace/aerospace.toml"* ]]
-  [[ "$output" != *"config/linearmouse/linearmouse.json"* ]]
+  [[ "$output" == *"config/herdr/herder.toml"* ]]
+  [[ "$output" != *"config/starship"* ]]
 }
 
 # A name can cover several targets (ghostty -> ghostty + Muxy), and must not

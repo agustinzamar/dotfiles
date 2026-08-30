@@ -201,7 +201,11 @@ EOF
   ctx="$(mktemp)"
   install_context_json "$ctx"
   json="$(cat "$ctx")"
-  [ "$(jq '[.links[] | select(.name == "ghostty")][0].rows | length' <<<"$json")" -eq 2 ]
+  # ghostty's second target is the macOS-only Muxy path, so the context an
+  # installer sees carries it on macOS and not anywhere else.
+  local ghostty_rows=1
+  [[ "$(os_family)" == macos ]] && ghostty_rows=2
+  [ "$(jq '[.links[] | select(.name == "ghostty")][0].rows | length' <<<"$json")" -eq "$ghostty_rows" ]
   [ "$(jq '[.links[] | select(.name == "yazi")][0].rows | length' <<<"$json")" -eq 3 ]
   [ "$(jq '[.links[] | select(.name == "agents")][0].optional' <<<"$json")" == "true" ]
   rm -f "$ctx"
@@ -215,7 +219,7 @@ EOF
   local token area count
   local tokens
   tokens="$({
-    all_links
+    all_links_raw
     optional_links
   } | awk -F'|' '($5 != "" || $6 != "") { if ($5 != "") print $5; if ($6 != "") print $6 }' | sort -u)"
   [ -n "$tokens" ]
