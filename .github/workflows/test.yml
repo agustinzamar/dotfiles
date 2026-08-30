@@ -8,12 +8,22 @@ on:
 
 jobs:
   test:
-    runs-on: macos-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
     steps:
       - uses: actions/checkout@v5
 
-      - name: Install shell tooling
+      # Lint runs on macOS only, so Linux needs the test runner and nothing else.
+      - name: Install shell tooling (macOS)
+        if: runner.os == 'macOS'
         run: brew install shellcheck shfmt bats-core
+
+      - name: Install shell tooling (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y bats
 
       - uses: oven-sh/setup-bun@v2
         with:
@@ -25,7 +35,10 @@ jobs:
       - name: Check syntax
         run: make check
 
+      # shfmt and shellcheck disagree between apt and brew releases, so a single
+      # runner owns the definition of "formatted".
       - name: Lint
+        if: runner.os == 'macOS'
         run: make lint
 
       - name: Test (shell)
