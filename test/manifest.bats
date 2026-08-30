@@ -233,11 +233,16 @@ EOF
 }
 
 @test "real tree: tap labels collapse, categories group, installed detection works" {
-  local ctx json
+  local ctx json cask_stub
   ctx="$(mktemp)"
-  # Real brew list: the installed-pre-check assertion must see actual state
-  # (the setup stub reports nothing installed by design for the other tests).
-  MANIFEST_BREW=/opt/homebrew/bin/brew install_context_json "$ctx"
+  # The installed pre-check must be driven by data, not by whatever this
+  # machine happens to have installed. Swap the empty setup() stub for one
+  # that reports exactly one cask, t3-code, so :installed asserts the
+  # brew-list matching logic instead of developer-machine state.
+  cask_stub="$BATS_TEST_TMPDIR/brew-cask-stub"
+  printf '#!/bin/sh\nif [ "$2" = "--cask" ]; then echo t3-code; fi\nexit 0\n' >"$cask_stub"
+  chmod +x "$cask_stub"
+  MANIFEST_BREW="$cask_stub" install_context_json "$ctx"
   json="$(cat "$ctx")"
   [ "$(jq -r '[.packages[] | select(.id == "anomalyco/tap/opencode")][0].label' <<<"$json")" == "opencode" ]
   [ "$(jq -r '[.packages[] | select(.id == "stupside/tap/castor")][0].label' <<<"$json")" == "castor" ]
@@ -256,15 +261,17 @@ EOF
   [ "$(jq -r '[.packages[] | select(.id == "mysql")][0].category' <<<"$json")" == "Databases" ]
   # Taps keep their full name as the label.
   [ "$(jq -r '[.packages[] | select(.id == "timescam/tap")][0].label' <<<"$json")" == "timescam/tap" ]
-  # Installed detection via brew list: t3-code is present on this machine.
+  # Installed detection via brew list: the stub reports t3-code and nothing
+  # else, so a cask it does not report must come back false.
   [ "$(jq -r '[.packages[] | select(.id == "t3-code")][0].installed' <<<"$json")" == "true" ]
+  [ "$(jq -r '[.packages[] | select(.id == "raycast")][0].installed' <<<"$json")" == "false" ]
   rm -f "$ctx"
 }
 
 @test "real tree: git/services/linters/prompt categories exist; no package falls back to a raw lowercase topic name" {
   local ctx json
   ctx="$(mktemp)"
-  MANIFEST_BREW=/opt/homebrew/bin/brew install_context_json "$ctx"
+  install_context_json "$ctx"
   json="$(cat "$ctx")"
   [ "$(jq -r '[.packages[] | select(.id == "lazygit")][0].category' <<<"$json")" == "Git" ]
   [ "$(jq -r '[.packages[] | select(.id == "hunk")][0].category' <<<"$json")" == "Git" ]
@@ -306,7 +313,7 @@ EOF
 @test "real tree: unar is declared once, not duplicated across topics" {
   local ctx json
   ctx="$(mktemp)"
-  MANIFEST_BREW=/opt/homebrew/bin/brew install_context_json "$ctx"
+  install_context_json "$ctx"
   json="$(cat "$ctx")"
   [ "$(jq -r '[.packages[] | select(.id == "unar")] | length' <<<"$json")" == "1" ]
   rm -f "$ctx"
