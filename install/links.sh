@@ -29,7 +29,6 @@ _links_table() {
 		ohmyposh|config/ohmyposh/theme.omp.json|$HOME/.config/oh-my-posh/theme.omp.json||shell
 		ghostty|config/ghostty/config|$HOME/.config/ghostty/config||terminal
 		ghostty|config/ghostty/config|$HOME/Library/Application Support/Muxy/ghostty.conf||terminal||macos
-		herdr|config/herdr/herder.toml|$HOME/.config/herdr/config.toml|app-writable|ai-herdr
 		tmux|config/tmux/tmux.conf|$HOME/.config/tmux/tmux.conf||terminal
 		yazi|config/yazi/yazi.toml|$HOME/.config/yazi/yazi.toml||terminal
 		yazi|config/yazi/keymap.toml|$HOME/.config/yazi/keymap.toml||terminal
