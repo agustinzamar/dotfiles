@@ -66,10 +66,6 @@ ai_agent_names() {
 # gates rows: an entry whose `components` none are selected is dropped before
 # any per-agent resolution runs.
 ai_selected_components() {
-  local profile="${DOT_PROFILE:-${XDG_CONFIG_HOME:-$HOME/.config}/dot/profile.json}"
-  if [[ -f "$profile" ]] && is_executable jq; then
-    jq -r '.components | to_entries[] | select(.value == true) | .key' "$profile" 2>/dev/null
-  fi
   printf '%s\n' base shell git terminal
 }
 
@@ -238,67 +234,6 @@ ai_install() {
 
   if ((${#failures[@]})); then
     echo "==> $kind that failed:" >&2
-    printf '    %s\n' "${failures[@]}" >&2
-    return 1
-  fi
-  return 0
-}
-
-# Write the resolved selection to ~/.config/dot/ai-profile.json. Merges with an
-# existing file (id → agent list is unioned) so re-runs accumulate, not clobber.
-ai_write_profile() {
-  ((${#AI_PROFILE_ROWS[@]})) || return 0
-  local prof="${XDG_CONFIG_HOME:-$HOME/.config}/dot/ai-profile.json"
-  local dir new_json merged rows
-  dir=$(dirname "$prof")
-  mkdir -p "$dir" || return 1
-  rows=$(mktemp) || return 1
-  printf '%s\n' "${AI_PROFILE_ROWS[@]}" > "$rows"
-  new_json=$(jq -R -s '
-    [ split("\n")[] | select(length > 0) | split("|") as $p
-      | { id: $p[0], agents: ($p[1] | split(" ") | map(select(length > 0))) } ]
-    | group_by(.id)
-    | map({ key: .[0].id, value: (map(.agents[]) | unique) })
-    | from_entries' "$rows") || { rm -f "$rows"; return 1; }
-  rm -f "$rows"
-  if [[ -f "$prof" ]]; then
-    merged=$(jq -n --argjson new "$new_json" --slurpfile old "$prof" '
-      ($old[0].items // {}) as $olditems
-      | ($new // {}) as $newitems
-      | { version: 1, items: (
-          reduce (($newitems + $olditems) | to_entries[]) as $e ({};
-            .[$e.key] = ((($newitems[$e.key] // []) + ($olditems[$e.key] // [])) | unique)) ) }' ) || return 1
-  else
-    merged=$(jq -n --argjson new "$new_json" '{ version: 1, items: $new }') || return 1
-  fi
-  printf '%s\n' "$merged" > "$prof"
-}
-
-# Replay a saved selection headlessly. Reads the single profile file
-# (~/.config/dot/ai-profile.json) and runs only the recorded id→agent pairs.
-ai_replay() {
-  local prof="${1:-${XDG_CONFIG_HOME:-$HOME/.config}/dot/ai-profile.json}"
-  [[ -f "$prof" ]] || { echo "no AI profile at $prof" >&2; return 1; }
-  local pairs failures=()
-  pairs=$(jq -r '.items | to_entries[] | .key as $id | .value[] | ($id + "|" + .)' "$prof") || return 1
-  [[ -n "$pairs" ]] || { echo "AI profile is empty" >&2; return 1; }
-
-  local agents_uniq agent out want_ids lid litem lcmd linter lagents
-  agents_uniq=$(printf '%s\n' "$pairs" | cut -d'|' -f2 | sort -u)
-  while IFS= read -r agent; do
-    [[ -n "$agent" ]] || continue
-    out=$( { ai_manifest_lines skills "$agent"; ai_manifest_lines plugins "$agent"; } 2>/dev/null)
-    want_ids=$(printf '%s\n' "$pairs" | awk -F'|' -v a="$agent" '$2 == a { print $1 }' | sort -u)
-    while IFS=$'\x1f' read -r lid litem lcmd linter lagents; do
-      [[ -n "$lid" ]] || continue
-      printf '%s\n' "$want_ids" | grep -qx "$lid" || continue
-      [[ -n "$lcmd" ]] || continue
-      ai_run_line "$lid" "$litem" "$lcmd" "$linter" "$lagents" || failures+=("$litem")
-    done <<<"$out"
-  done <<<"$agents_uniq"
-
-  if ((${#failures[@]})); then
-    echo "==> replay failed for:" >&2
     printf '    %s\n' "${failures[@]}" >&2
     return 1
   fi

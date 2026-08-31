@@ -4,7 +4,7 @@
 // total), StatusMessage per-step results (success/error/warning variants) and
 // a final Badge. applyConfirmed keeps its single logic path — it just feeds
 // this tree through the ApplyUi seam; the console reporter stays for headless
-// -apply -profile and dry-run (the spec: headless MUST NOT mount a UI).
+// apply and dry-run (the spec: headless MUST NOT mount a UI).
 //
 // Deliberately NO useInput anywhere in this tree: ink only enables stdin raw
 // mode while a useInput hook is mounted, so this screen never intercepts

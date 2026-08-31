@@ -1,12 +1,11 @@
-// AI picker (item 8, UI portion): component mount test + the one piece of pure
-// logic worth pinning (buildProfile's item→[agents] intersection). Frame
+// AI picker (item 8, UI portion): component mount test. Frame
 // technique mirrors tui.test.tsx: chalk.level=1 at module top,
 // ink-testing-library render/cleanup, stripAnsi for words, afterEach(cleanup),
 // small delay to let the MultiSelect paint.
 import { afterEach, describe, expect, test } from "bun:test";
 import chalk from "chalk";
 import { cleanup, render } from "ink-testing-library";
-import { ALL_AGENTS, AiPicker, buildProfile, type AiItem } from "./ai";
+import { ALL_AGENTS, AiPicker } from "./ai";
 
 // Force real color codes so assertions match what a terminal sees.
 chalk.level = 1;
@@ -40,35 +39,5 @@ describe("AiPicker mount", () => {
     // Never renders a raw ANSI reset that would indicate a broken frame.
     expect(frame).not.toContain("\x1b[0m");
     ui.unmount();
-  });
-});
-
-describe("buildProfile", () => {
-  const items: AiItem[] = [
-    {
-      id: "ponytail",
-      label: "Ponytail",
-      kind: "plugin",
-      agents: ["claude-code", "codex", "opencode"],
-    },
-    { id: "src1", label: "src1", kind: "skill", agents: [...ALL_AGENTS] },
-  ];
-
-  test("version is pinned to 1 and items map id → selected-and-supported agents", () => {
-    const profile = buildProfile(
-      ["ponytail", "src1"],
-      ["claude-code", "pi"],
-      items,
-    );
-    expect(profile.version).toBe(1);
-    // ponytail supports claude-code/codex/opencode, so `pi` is dropped.
-    expect(profile.items["ponytail"]).toEqual(["claude-code"]);
-    // a skill supports every agent, so both selected agents are kept.
-    expect(profile.items["src1"]).toEqual(["claude-code", "pi"]);
-  });
-
-  test("an unselected or unknown item id never enters the map", () => {
-    const profile = buildProfile(["ponytail"], ["claude-code"], items);
-    expect(Object.keys(profile.items)).toEqual(["ponytail"]);
   });
 });
