@@ -45,9 +45,6 @@ _links_table() {
 		hunk|config/hunk/config.toml|$HOME/.config/hunk/config.toml||git|hunk
 		lazygit|config/lazygit/config.yml|$HOME/.config/lazygit/config.yml||git|lazygit
 		git|config/git/ignore|$HOME/.config/git/ignore||git|git
-		claude|ai/claude/statusline-command.sh|$HOME/.claude/statusline-command.sh||ai|claude
-		opencode|ai/opencode/opencode.json|$HOME/.config/opencode/opencode.json|app-writable|ai|opencode
-		claude|ai/claude/settings.json|$HOME/.claude/settings.json|app-writable|ai|claude
 	EOF
 }
 
@@ -86,7 +83,6 @@ all_links_raw() { _emit_links; }
 # cleans them up.
 optional_links() {
   cat <<-EOF
-opencode|config/opencode/opencode.jsonc|$HOME/.config/opencode/opencode.jsonc|||ai
 	EOF
 }
 
