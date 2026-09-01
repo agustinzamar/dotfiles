@@ -15,7 +15,8 @@
 
 # SDD task artifacts
 .superpowers/
-docs/superpowers/
+docs/
+
 # Local Pi runtime state
 .atl/
 .pi/
