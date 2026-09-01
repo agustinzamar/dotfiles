@@ -29,6 +29,7 @@ _links_table() {
 		ohmyposh|config/ohmyposh/theme.omp.json|$HOME/.config/oh-my-posh/theme.omp.json||shell
 		ghostty|config/ghostty/config|$HOME/.config/ghostty/config||terminal
 		ghostty|config/ghostty/config|$HOME/Library/Application Support/Muxy/ghostty.conf||terminal||macos
+		herdr|config/herdr/herder.toml|$HOME/.config/herdr/config.toml|app-writable|ai-herdr
 		tmux|config/tmux/tmux.conf|$HOME/.config/tmux/tmux.conf||terminal
 		yazi|config/yazi/yazi.toml|$HOME/.config/yazi/yazi.toml||terminal
 		yazi|config/yazi/keymap.toml|$HOME/.config/yazi/keymap.toml||terminal
@@ -77,11 +78,11 @@ all_links() { _emit_links "$(os_family)"; }
 all_links_raw() { _emit_links; }
 
 # Opt-in links, in the same `name|source|target` shape. These are never walked
-# by `dot link` / `dot link all`: each one hands an AI agent a file it reads on
-# every run, so it stays a deliberate `dot link <name>`. `dot unlink` still
-# cleans them up.
+# by `dot link` / `dot link all`: each one is a deliberate `dot link <name>`.
+# `dot unlink` still cleans them up.
 optional_links() {
   cat <<-EOF
+		opencode|config/opencode/opencode.jsonc|$HOME/.config/opencode/opencode.jsonc||
 	EOF
 }
 
