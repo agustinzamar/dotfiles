@@ -82,7 +82,6 @@ all_links_raw() { _emit_links; }
 # `dot unlink` still cleans them up.
 optional_links() {
   cat <<-EOF
-		opencode|config/opencode/opencode.jsonc|$HOME/.config/opencode/opencode.jsonc||
 	EOF
 }
 
@@ -127,9 +126,8 @@ link_all() {
 # loudly instead of silently doing nothing.
 link_named() {
   local name="$1" map found=0
-  # A name can live in both maps (the `opencode` rows split between all_links and
-  # optional_links), so walk every map that declares it rather than stopping at
-  # the first — otherwise `dot link opencode` would skip the optional_links rows.
+  # A name could live in both maps, so walk every map that declares it rather
+  # than stopping at the first — otherwise a shared name would skip rows.
   for map in all_links_raw optional_links; do
     if "$map" | cut -d'|' -f1 | grep -qx "$name"; then
       log "Linking $name"
