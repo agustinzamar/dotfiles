@@ -74,8 +74,8 @@ ai_manifest_lines() {
   local selected
   selected=$(ai_selected_components | jq -R -s 'split("\n") | map(select(length > 0))')
   case "$kind" in
-  skills)
-    jq -r --arg agents "$agents" --arg all "$(ai_agent_names)" --argjson selected "$selected" '
+    skills)
+      jq -r --arg agents "$agents" --arg all "$(ai_agent_names)" --argjson selected "$selected" '
         ($agents | split(" ")) as $want
         | ($all | split(" ")) as $everyone
         | .skills
@@ -112,9 +112,9 @@ ai_manifest_lines() {
               ($overrides[] | [ $id, ($item + " [" + . + "]"),
                                 $e.install[.], "0", . ] | join("\u001f"))
           end' "$DOTFILES_DIR/ai/skills.json"
-    ;;
-  plugins)
-    jq -r --arg agents "$agents" --argjson selected "$selected" '
+      ;;
+    plugins)
+      jq -r --arg agents "$agents" --argjson selected "$selected" '
         ($agents | split(" ")) as $want
         | .plugins[]
         | . as $e
@@ -127,7 +127,7 @@ ai_manifest_lines() {
             $e.install[.],
             (if $e.interactive then "1" else "0" end),
             . ] | join("\u001f")' "$DOTFILES_DIR/ai/plugins.json"
-    ;;
+      ;;
   esac
 }
 

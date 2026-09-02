@@ -67,6 +67,8 @@ area_for_package() {
   case "$1" in
     # Area tokens used directly as link components resolve to themselves.
     base | shell | git | terminal | vscode | ai | ai-herdr | claude | dev | media | desktop | system | desktop-*) echo "$1" ;;
+    # --- NPM global tools ---
+    npm) echo "dev" ;;
     # --- System settings (dot dock / dot macos apply_defaults scripts) ---
     dock | macos) echo "system" ;;
     # --- Shell (locked block; also p10k/starship link component) ---
@@ -131,7 +133,7 @@ package_rows() {
   for file in "$MANIFEST_TOPIC_DIR"/*; do
     topic=$(basename "$file")
     case "$topic" in
-      code | duti) continue ;;
+      code | duti | npm) continue ;;
     esac
     while IFS= read -r line; do
       line=${line%%#*}
@@ -147,6 +149,7 @@ package_rows() {
   # Special-installer topics: one delegating row each.
   # (dock/macos/duti use their own bin/dot subcommands, not `dot install`.)
   printf 'code\ttopic\tcode\n'
+  printf 'npm\ttopic\tnpm\n'
 }
 
 # Emit the link map verbatim (all_links then optional_links). manifest.sh adds
@@ -169,6 +172,7 @@ _manifest_label() {
     # step-1 rows instead of being hidden away in a step-2 corner.
     case "$id" in
       code) printf 'VS Code extensions' ;;
+      npm) printf 'NPM global tools' ;;
       duti-defaults) printf 'Default file handlers' ;;
       dock) printf 'Dock defaults' ;;
       macos) printf 'macOS defaults' ;;
@@ -190,6 +194,8 @@ manifest_category() {
     duti-defaults | dock | macos) echo "System" ;;
     # --- VS Code extensions (`code` delegates to dot install code) ---
     code) echo "Editors" ;;
+    # --- NPM global tools (`npm` delegates to dot install npm) ---
+    npm) echo "Dev" ;;
     # --- AI agents and AI apps ---
     claude-code@latest | codex | t3-code | anomalyco/tap/opencode | pi-coding-agent | claude | chatgpt | herdr | openusage) echo "AI" ;;
     # --- Browsers ---

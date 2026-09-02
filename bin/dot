@@ -259,8 +259,14 @@ sub_ai() {
   local do_all=false explicit_kind=false
   for arg in "$@"; do
     case "$arg" in
-      --skills) do_skills=true; explicit_kind=true ;;
-      --plugins) do_plugins=true; explicit_kind=true ;;
+      --skills)
+        do_skills=true
+        explicit_kind=true
+        ;;
+      --plugins)
+        do_plugins=true
+        explicit_kind=true
+        ;;
       --all) do_all=true ;;
       -*)
         echo "Usage: dot ai [--all] [<agent>] [--skills|--plugins]" >&2
@@ -275,7 +281,10 @@ sub_ai() {
         ;;
     esac
   done
-  $do_skills || $do_plugins || { do_skills=true; do_plugins=true; }
+  $do_skills || $do_plugins || {
+    do_skills=true
+    do_plugins=true
+  }
 
   # Bare `dot ai` (nothing requested) opens the picker.
   if ! $do_all && ((${#agents[@]} == 0)) && ! $explicit_kind; then
@@ -302,7 +311,7 @@ sub_ai() {
 sub_full() {
   log "Full install"
   local phase failures=()
-  for phase in bootstrap brew link zsh code macos duti git; do
+  for phase in bootstrap brew npm link zsh code macos duti git; do
     "sub_$phase" || failures+=("$phase")
   done
 
@@ -440,6 +449,22 @@ sub_duti() {
     rm -f "$tmp"
   else
     echo "⚠️ duti not installed; skipping default app setup" >&2
+  fi
+}
+
+sub_npm() {
+  if is_executable npm; then
+    log "Installing NPM global tools"
+    local pkg failures=()
+    while read -r pkg; do
+      run npm install -g "$pkg" || failures+=("$pkg")
+    done < <(read_package_file "$TOPIC_DIR/npm")
+    if ((${#failures[@]})); then
+      log "npm packages that failed: ${failures[*]}"
+      return 1
+    fi
+  else
+    echo "⚠️ npm not installed; skipping NPM global tools" >&2
   fi
 }
 

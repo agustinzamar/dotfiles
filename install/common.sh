@@ -109,8 +109,8 @@ seed_app_writable() {
     echo "seed $target (expand \$HOME)"
     return 0
   fi
-  sed -e "s|\$HOME|$HOME|g" -e "s|\${HOME}|$HOME|g" "$source" >"$target.tmp" \
-    && run mv "$target.tmp" "$target"
+  sed -e "s|\$HOME|$HOME|g" -e "s|\${HOME}|$HOME|g" "$source" >"$target.tmp" &&
+    run mv "$target.tmp" "$target"
 }
 
 # link_file <repo-relative-source> <absolute-target> [mode]

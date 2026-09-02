@@ -176,11 +176,13 @@ EOF
   ctx="$(mktemp)"
   install_context_json "$ctx"
   json="$(cat "$ctx")"
-  # Only `code` remains a topic row; duti/dock/macos are subcommands now.
-  [ "$(jq '[.packages[] | select(.kind == "topic")] | length' <<<"$json")" -eq 1 ]
+  # `code` and `npm` are topic rows; duti/dock/macos are subcommands now.
+  [ "$(jq '[.packages[] | select(.kind == "topic")] | length' <<<"$json")" -eq 2 ]
   [ "$(jq -r '[.packages[] | select(.id == "code")][0].topic' <<<"$json")" == "code" ]
-  # Human label for the delegating row.
+  [ "$(jq -r '[.packages[] | select(.id == "npm")][0].topic' <<<"$json")" == "npm" ]
+  # Human labels for the delegating rows.
   [ "$(jq -r '[.packages[] | select(.id == "code")][0].label' <<<"$json")" == "VS Code extensions" ]
+  [ "$(jq -r '[.packages[] | select(.id == "npm")][0].label' <<<"$json")" == "NPM global tools" ]
   rm -f "$ctx"
 }
 
@@ -349,4 +351,54 @@ source_ai() {
 @test "AI agents: AI_AGENTS declares pi:pi" {
   source_ai
   printf '%s\n' "${AI_AGENTS[@]}" | grep -qx 'pi:pi' || fail "AI_AGENTS is missing pi:pi"
+}
+
+# ---------------------------------------------------------------------------
+# npm delegating topic row
+# ---------------------------------------------------------------------------
+
+@test "npm becomes one delegating topic row with correct label and category" {
+  local ctx json
+  ctx="$(mktemp)"
+  install_context_json "$ctx"
+  json="$(cat "$ctx")"
+  # Exactly one npm topic row.
+  local count
+  count="$(jq '[.packages[] | select(.id == "npm" and .kind == "topic")] | length' <<<"$json")"
+  [ "$count" -eq 1 ]
+  # Human label.
+  [ "$(jq -r '[.packages[] | select(.id == "npm")][0].label' <<<"$json")" == "NPM global tools" ]
+  # Category and area.
+  [ "$(jq -r '[.packages[] | select(.id == "npm")][0].category' <<<"$json")" == "Dev" ]
+  [ "$(jq -r '[.packages[] | select(.id == "npm")][0].area' <<<"$json")" == "dev" ]
+  rm -f "$ctx"
+}
+
+@test "npm is excluded from brew parsing in package_rows" {
+  # The npm topic file contains plain package names, not brew/cask entries.
+  # package_rows must skip it (like code/duti) so brew bundle never sees it.
+  # Verify the skip is explicit by including a brew line that WOULD match if
+  # the topic were not excluded.
+  local topic_dir rows
+  topic_dir="$(mktemp -d)"
+  mkdir -p "$topic_dir"
+  printf 'typescript-language-server\nbrew "leftpad"\n' >"$topic_dir/npm"
+  printf 'brew "fzf"\n' >"$topic_dir/core"
+
+  rows="$(MANIFEST_TOPIC_DIR="$topic_dir" package_rows)"
+  # npm topic must be fully excluded: no npm entry in the output at all.
+  ! grep -q 'npm' <<<"$rows"
+  # core topic must still be present.
+  grep -q 'core.*brew.*fzf' <<<"$rows"
+}
+
+@test "real tree: code row remains present alongside npm" {
+  local ctx json
+  ctx="$(mktemp)"
+  install_context_json "$ctx"
+  json="$(cat "$ctx")"
+  # Both code and npm are topic rows.
+  [ "$(jq '[.packages[] | select(.id == "code" and .kind == "topic")] | length' <<<"$json")" -eq 1 ]
+  [ "$(jq '[.packages[] | select(.id == "npm" and .kind == "topic")] | length' <<<"$json")" -eq 1 ]
+  rm -f "$ctx"
 }

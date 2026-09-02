@@ -19,12 +19,7 @@ import { Box, Text, useApp } from "ink";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { useEffect, useMemo, useState } from "react";
-import {
-  ConfirmInput,
-  MultiSelect,
-  Spinner,
-  StatusMessage,
-} from "@inkjs/ui";
+import { ConfirmInput, MultiSelect, Spinner, StatusMessage } from "@inkjs/ui";
 
 /** Declared agents, keyed by the profile's agent KEY (plan D3 / item 6). The
  *  executable probed for each (absent → shown unselectable). */
@@ -84,8 +79,7 @@ export function loadItems(repoRoot: string): AiItem[] {
     for (const p of parsed.plugins ?? []) {
       const id = (p.id ?? p.name ?? p.repo) as string;
       if (!id) continue;
-      const label =
-        (p.label ?? p.name ?? p.repo ?? id) as string;
+      const label = (p.label ?? p.name ?? p.repo ?? id) as string;
       items.push({
         id,
         label,
@@ -259,7 +253,7 @@ export function AiPicker({
           Confirm AI asset install
         </Text>
         {Object.keys(plan).length === 0 ? (
-          <Text dimColor>  (nothing selected)</Text>
+          <Text dimColor> (nothing selected)</Text>
         ) : (
           Object.entries(plan).map(([id, ags]) => (
             <Text key={id}>{`  ${id} → ${

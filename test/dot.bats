@@ -325,7 +325,7 @@ EOF
 
 @test "install runs every phase through the failure-collecting loop" {
   local phase
-  for phase in brew link zsh code macos duti git; do
+  for phase in brew npm link zsh code macos duti git; do
     grep -q "for phase in .*\b$phase\b" "$DOT" || {
       echo "phase '$phase' missing from the full-install loop"
       return 1
@@ -409,12 +409,9 @@ EOF
 # some way, so a newly-added orphan fails loudly instead of sitting silent.
 @test "every tracked config file is wired into an install path" {
   # Consumed directly by their own install/*.sh, not through links.sh.
-  # .zshrc.server is fetched and linked by remote-install-server.sh:16 — the
-  # standalone `curl | bash` server lane, which has no repo and cannot use
-  # links.sh.
-  local handled="config/git/config config/zsh/.zshrc.server"
+  local handled="config/git/config"
   # Installed via `herdr plugin link` (see herder.toml), not the dot map.
-  local known_gaps="config/herdr/workspace-layout config/zsh/.zshrc.server"
+  local known_gaps="config/herdr/workspace-layout"
 
   local sources
   # Unfiltered: an orphan guard that only sees the rows applicable to the
@@ -424,6 +421,9 @@ EOF
 
   local file rel check covered missing=0
   while IFS= read -r file; do
+    # `git ls-files` includes tracked paths deleted in the working tree. They
+    # are not current config files and must not be reported as orphans.
+    [[ -e "$DOTFILES_DIR/$file" || -L "$DOTFILES_DIR/$file" ]] || continue
     rel=${file#"$DOTFILES_DIR"/}
     [[ " $handled " == *" $rel "* ]] && continue
         local gap
@@ -479,7 +479,8 @@ EOF
   printf '{"components":{"ai-herdr":true}}\n' >"$profile"
   HOME="$home" DOT_PROFILE="$profile" run "$DOT" link --dry-run
   [ "$status" -eq 0 ]
-  [[ "$output" == *"config/herdr/herder.toml"* ]]
+  [[ "$output" == *"seed $home/.config/herdr/config.toml (expand \$HOME)"* ]]
+  [[ "$output" != *"ln -s"* ]]
   [[ "$output" != *"config/starship"* ]]
 }
 
@@ -843,4 +844,453 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" == *"already installed"* ]]
   [[ "$output" != *"+ install Homebrew"* ]]
+}
+
+# ---------------------------------------------------------------------------
+# npm global tools (topics/npm)
+# ---------------------------------------------------------------------------
+
+@test "dot npm warns and succeeds when npm is missing" {
+  local stub
+  stub="$(mktemp -d)"
+  # No npm on PATH: only sh and basic utils.
+  PATH="$MACOS_BIN:/usr/bin:/bin" run "$DOT" npm
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"npm not installed"* ]]
+}
+
+@test "dot npm installs packages globally with correct arguments" {
+  local stub log
+  stub="$(mktemp -d)"
+  log="$stub/log"
+  cat >"$stub/npm" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$*" >>"$NPM_LOG"
+exit 0
+EOF
+  chmod +x "$stub/npm"
+
+  NPM_LOG="$log" PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" npm
+  [ "$status" -eq 0 ]
+  grep -q '\-g' "$log"
+  grep -q 'typescript-language-server' "$log"
+}
+
+@test "dot install npm also works" {
+  local stub log
+  stub="$(mktemp -d)"
+  log="$stub/log"
+  cat >"$stub/npm" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$*" >>"$NPM_LOG"
+exit 0
+EOF
+  chmod +x "$stub/npm"
+
+  NPM_LOG="$log" PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" install npm
+  [ "$status" -eq 0 ]
+  grep -q '\-g' "$log"
+  grep -q 'typescript-language-server' "$log"
+}
+
+@test "npm topic ignores blank lines and comments" {
+  local stub log real_npm
+  stub="$(mktemp -d)"
+  log="$stub/log"
+  cat >"$stub/npm" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$*" >>"$NPM_LOG"
+exit 0
+EOF
+  chmod +x "$stub/npm"
+
+  # Back up real npm topic, replace with test content.
+  real_npm="$DOTFILES_DIR/install/topics/npm"
+  local backup="$stub/npm-backup"
+  cp "$real_npm" "$backup"
+  cat >"$real_npm" <<'EOF'
+# Comment line
+typescript-language-server
+
+# Another comment
+EOF
+
+  NPM_LOG="$log" PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" npm
+  local status=$?
+  cp "$backup" "$real_npm"
+  [ "$status" -eq 0 ]
+  # Only one package, no blank or comment arguments.
+  local args
+  args=$(grep -c '' "$log")
+  [ "$args" -eq 1 ]
+  grep -q 'typescript-language-server' "$log"
+}
+
+@test "npm installs one argument per package" {
+  local stub log real_npm
+  stub="$(mktemp -d)"
+  log="$stub/log"
+  cat >"$stub/npm" <<'EOF'
+#!/bin/sh
+printf '%s\n' "$*" >>"$NPM_LOG"
+exit 0
+EOF
+  chmod +x "$stub/npm"
+
+  real_npm="$DOTFILES_DIR/install/topics/npm"
+  local backup="$stub/npm-backup"
+  cp "$real_npm" "$backup"
+  cat >"$real_npm" <<'EOF'
+typescript-language-server
+prettier
+EOF
+
+  NPM_LOG="$log" PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" npm
+  local status=$?
+  cp "$backup" "$real_npm"
+  [ "$status" -eq 0 ]
+  # Each package gets its own line in the log (one `npm install -g pkg` per package).
+  local count
+  count=$(grep -c 'typescript-language-server\|prettier' "$log")
+  [ "$count" -eq 2 ]
+  # Packages are separate arguments, not space-joined.
+  ! grep -q 'typescript-language-server prettier' "$log"
+}
+
+@test "npm install failure propagates" {
+  local stub real_npm
+  stub="$(mktemp -d)"
+  printf '#!/bin/sh\nexit 1\n' >"$stub/npm"
+  chmod +x "$stub/npm"
+
+  real_npm="$DOTFILES_DIR/install/topics/npm"
+  local backup="$stub/npm-backup"
+  cp "$real_npm" "$backup"
+  printf 'typescript-language-server\n' >"$real_npm"
+
+  PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" npm
+  cp "$backup" "$real_npm"
+  [ "$status" -eq 1 ]
+}
+
+@test "npm phase runs after brew in the full install loop" {
+  grep -q "for phase in .*\bnpm\b" "$DOT" || {
+    echo "npm missing from the full-install loop"
+    return 1
+  }
+  # npm must come after brew (Node.js must be installed first).
+  local loop_line
+  loop_line=$(grep "for phase in" "$DOT")
+  local brew_pos npm_pos
+  brew_pos=$(echo "$loop_line" | grep -bo '\bbrew\b' | head -1 | cut -d: -f1)
+  npm_pos=$(echo "$loop_line" | grep -bo '\bnpm\b' | head -1 | cut -d: -f1)
+  [ -n "$brew_pos" ] && [ -n "$npm_pos" ]
+  [ "$brew_pos" -lt "$npm_pos" ]
+}
+
+@test "npm failures are collected in the full install loop" {
+  # Verify npm is in the phase loop and uses the failure-collecting pattern.
+  grep -q "for phase in .*\bnpm\b" "$DOT" || {
+    echo "npm missing from the full-install loop"
+    return 1
+  }
+  # The loop collects failures into an array, not short-circuits.
+  grep -q 'failures+=("\$phase")' "$DOT" || {
+    echo "full-install loop does not collect failures"
+    return 1
+  }
+}
+
+# ---------------------------------------------------------------------------
+# Remediation: sub_npm failure propagation (root cause fix)
+# ---------------------------------------------------------------------------
+
+# BUG: sub_npm used to mask an earlier package failure when a later package
+# succeeded. The last `run` call determined the function's exit status, so a
+# multi-package list with pkg1=fail, pkg2=pass returned 0.
+@test "sub_npm collects failures and returns non-zero when any package fails" {
+  local stub log real_npm backup
+  stub="$(mktemp -d)"
+  log="$stub/log"
+  # Stub npm: succeed for typescript-language-server, fail for prettier.
+  cat >"$stub/npm" <<'STUB'
+#!/bin/sh
+printf '%s\n' "$*" >>"$NPM_LOG"
+if [ "$3" = "prettier" ]; then exit 1; fi
+exit 0
+STUB
+  chmod +x "$stub/npm"
+
+  real_npm="$DOTFILES_DIR/install/topics/npm"
+  backup="$stub/npm-backup"
+  cp "$real_npm" "$backup"
+  trap 'cp "$backup" "$real_npm"' EXIT
+  printf 'typescript-language-server\nprettier\n' >"$real_npm"
+
+  NPM_LOG="$log" PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" npm
+  # Restore before assertions, while the trap protects interrupted tests.
+  cp "$backup" "$real_npm"
+  trap - EXIT
+  # Must return non-zero because prettier failed.
+  [ "$status" -eq 1 ]
+  # Both packages were attempted (neither masked).
+  grep -q 'typescript-language-server' "$log"
+  grep -q 'prettier' "$log"
+}
+
+# Verify the masking regression is truly fixed: first package fails, later
+# succeeds, and the function still returns non-zero.
+@test "sub_npm returns non-zero when first package fails and later succeeds" {
+  local stub log real_npm backup
+  stub="$(mktemp -d)"
+  log="$stub/log"
+  # Stub npm: fail for prettier, succeed for typescript-language-server.
+  cat >"$stub/npm" <<'STUB'
+#!/bin/sh
+printf '%s\n' "$*" >>"$NPM_LOG"
+if [ "$3" = "prettier" ]; then exit 1; fi
+exit 0
+STUB
+  chmod +x "$stub/npm"
+
+  real_npm="$DOTFILES_DIR/install/topics/npm"
+  backup="$stub/npm-backup"
+  cp "$real_npm" "$backup"
+  trap 'cp "$backup" "$real_npm"' EXIT
+  printf 'prettier\ntypescript-language-server\n' >"$real_npm"
+
+  NPM_LOG="$log" PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" npm
+  cp "$backup" "$real_npm"
+  trap - EXIT
+  # Must return non-zero because prettier failed.
+  [ "$status" -eq 1 ]
+  # Both packages were attempted.
+  grep -q 'prettier' "$log"
+  grep -q 'typescript-language-server' "$log"
+}
+
+# Verify the complete argument vector: `npm install -g <pkg>` — not just
+# that the package name appears, but that install and -g are present and
+# ordered correctly (issue 3: argument vector assertion).
+@test "sub_npm invokes npm with install -g and one package per call" {
+  local stub log real_npm backup
+  stub="$(mktemp -d)"
+  log="$stub/log"
+  cat >"$stub/npm" <<'STUB'
+#!/bin/sh
+printf '%s\n' "$*" >>"$NPM_LOG"
+exit 0
+STUB
+  chmod +x "$stub/npm"
+
+  real_npm="$DOTFILES_DIR/install/topics/npm"
+  backup="$stub/npm-backup"
+  cp "$real_npm" "$backup"
+  trap 'cp "$backup" "$real_npm"' EXIT
+  printf 'typescript-language-server\nprettier\n' >"$real_npm"
+
+  NPM_LOG="$log" PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" npm
+  local rc=$?
+  cp "$backup" "$real_npm"
+  trap - EXIT
+  [ "$rc" -eq 0 ]
+  # Each line is one complete `npm install -g <pkg>` invocation.
+  while IFS= read -r line; do
+    [[ "$line" == install\ -g\ * ]] || {
+      echo "argument vector does not start with 'install -g': $line"
+      return 1
+    }
+    # Exactly one argument after -g.
+    local arg_count
+    arg_count=$(echo "$line" | awk '{print NF}')
+    [ "$arg_count" -eq 3 ] || {
+      echo "expected 3 args (install -g pkg), got $arg_count: $line"
+      return 1
+    }
+  done <"$log"
+}
+
+# Verify shell-sensitive package names preserve argument boundaries.
+# Package names with @, spaces, and -- must not be word-split or expanded.
+@test "sub_npm preserves shell-sensitive package argument boundaries" {
+  local stub log real_npm backup
+  stub="$(mktemp -d)"
+  log="$stub/log"
+  cat >"$stub/npm" <<'STUB'
+#!/bin/sh
+# Log the package argument (3rd positional: install -g <pkg>)
+printf '%s\n' "$3" >>"$NPM_LOG"
+exit 0
+STUB
+  chmod +x "$stub/npm"
+
+  real_npm="$DOTFILES_DIR/install/topics/npm"
+  backup="$stub/npm-backup"
+  cp "$real_npm" "$backup"
+  trap 'cp "$backup" "$real_npm"' EXIT
+  printf '@typescript-eslint/parser\nprettier@3.0.0\nmy scoped --pkg\n' >"$real_npm"
+
+  NPM_LOG="$log" PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" npm
+  local rc=$?
+  cp "$backup" "$real_npm"
+  trap - EXIT
+  [ "$rc" -eq 0 ]
+  # Each package name appears exactly once as a complete argument
+  local count
+  count=$(grep -c '^@typescript-eslint/parser$' "$log")
+  [ "$count" -eq 1 ]
+  count=$(grep -c '^prettier@3.0.0$' "$log")
+  [ "$count" -eq 1 ]
+  count=$(grep -c '^my scoped --pkg$' "$log")
+  [ "$count" -eq 1 ]
+  # No word-splitting: the scoped package must not appear as separate tokens
+  ! grep -q '^--pkg$' "$log"
+}
+
+# ---------------------------------------------------------------------------
+# Remediation: runtime tests for full-install phase ordering and failure
+# collection (production sub_full + sub_npm, PATH stubs, no redefinitions)
+# ---------------------------------------------------------------------------
+
+# Helper: create PATH stubs for production sub_full runtime tests.
+# Writes stubs to $1/stub, sets PHASE_LOG in $1/phase.log.
+_make_full_stubs() {
+  local dir="$1"
+  local phase_log="$dir/phase.log"
+  touch "$phase_log"
+
+# brew stub: log calls, handle subcommands; no prefix so fzf check is skipped
+  cat >"$dir/brew" <<'STUB'
+#!/bin/sh
+printf 'brew %s\n' "$*" >>"$PHASE_LOG"
+case "$1" in
+  bundle) exit 0 ;;
+  list) exit 0 ;;
+  *) exit 0 ;;
+esac
+STUB
+
+  # npm stub: log calls
+  cat >"$dir/npm" <<'STUB'
+#!/bin/sh
+printf 'npm-phase\n' >>"$PHASE_LOG"
+exit 0
+STUB
+
+# git stub: handle config and clone
+  cat >"$dir/git" <<'STUB'
+#!/bin/sh
+printf 'git %s\n' "$*" >>"$PHASE_LOG"
+case "$1" in
+  config) exit 0 ;;
+  clone)
+    for arg in "$@"; do
+      case "$arg" in -*) continue ;; http*|https*) continue ;; esac
+      mkdir -p "$arg" 2>/dev/null || true
+    done
+    exit 0
+    ;;
+  *) exit 0 ;;
+esac
+STUB
+
+  # ssh-add stub
+  cat >"$dir/ssh-add" <<'STUB'
+#!/bin/sh
+exit 0
+STUB
+
+  # defaults stub (for macos phase)
+  cat >"$dir/defaults" <<'STUB'
+#!/bin/sh
+exit 0
+STUB
+
+  # sudo stub
+  cat >"$dir/sudo" <<'STUB'
+#!/bin/sh
+exit 0
+STUB
+
+  # code stub: skip VS Code extension installs
+  cat >"$dir/code" <<'STUB'
+#!/bin/sh
+exit 0
+STUB
+
+  # gh stub: skip GitHub CLI operations in git config
+  cat >"$dir/gh" <<'STUB'
+#!/bin/sh
+exit 0
+STUB
+
+  # Avoid macOS-only commands and terminate the defaults keep-alive loop.
+  for command in mdfind osascript systemsetup; do
+    cat >"$dir/$command" <<'STUB'
+#!/bin/sh
+exit 0
+STUB
+  done
+  cat >"$dir/bash-env" <<'STUB'
+kill() {
+  if [[ "${1:-}" == "-0" ]]; then return 1; fi
+  builtin kill "$@"
+}
+sleep() { return 0; }
+STUB
+
+  chmod +x "$dir/brew" "$dir/npm" "$dir/git" "$dir/ssh-add" "$dir/defaults" "$dir/sudo" "$dir/code" "$dir/gh" "$dir/mdfind" "$dir/osascript" "$dir/systemsetup"
+}
+
+# Runtime: production sub_full runs npm after brew.
+# Uses PATH stubs for brew/npm/git; does NOT redefine sub_npm or sub_full.
+@test "runtime: production sub_full runs npm after brew" {
+  local stub phase_log
+  stub="$(mktemp -d)"
+  phase_log="$stub/phase.log"
+
+  _make_full_stubs "$stub"
+
+  PHASE_LOG="$phase_log" BASH_ENV="$stub/bash-env" HOME="$(mktemp -d)" \
+    PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" install --all
+  [ "$status" -eq 0 ]
+  # Brew phase must appear before npm phase in the log
+  local brew_pos npm_pos
+  brew_pos=$(grep -n '^brew ' "$phase_log" | head -1 | cut -d: -f1)
+  npm_pos=$(grep -n '^npm-phase$' "$phase_log" | head -1 | cut -d: -f1)
+  [ -n "$brew_pos" ] && [ -n "$npm_pos" ]
+  [ "$brew_pos" -lt "$npm_pos" ]
+  local dev_pos
+  dev_pos=$(grep -n '/install/topics/dev$' "$phase_log" | head -1 | cut -d: -f1)
+  [ -n "$dev_pos" ]
+  [ "$dev_pos" -lt "$npm_pos" ]
+}
+
+# Runtime: production sub_full collects npm failure and continues.
+# npm stub exits 1; other phases still run; exit code is 1.
+@test "runtime: production sub_full collects npm failure and continues" {
+  local stub phase_log
+  stub="$(mktemp -d)"
+  phase_log="$stub/phase.log"
+
+  _make_full_stubs "$stub"
+  # Override npm stub to fail
+  cat >"$stub/npm" <<'STUB'
+#!/bin/sh
+printf 'npm-phase\n' >>"$PHASE_LOG"
+exit 1
+STUB
+  chmod +x "$stub/npm"
+
+  PHASE_LOG="$phase_log" BASH_ENV="$stub/bash-env" HOME="$(mktemp -d)" \
+    PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" install --all
+  [ "$status" -eq 1 ]
+  # NPM was attempted
+  grep -q 'npm-phase' "$phase_log"
+  # Brew also ran (other phases continue despite npm failure)
+  grep -q '^brew ' "$phase_log"
+  # A later production phase ran after NPM failed.
+  grep -q '^git ' "$phase_log"
+  # Output mentions failures
+  [[ "$output" == *"failures"* ]] || [[ "$output" == *"failed"* ]]
 }

@@ -5,7 +5,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import chalk from "chalk";
 import { cleanup, render } from "ink-testing-library";
-import { ALL_AGENTS, AiPicker } from "./ai";
+import { AiPicker } from "./ai";
 
 // Force real color codes so assertions match what a terminal sees.
 chalk.level = 1;
