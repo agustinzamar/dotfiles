@@ -300,6 +300,9 @@ sub_ai() {
   AI_PROFILE_ROWS=()
   if $do_skills; then ai_install skills "${agents[@]}" || failures+=("skills"); fi
   if $do_plugins; then ai_install plugins "${agents[@]}" || failures+=("plugins"); fi
+  if ((${#failures[@]} == 0)); then
+    ai_apply_model_assignments || failures+=("model assignments")
+  fi
 
   if ((${#failures[@]})); then
     echo "❌ Finished with failures: ${failures[*]}" >&2

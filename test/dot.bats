@@ -659,6 +659,46 @@ EOF
   [[ "$output" == *"claude-code: claude is not installed"* ]]
 }
 
+@test "AI applies tracked Gentle AI model assignments without replacing state" {
+  local home stub
+  home="$(mktemp -d)"
+  stub="$(mktemp -d)"
+  for command in opencode pnpm ocx; do
+    printf '#!/bin/sh\nexit 0\n' >"$stub/$command"
+    chmod +x "$stub/$command"
+  done
+  mkdir -p "$home/.gentle-ai"
+  printf '%s\n' '{"sentinel":"keep","model_assignments":{"old":{"provider_id":"old","model_id":"old"}}}' >"$home/.gentle-ai/state.json"
+
+  HOME="$home" PATH="$stub:$PATH" run "$DOT" ai opencode --plugins
+  [ "$status" -eq 0 ]
+  jq -e '.sentinel == "keep"' "$home/.gentle-ai/state.json" >/dev/null
+  jq -e --slurpfile expected "$DOTFILES_DIR/config/gentle-ai/model-assignments.json" '.model_assignments == $expected[0]' "$home/.gentle-ai/state.json" >/dev/null
+}
+
+@test "AI model assignment application is dry-run safe and skips missing state" {
+  local home stub before
+  home="$(mktemp -d)"
+  stub="$(mktemp -d)"
+  for command in opencode pnpm ocx; do
+    printf '#!/bin/sh\nexit 0\n' >"$stub/$command"
+    chmod +x "$stub/$command"
+  done
+  mkdir -p "$home/.gentle-ai"
+  printf '%s\n' '{"sentinel":"keep"}' >"$home/.gentle-ai/state.json"
+  before=$(<"$home/.gentle-ai/state.json")
+
+  HOME="$home" PATH="$stub:$PATH" run "$DOT" ai opencode --plugins --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"apply Gentle AI model assignments"* ]]
+  [ "$(<"$home/.gentle-ai/state.json")" = "$before" ]
+
+  rm "$home/.gentle-ai/state.json"
+  HOME="$home" PATH="$stub:$PATH" run "$DOT" ai opencode --plugins
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Gentle AI state not found"* ]]
+}
+
 @test "AI rejects an unknown flag and an unknown agent" {
   run "$DOT" ai --nope
   [ "$status" -eq 1 ]

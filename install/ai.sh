@@ -240,6 +240,45 @@ ai_install() {
   return 0
 }
 
+# Apply the tracked Gentle AI model assignments without replacing its runtime
+# state, which also contains machine-specific install and telemetry metadata.
+ai_apply_model_assignments() {
+  local source="$DOTFILES_DIR/config/gentle-ai/model-assignments.json"
+  local target="$HOME/.gentle-ai/state.json"
+  local temporary
+
+  [[ -f "$source" ]] || return 0
+  [[ -f "$target" ]] || {
+    echo "Gentle AI state not found; skipping model assignments" >&2
+    return 0
+  }
+
+  if "$DRY_RUN"; then
+    echo "+ apply Gentle AI model assignments from $source"
+    return 0
+  fi
+
+  jq -e '
+    type == "object" and
+    all(.[]; type == "object" and
+      (.provider_id | type == "string") and
+      (.model_id | type == "string"))
+  ' "$source" >/dev/null || {
+    echo "invalid Gentle AI model assignments: $source" >&2
+    return 1
+  }
+
+  temporary=$(mktemp "$target.tmp.XXXXXX") || return 1
+  if ! jq --slurpfile assignments "$source" \
+    '.model_assignments = $assignments[0]' "$target" >"$temporary"; then
+    rm -f "$temporary"
+    return 1
+  fi
+
+  chmod --reference="$target" "$temporary" 2>/dev/null || true
+  mv "$temporary" "$target"
+}
+
 # Open the AI picker TUI (tools/tui/src/ai.tsx). The picker is built by a
 # separate step; here we only locate bun and launch it, then propagate its exit.
 ai_open_picker() {
