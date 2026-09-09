@@ -70,6 +70,7 @@ keybind = cmd+shift+right=text:\x1b[1;4F
 
 # --- Font ---
 font-family = "JetBrainsMono Nerd Font"
+font-family = "Menlo"
 font-size = 20
 font-thicken = true
 font-thicken-strength = 100
