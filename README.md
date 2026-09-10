@@ -30,12 +30,11 @@ once the shell configs are linked and the shell has been restarted. A bare
 
 Bare `dot install` (and bare `make`) opens the **interactive installer** and
 needs a TTY. Scripted or CI installs, or piping the one-liner without flags,
-should use the headless paths instead — bare `dot install` under non-TTY stdin
+should use the headless path instead — bare `dot install` under non-TTY stdin
 fails fast and says so:
 
 ```bash
 dot install --all          # headless: every standard phase (AI stays opt-in)
-dot install --profile dev  # headless: apply a saved profile
 ```
 
 On a truly fresh machine the installer bootstraps what it needs (Xcode CLT,
@@ -104,7 +103,6 @@ change to a script, not like a change to a config value.
 | --- | --- |
 | `install` | Opens the interactive installer (tools, then config links) — requires a TTY |
 | `install --all` | Install every standard phase headlessly (AI stays opt-in) |
-| `install --profile PATH` | Apply a saved component profile without the TUI |
 | `link` | Repair links selected in `~/.config/dot/profile.json` |
 | `link --all` | Force-link every valid config explicitly |
 | `link <name>` | Force-link one config (`ghostty`, `tmux`, `yazi`, …) |
@@ -120,7 +118,6 @@ nothing:
 ```bash
 dot install --dry-run
 dot link --dry-run
-dot install --dry-run --profile ~/.config/dot/profile.json
 ```
 
 ### The installer (two steps)
@@ -145,8 +142,7 @@ carries `make test`, `make check` and `make lint`, which CI runs.
 
 ## The installer binary
 
-The interactive installer and `dot install --profile` run a compiled binary,
-`bin/dot-tui`. The prebuilt binary is used if present; otherwise `bin/dot`
+The interactive installer runs a compiled binary, `bin/dot-tui`. The prebuilt binary is used if present; otherwise `bin/dot`
 builds it from source with Bun at least at the version pinned in
 [`.bun-version`](.bun-version), or prints guidance pointing back to the
 bootstrap one-liner above. Neither path requires a language toolchain at
