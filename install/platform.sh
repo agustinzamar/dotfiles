@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
 # OS platform detection. Sourced, never executed.
-#
-# Deliberately separate from remote-install-server.sh's detect_pkg: that script
-# runs as `curl | bash` with no checkout, so it cannot source this file, and it
-# recognises five managers where this one is a closed set the repo can support.
 
 # Cached: every platform-conditional branch calls os_family, and the answer
 # cannot change inside a single run.
