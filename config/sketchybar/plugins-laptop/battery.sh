@@ -6,7 +6,7 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 PERCENTAGE=$(pmset -g batt | grep -Eo "\d+%" | cut -d% -f1)
 CHARGING=$(pmset -g batt | grep 'AC Power')
 
-if [ $PERCENTAGE = "" ]; then
+if [ "$PERCENTAGE" = "" ]; then
     exit 0
 fi
 
@@ -38,7 +38,7 @@ if [[ $CHARGING != "" ]]; then
     ICON_COLOR=0xffeed49f
 fi
 
-sketchybar --set $NAME \
-    icon=$ICON \
+sketchybar --set "$NAME" \
+    icon="$ICON" \
     label="${PERCENTAGE}%" \
-    icon.color=${ICON_COLOR}
+    icon.color="${ICON_COLOR}"
