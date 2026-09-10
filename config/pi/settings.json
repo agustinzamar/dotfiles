@@ -17,7 +17,7 @@
   "followUpMode": "all",
   "fullscreenExitOutput": "resume-hint",
   "fullscreenScrollbar": "always",
-  "hideThinkingBlock": true,
+  "hideThinkingBlock": false,
   "images": {
     "blockImages": true
   },
@@ -50,7 +50,7 @@
   "terminal": {
     "showTerminalProgress": true
   },
-  "theme": "Gentleman-Cute-Terminal",
+  "theme": "Gentle",
   "transport": "auto",
   "treeFilterMode": "default",
   "tuiMode": "fullscreen",
