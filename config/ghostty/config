@@ -71,6 +71,9 @@ keybind = cmd+shift+right=text:\x1b[1;4F
 # --- Font ---
 font-family = "JetBrainsMono Nerd Font"
 font-family = "Menlo"
+# gentle-pi uses U+27E1 (⟡) as its section separator. Map it to a
+# font that contains the glyph instead of the PCMyungjo fallback box.
+font-codepoint-map = U+27E1=Apple Symbols
 font-size = 20
 font-thicken = true
 font-thicken-strength = 100
