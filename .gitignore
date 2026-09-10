@@ -21,6 +21,7 @@ docs/
 .atl/
 .pi/
 .omo/
+.codegraph/
 
 # Compiled installer binary (bun build --compile; built on demand)
 bin/dot-tui
