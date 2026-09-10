@@ -45,6 +45,7 @@ _links_table() {
 		hunk|config/hunk/config.toml|$HOME/.config/hunk/config.toml||git|hunk
 		lazygit|config/lazygit/config.yml|$HOME/.config/lazygit/config.yml||git|lazygit
 		git|config/git/ignore|$HOME/.config/git/ignore||git|git
+		npm|config/npm/.npmrc|$HOME/.npmrc
 		pi|config/pi/settings.json|$HOME/.pi/agent/settings.json||ai
 		pi|config/pi/themes/Gentleman-Cute-Terminal.json|$HOME/.pi/agent/themes/Gentleman-Cute-Terminal.json||ai
 	EOF
