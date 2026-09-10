@@ -1,9 +1,9 @@
 {
   "autocompleteMaxVisible": 5,
-  "defaultModel": "gpt-5.6-luna",
+  "defaultModel": "gpt-5.6-sol",
   "defaultProjectTrust": "always",
   "defaultProvider": "openai-codex",
-  "defaultThinkingLevel": "high",
+  "defaultThinkingLevel": "medium",
   "doubleEscapeAction": "tree",
   "editorPaddingX": 1,
   "enableInstallTelemetry": false,
@@ -26,7 +26,7 @@
     "anthropic/claude-opus-5": "high",
     "anthropic/claude-sonnet-5": "medium",
     "openai-codex/gpt-5.6-luna": "high",
-    "openai-codex/gpt-5.6-sol": "high",
+    "openai-codex/gpt-5.6-sol": "medium",
     "opencode-go/hy3": "high"
   },
   "outputPad": 1,
