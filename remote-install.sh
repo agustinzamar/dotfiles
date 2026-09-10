@@ -12,10 +12,6 @@
 # a flag, which is passed through untouched via "$@" below:
 #
 #   .../remote-install.sh --all               full install, no interaction
-#   .../remote-install.sh --profile <path>    apply a saved profile headlessly
-#
-# The "revert remote-install.sh to force --all" pin from the proposal remains
-# available as a rollback if the fresh-VM interactive path needs to be frozen.
 
 set -Eeuo pipefail
 
