@@ -20,7 +20,7 @@ exclude_untracked = false
 line_numbers = true
 
 # Wrap long lines
-wrap_lines = false
+wrap_lines = true
 
 # Show the menu bar
 menu_bar = true
@@ -33,3 +33,6 @@ prompt_save_view_preferences = true
 
 # Use a transparent background
 transparent_background = false
+hunk_headers = true
+copy_decorations = false
+cursor_line = "row"

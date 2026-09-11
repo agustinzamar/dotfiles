@@ -1,4 +1,4 @@
-alias cd='z'
+cd() { if (( $+functions[z] )); then z "$@"; else builtin cd "$@"; fi }
 alias cat='bat --paging=never'
 alias ls='eza -la --icons --group-directories-first'
 alias ll='eza -la --icons --git'
