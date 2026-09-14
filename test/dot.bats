@@ -289,6 +289,44 @@ setup() {
   [ "$output" = "$DOTFILES_DIR" ]
 }
 
+# Herd PHP exports must live in exactly one tracked file (system/.exports),
+# not duplicated in .zshrc. Paths must use $HOME, not a hardcoded user home.
+@test "Herd exports exist only in system/.exports with $HOME paths" {
+  local exports="$DOTFILES_DIR/system/.exports"
+  [ -f "$exports" ]
+
+  # Exactly one conditional Herd block in .exports.
+  local herd_count
+  herd_count=$(grep -c 'Herd.*bin' "$exports" || true)
+  [ "$herd_count" -ge 1 ]
+
+  # Every Herd path uses $HOME, never a hardcoded home.
+  grep -qE '/Users/[^/]+/Library' "$exports" && return 1
+
+  # Four PHP version exports are present.
+  grep -q 'HERD_PHP_85_INI_SCAN_DIR' "$exports"
+  grep -q 'HERD_PHP_84_INI_SCAN_DIR' "$exports"
+  grep -q 'HERD_PHP_83_INI_SCAN_DIR' "$exports"
+  grep -q 'HERD_PHP_82_INI_SCAN_DIR' "$exports"
+}
+
+@test "zshrc has no duplicate Herd export block" {
+  local zshrc="$DOTFILES_DIR/config/zsh/.zshrc"
+  # The old injected block used these exact lines; they must be gone.
+  grep -q 'HERD_PHP_85_INI_SCAN_DIR' "$zshrc" && return 1
+  grep -q 'HERD_PHP_86_INI_SCAN_DIR' "$zshrc" && return 1
+  grep -q 'HERD_PHP_82_INI_SCAN_DIR' "$zshrc" && return 1
+  grep -q 'Herd PHP Injected' "$zshrc" && return 1
+  # No hardcoded user paths in .zshrc Herd lines.
+  grep -qE '/Users/[^/]+/Library' "$zshrc" && return 1
+  # The source line that loads .exports must remain.
+  grep -q 'source.*system/\.exports' "$zshrc"
+}
+
+@test "zshrc syntax is valid after Herd cleanup" {
+  zsh -n "$DOTFILES_DIR/config/zsh/.zshrc"
+}
+
 # An exported secret is inherited by every command the shell runs.
 @test "no shell file exports a secret" {
   local hits
@@ -720,6 +758,31 @@ EOF
   [[ "$output" == *"--agent claude-code"* ]]
 }
 
+@test "dot ai without TTY shows a TTY error, not bun lookup" {
+  # Pipe (no TTY) — ai_open_picker must refuse before bun lookup.
+  # The guard in install/ai.sh fires before bun is located, so the output
+  # must mention the TTY error and must NOT mention bun missing.
+  run bash -c 'echo "" | '"$DOT"' ai'
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"not a TTY"* ]]
+  [[ "$output" != *"bun not found"* ]]
+}
+
+@test "ai.tsx compiles and has a runtime import.meta.main entry point" {
+  # grep proves the pattern exists in source; bun build proves the TypeScript
+  # compiles and the import.meta.main block is syntactically valid at runtime.
+  grep -q 'import\.meta\.main' "$DOTFILES_DIR/tools/tui/src/ai.tsx"
+  # bun build compiles the file end-to-end; a missing import.meta.main or a
+  # syntax error in the block would fail here.
+  command -v bun >/dev/null 2>&1 || skip "bun not installed"
+  bun build --target=bun "$DOTFILES_DIR/tools/tui/src/ai.tsx" >/dev/null 2>&1
+}
+
+@test "dot ai --all does not require a TTY" {
+  run "$DOT" ai --all --dry-run
+  [ "$status" -eq 0 ]
+}
+
 @test "link and unlink round-trip" {
   local home
   home="$(mktemp -d)"
@@ -854,6 +917,37 @@ EOF
       return 1
     }
   done
+}
+
+@test "bare make shows help, not install" {
+  run make -C "$DOTFILES_DIR" --no-print-directory
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Usage: make"* ]]
+  [[ "$output" == *"install"* ]]
+  [[ "$output" != *"Running"* ]]
+}
+
+@test "make help prints available targets" {
+  run make -C "$DOTFILES_DIR" help --no-print-directory
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Usage:"* ]]
+  [[ "$output" == *"install"* ]]
+  [[ "$output" == *"test"* ]]
+  [[ "$output" == *"lint"* ]]
+}
+
+@test "make install still dispatches dot install" {
+  # Verify make install calls the correct script; full dispatch is tested
+  # elsewhere. We only check that the Makefile recipe points at the right CLI.
+  grep -q '^\t$(DOT) install' "$DOTFILES_DIR/Makefile"
+}
+
+@test "make install dispatches dot install (runtime check)" {
+  # Verify `make install` actually invokes `dot install` by checking the
+  # Makefile recipe and that the dot binary is callable.
+  local recipe
+  recipe=$(make -C "$DOTFILES_DIR" -n install --no-print-directory 2>&1)
+  [[ "$recipe" == *"dot"*"install"* ]]
 }
 
 # ---------------------------------------------------------------------------

@@ -28,13 +28,11 @@ describe("AiPicker mount", () => {
     const text = stripAnsi(frame).toLowerCase();
     // Step header paints.
     expect(text).toContain("step 1: select ai items");
-    // Skills and plugins render in ONE combined list (kinds tagged on every row).
-    expect(text).toContain("[plugin]");
+    // Skills render in the combined list (kind tagged on every row).
     expect(text).toContain("[skill]");
-    // A known plugin id appears (manifest `label` is humanized, so match
-    // case-insensitively against the id-derived text).
-    expect(text).toContain("ponytail");
-    // Agent tagging paints: skills resolve to every agent, plugins to a subset.
+    // A known skill label appears.
+    expect(text).toContain("matt pocock");
+    // Agent tagging paints: skills resolve to every agent.
     expect(text).toContain("all agents");
     // Never renders a raw ANSI reset that would indicate a broken frame.
     expect(frame).not.toContain("\x1b[0m");

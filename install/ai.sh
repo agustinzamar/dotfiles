@@ -282,6 +282,10 @@ ai_apply_model_assignments() {
 # Open the AI picker TUI (tools/tui/src/ai.tsx). The picker is built by a
 # separate step; here we only locate bun and launch it, then propagate its exit.
 ai_open_picker() {
+  [[ -t 0 ]] || {
+    echo "stdin is not a TTY — the AI picker requires a terminal; use \`dot ai --all\` for the headless path" >&2
+    return 1
+  }
   local bun_bin=""
   for candidate in "$HOME/.bun/bin/bun" /opt/homebrew/bin/bun /usr/local/bin/bun; do
     [[ -x "$candidate" ]] && bun_bin=$candidate

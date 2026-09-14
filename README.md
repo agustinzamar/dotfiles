@@ -26,12 +26,13 @@ bin/dot install
 
 `system/.exports` puts `~/dotfiles/bin` on your `PATH`, so `dot` is available
 once the shell configs are linked and the shell has been restarted. A bare
-`make` runs the full install.
+`make` shows available targets; `make install` runs the full interactive
+installer.
 
-Bare `dot install` (and bare `make`) opens the **interactive installer** and
-needs a TTY. Scripted or CI installs, or piping the one-liner without flags,
-should use the headless path instead — bare `dot install` under non-TTY stdin
-fails fast and says so:
+Bare `dot install` (and bare `make install`) opens the **interactive
+installer** and needs a TTY. Scripted or CI installs, or piping the one-liner
+without flags, should use the headless path instead — bare `dot install` under
+non-TTY stdin fails fast and says so:
 
 ```bash
 dot install --all          # headless: every standard phase (AI stays opt-in)
@@ -137,8 +138,9 @@ The profile at `~/.config/dot/profile.json` stores the selected *areas*
 not persisted. Successful work is not repeated during the same session, and
 deselecting an installed app never uninstalls it or removes its config link.
 
-A bare `make` is the one-shot first init (`dot install`). The Makefile also
-carries `make test`, `make check` and `make lint`, which CI runs.
+A bare `make` shows available targets (`help` is the default). `make install`
+runs the first-init entry point (`dot install`). The Makefile also carries
+`make test`, `make check` and `make lint`, which CI runs.
 
 ## The installer binary
 

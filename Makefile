@@ -1,7 +1,7 @@
 DOTFILES_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
 SHELL := /bin/bash
-# A bare `make` is the first-init entry point: install.
-.DEFAULT_GOAL := install
+# Bare `make` shows usage; `make install` is the first-init entry point.
+.DEFAULT_GOAL := help
 
 # Call the CLI by path. Exporting PATH here does not work: make 3.81 (what
 # macOS ships) execs single-word recipes itself, using the PATH it started
@@ -13,7 +13,19 @@ SCRIPTS := bin/dot install/*.sh system/defaults/*.sh remote-install.sh
 # Everything else is `dot <command>` — this file only carries the first-init
 # entry point and the lint targets CI runs.
 # `install` and `test` are also directory names, so these must stay phony.
-.PHONY: install test check lint format bun-test build-tui
+.PHONY: help install test check lint format bun-test build-tui
+
+help:
+	@echo "Usage: make <target>"
+	@echo ""
+	@echo "Targets:"
+	@echo "  install       First-init entry point (runs dot install)"
+	@echo "  test          Run the Bats test suite"
+	@echo "  check         Syntax-check shell scripts and TypeScript"
+	@echo "  lint          Check formatting (Prettier + shfmt + shellcheck)"
+	@echo "  format        Auto-fix formatting"
+	@echo "  bun-test      Run Bun tests for tools/tui"
+	@echo "  build-tui     Build the installer TUI binary"
 
 install:
 	$(DOT) install

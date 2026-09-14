@@ -280,3 +280,10 @@ export function AiPicker({
     </StatusMessage>
   );
 }
+
+// Direct entry point: `bun tools/tui/src/ai.tsx`
+if (import.meta.main) {
+  const { render } = await import("ink");
+  const { createElement } = await import("react");
+  render(createElement(AiPicker));
+}

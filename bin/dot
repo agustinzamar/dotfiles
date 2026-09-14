@@ -40,11 +40,12 @@ sub_help() {
   echo "Options: --dry-run"
   echo
   echo "Commands:"
-  echo "   doctor           Check that required tools and symlinks are in place"
-  echo "   help             This help message"
-  echo "   test             Run tests"
-  echo "   unlink           Remove symlinks that point into this repo"
-  echo "   update           Pull latest dotfiles and upgrade installed packages"
+  echo "   agents sync     Refresh agent instruction files from the repository"
+  echo "   doctor          Check that required tools and symlinks are in place"
+  echo "   help            This help message"
+  echo "   test            Run tests"
+  echo "   unlink          Remove symlinks that point into this repo"
+  echo "   update          Pull latest dotfiles and upgrade installed packages"
   echo
   echo "Config links:"
   echo "   link             Symlink selected configs whose tools are available"
@@ -255,6 +256,31 @@ sub_baseline() {
 # `--skills`/`--plugins` still install for every detected agent, just like
 # before. `--dry-run` composes with all of the above (printed by bin/dot before dispatch).
 sub_ai() {
+  # `dot ai sync` is a distinct entry point, not an agent name: it runs the
+  # tracked model-assignment KB against every live agent config directly,
+  # skipping the skills/plugins/model-assignment-application flow below.
+  # Checked before the agent-name parsing loop so `sync` can never be mistaken
+  # for an agent.
+  if [[ "${1:-}" == sync ]]; then
+    shift
+    local bun_bin=""
+    for candidate in "$HOME/.bun/bin/bun" /opt/homebrew/bin/bun /usr/local/bin/bun; do
+      [[ -x "$candidate" ]] && bun_bin=$candidate
+    done
+    [[ -z "$bun_bin" ]] && bun_bin=$(command -v bun 2>/dev/null || true)
+    [[ -n "$bun_bin" ]] || {
+      echo "bun not found — cannot run the model-assignment sync" >&2
+      return 1
+    }
+    # bin/dot's top-level dispatcher already pulled --dry-run out of "$@" into
+    # $DRY_RUN before sub_ai ever runs, so it must be re-added here rather than
+    # trusted to still be in "$@".
+    local sync_args=("$@")
+    "$DRY_RUN" && sync_args+=(--dry-run)
+    "$bun_bin" "$DOTFILES_DIR/tools/scripts/sync-model-assignments.ts" ${sync_args[@]+"${sync_args[@]}"}
+    return $?
+  fi
+
   local do_skills=false do_plugins=false agents=() arg failures=()
   local do_all=false explicit_kind=false
   for arg in "$@"; do
@@ -636,7 +662,22 @@ sub_test() {
   bats "$DOTFILES_DIR"/test/*.bats
 }
 
-TOP_COMMANDS=" backup clean doctor edit help install link test unlink update "
+# dot agents sync — refresh agent instruction files from the repository source.
+sub_agents() {
+  local cmd="${1:-}"
+  case "$cmd" in
+    sync)
+      shift
+      "$DOTFILES_DIR/install/agents.sh" "$@"
+      ;;
+    *)
+      echo "Usage: $BIN_NAME agents sync" >&2
+      return 1
+      ;;
+  esac
+}
+
+TOP_COMMANDS=" agents backup clean doctor edit help install link test unlink update "
 
 COMMAND_NAME=${1:-}
 case "$COMMAND_NAME" in

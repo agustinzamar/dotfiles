@@ -161,15 +161,3 @@ eval "$(oh-my-posh init zsh --config "$HOME/.config/oh-my-posh/theme.omp.json")"
 
 # Yazi: force Kitty Graphics Protocol for image previews in Ghostty
 export YAZI_IMAGE_PROTOCOL=kitty
-
-
-# Herd injected PHP 8.4 configuration.
-export HERD_PHP_84_INI_SCAN_DIR="/Users/agustin/Library/Application Support/Herd/config/php/84"
-
-
-# Herd injected PHP 8.5 configuration.
-export HERD_PHP_85_INI_SCAN_DIR="/Users/agustin/Library/Application Support/Herd/config/php/85"
-
-
-# Herd injected PHP 8.3 configuration.
-export HERD_PHP_83_INI_SCAN_DIR="/Users/agustin/Library/Application Support/Herd/config/php/83"
