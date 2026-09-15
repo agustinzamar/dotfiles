@@ -1,0 +1,35 @@
+{
+  "_doc": "Única fuente de verdad del perfil de modelos SDD. Editar aquí y correr `dot ai profile-sync` (`--dry-run` para previsualizar). El comando proyecta a: OpenCode (opencode.jsonc + state.json), Pi (agents/*.md + subagents.json + settings.json) y Claude (effort en agents/*.md). 'model' es el ID sin prefijo de provider; 'effort' vale low|medium|high en OpenCode y low|medium|high|xhigh en Pi. 'pi_file' existe solo cuando el archivo Pi se llama distinto al rol. 'pi_target=default' escribe el defaultModel de Pi (solo gentle-orchestrator). 'opencode=false' marca roles solo-Pi.",
+  "providers": {
+    "opencode": "openai",
+    "pi": "openai-codex"
+  },
+  "agents": {
+    "gentle-orchestrator": { "model": "gpt-5.6-sol", "effort": "high", "pi_target": "default" },
+    "sdd-init": { "model": "gpt-5.6-sol", "effort": "medium" },
+    "sdd-onboard": { "model": "gpt-5.6-sol", "effort": "medium" },
+    "sdd-explore": { "model": "gpt-5.6-terra", "effort": "high" },
+    "sdd-research": { "model": "gpt-5.6-sol", "effort": "high" },
+    "sdd-propose": { "model": "gpt-5.6-sol", "effort": "high", "pi_file": "sdd-proposal" },
+    "sdd-spec": { "model": "gpt-5.6-terra", "effort": "high" },
+    "sdd-design": { "model": "gpt-5.6-sol", "effort": "high" },
+    "sdd-tasks": { "model": "gpt-5.6-terra", "effort": "high" },
+    "sdd-status": { "model": "gpt-5.6-sol", "effort": "medium", "opencode": false },
+    "sdd-apply": { "model": "gpt-5.6-terra", "effort": "high" },
+    "sdd-verify": { "model": "gpt-5.6-sol", "effort": "high" },
+    "sdd-sync": { "model": "gpt-5.6-sol", "effort": "medium", "opencode": false },
+    "sdd-archive": { "model": "gpt-5.6-luna", "effort": "high" },
+    "jd-judge-a": { "model": "gpt-5.6-sol", "effort": "high" },
+    "jd-judge-b": { "model": "gpt-5.6-sol", "effort": "high" },
+    "jd-fix-agent": { "model": "gpt-5.6-sol", "effort": "medium" },
+    "gentle-ai-explore": { "model": "gpt-5.6-terra", "effort": "high", "opencode": false },
+    "gentle-ai-verify": { "model": "gpt-5.6-sol", "effort": "high", "opencode": false },
+    "gentle-ai-worker": { "model": "gpt-5.6-luna", "effort": "xhigh", "opencode": false },
+    "review-readability": { "model": "gpt-5.6-sol", "effort": "high" },
+    "review-refuter": { "model": "gpt-5.6-sol", "effort": "medium" },
+    "review-reliability": { "model": "gpt-5.6-sol", "effort": "high" },
+    "review-resilience": { "model": "gpt-5.6-sol", "effort": "high" },
+    "review-risk": { "model": "gpt-5.6-sol", "effort": "high" },
+    "review-validator": { "model": "gpt-5.6-sol", "effort": "medium" }
+  }
+}

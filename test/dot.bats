@@ -711,7 +711,7 @@ EOF
   HOME="$home" PATH="$stub:$PATH" run "$DOT" ai opencode --plugins
   [ "$status" -eq 0 ]
   jq -e '.sentinel == "keep"' "$home/.gentle-ai/state.json" >/dev/null
-  jq -e --slurpfile expected "$DOTFILES_DIR/config/gentle-ai/model-assignments.json" '.model_assignments == $expected[0]' "$home/.gentle-ai/state.json" >/dev/null
+  jq -e --slurpfile expected "$DOTFILES_DIR/ai/gentle-ai/model-assignments.json" '.model_assignments == $expected[0]' "$home/.gentle-ai/state.json" >/dev/null
 }
 
 @test "AI model assignment application is dry-run safe and skips missing state" {

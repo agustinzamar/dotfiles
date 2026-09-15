@@ -242,8 +242,9 @@ ai_install() {
 
 # Apply the tracked Gentle AI model assignments without replacing its runtime
 # state, which also contains machine-specific install and telemetry metadata.
+# Source is generated from ai/gentle-ai/sdd-profile.json by profile-sync.
 ai_apply_model_assignments() {
-  local source="$DOTFILES_DIR/config/gentle-ai/model-assignments.json"
+  local source="$DOTFILES_DIR/ai/gentle-ai/model-assignments.json"
   local target="$HOME/.gentle-ai/state.json"
   local temporary
 
