@@ -586,7 +586,7 @@ describe("applyConfirmed — one code path for interactive and headless", () => 
           default: false,
         },
         {
-          id: "raycast",
+          id: "tinycast",
           topic: "utilities",
           kind: "cask",
           area: "utilities",
@@ -616,7 +616,7 @@ describe("applyConfirmed — one code path for interactive and headless", () => 
       brewCalls.indexOf("brew install yabai"),
     );
     // A different topic's tap never gets pulled in.
-    expect(brewCalls).not.toContain("brew install --cask raycast");
+    expect(brewCalls).not.toContain("brew install --cask tinycast");
   });
 
   test("mid-apply interruption exits non-zero and short-circuits the next steps", async () => {

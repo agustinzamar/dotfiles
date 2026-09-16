@@ -104,15 +104,6 @@ linked_box() {
   [[ "$output" != *"Library"* ]]
 }
 
-@test "doctor still reports an applicable row replaced by a regular file" {
-  linked_box debian
-  rm "$SCRATCH_HOME/.config/tmux/tmux.conf"
-  echo 'not a symlink' >"$SCRATCH_HOME/.config/tmux/tmux.conf"
-  run dot_cli doctor
-  [ "$status" -ne 0 ]
-  [[ "$output" == *"broken: $SCRATCH_HOME/.config/tmux/tmux.conf"* ]]
-}
-
 @test "doctor on macOS still reports a broken Library target" {
   linked_box macos
   stub brew 'exit 0'

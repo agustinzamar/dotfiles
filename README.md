@@ -106,7 +106,7 @@ change to a script, not like a change to a config value.
 | `install --all` | Install every standard phase headlessly (AI stays opt-in) |
 | `link` | Repair links selected in `~/.config/dot/profile.json` |
 | `link --all` | Force-link every valid config explicitly |
-| `link <name>` | Force-link one config (`ghostty`, `tmux`, `yazi`, …) |
+| `link <name>` | Force-link one config (`ghostty`, `paneru`, `yazi`, …) |
 | `ai [agent]` | Install AI skills and plugins (opt-in, never part of `install`) |
 | `unlink` | Remove symlinks that point into this repo |
 | `doctor` | Check required tools and symlinks |
@@ -125,7 +125,7 @@ dot link --dry-run
 
 The installer has two steps. **Step 1** lists every package as its own row,
 grouped visually by topic: a locked essentials block is pinned at the top
-(shell + git setup, `fzf`/`git`/`gh`/`tmux`) and is always installed; the rest
+(shell + git setup, `fzf`/`git`/`gh`) and is always installed; the rest
 are individually toggleable, with the former baseline tools
 (`lazygit`, `hunk`, `yazi`, `neovim`, Ghostty) pre-checked. **Step 2** offers
 exactly the config links that belong to the tools you selected, all unchecked,

@@ -76,7 +76,7 @@ area_for_package() {
     # --- Git ---
     gh | lazygit | hunk) echo "git" ;;
     # --- Terminal / core CLI ---
-    eza | fd | yazi | poppler | ripgrep | grip | watch | btop | procs | topgrade | dust | dockutil | mole | 7zip | bat | jq | jless | yq | unar | tmux | duti | ghostty | neovim | font-jetbrains-mono-nerd-font | duti-defaults | 'we"ird\name') echo "terminal" ;;
+    eza | fd | yazi | poppler | ripgrep | grip | watch | btop | procs | topgrade | dust | dockutil | mole | 7zip | bat | jq | jless | yq | unar | duti | ghostty | neovim | font-jetbrains-mono-nerd-font | duti-defaults | 'we"ird\name') echo "terminal" ;;
     # --- VS Code ---
     visual-studio-code | code) echo "vscode" ;;
     # --- AI ---
@@ -86,14 +86,11 @@ area_for_package() {
     make | go | node | python@3.14 | pnpm | bun | npm-check-updates | pipx | rust | shellcheck | shfmt | bats-core | act | sshpass | phpstorm | actionlint | swiftformat | mysql | mysql-client | postgresql | redis | sqlite | herd | orbstack | openusage | direnv) echo "dev" ;;
     # --- Desktop (subareas match links.sh component tokens) ---
     linearmouse) echo "desktop-linearmouse" ;;
-    aerospace) echo "desktop-aerospace" ;;
     sketchybar) echo "desktop-sketchybar" ;;
-    yabai) echo "desktop-yabai" ;;
-    skhd) echo "desktop-skhd" ;;
-    borders) echo "desktop-borders" ;;
-    pearcleaner | google-chrome | firefox | brave-browser | discord | telegram | whatsapp | slack | raycast | finetune | typewhisper | rectangle | localsend | hyperkey | alt-tab | chatgpt | koekeishiya/formulae | FelixKratz/formulae | FelixKratz/JankyBorders) echo "desktop" ;;
+    paneru) echo "desktop-paneru" ;;
+    pearcleaner | google-chrome | firefox | brave-browser | discord | telegram | crmne/tap/zapfast | slack | abue-ammar/tinycast/tinycast | finetune | typewhisper | rectangle | localsend | hyperkey | alt-tab | chatgpt | FelixKratz/formulae) echo "desktop" ;;
     # --- Media ---
-    ffmpeg | ffmpegthumbnailer | imagemagick | webp | spotify | stremio | vlc | stupside/tap/castor | castor) echo "media" ;;
+    ffmpeg | ffmpegthumbnailer | imagemagick | webp | media-control | crmne/tap/spotifast | stremio | vlc | stupside/tap/castor | castor) echo "media" ;;
     *) return 1 ;;
   esac
 }
@@ -112,12 +109,11 @@ manifest_is_locked() {
 }
 
 # Former forced-baseline tools: pre-checked in the TUI, still toggleable.
-# tmux is a real preference (not everyone wants a multiplexer forced on); git
-# and gh moved here from the locked block so they render under the Git
+# git and gh moved here from the locked block so they render under the Git
 # category alongside lazygit/hunk instead of the inert always-on block.
 manifest_is_default() {
   case "$1" in
-    lazygit | hunk | yazi | neovim | ghostty | tmux | git | gh) return 0 ;;
+    lazygit | hunk | yazi | neovim | ghostty | git | gh) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -201,13 +197,13 @@ manifest_category() {
     # --- Browsers ---
     google-chrome | firefox | brave-browser) echo "Browsers" ;;
     # --- Communication ---
-    discord | telegram | whatsapp | slack) echo "Communication" ;;
+    discord | telegram | crmne/tap/zapfast | slack) echo "Communication" ;;
     # --- Desktop / window managers (the tiling stack) ---
-    yabai | skhd | sketchybar | aerospace | borders | koekeishiya/formulae | FelixKratz/formulae | FelixKratz/JankyBorders) echo "Desktop" ;;
+    sketchybar | paneru | FelixKratz/formulae) echo "Desktop" ;;
     # --- Tweakers (input, window and bar tweaks) ---
     linearmouse | finetune | rectangle | hyperkey | alt-tab | typewhisper) echo "Tweakers" ;;
     # --- Utilities ---
-    raycast | localsend | mole | pearcleaner | topgrade | dockutil | duti) echo "Utilities" ;;
+    abue-ammar/tinycast/tinycast | localsend | mole | pearcleaner | topgrade | dockutil | duti) echo "Utilities" ;;
     # --- Archives ---
     7zip | unar) echo "Archives" ;;
     # --- Monitoring ---
@@ -220,7 +216,7 @@ manifest_category() {
     # starship/powerlevel10k are dormant alternatives — config exists but
     # .zshrc doesn't source them yet), command correction, and the locked
     # fzf/zoxide (never rendered, kept here for data consistency) ---
-    ghostty | tmux | font-jetbrains-mono-nerd-font | oh-my-posh | starship | powerlevel10k | pay-respects | timescam/tap | fzf | zoxide) echo "Terminals" ;;
+    ghostty | font-jetbrains-mono-nerd-font | oh-my-posh | starship | powerlevel10k | pay-respects | timescam/tap | fzf | zoxide) echo "Terminals" ;;
     # --- Text and search ---
     ripgrep | bat | jq | jless | yq | grip) echo "Text" ;;
     # --- Git and GitHub ---
@@ -236,9 +232,9 @@ manifest_category() {
     # --- Databases ---
     mysql | mysql-client | postgresql | redis | sqlite) echo "Databases" ;;
     # --- Media processing ---
-    ffmpeg | ffmpegthumbnailer | imagemagick | webp) echo "Media tools" ;;
+    ffmpeg | ffmpegthumbnailer | imagemagick | webp | media-control) echo "Media tools" ;;
     # --- Entertainment ---
-    spotify | stremio | vlc | stupside/tap/castor) echo "Entertainment" ;;
+    crmne/tap/spotifast | stremio | vlc | stupside/tap/castor) echo "Entertainment" ;;
     *) echo "pin-topic" ;;
   esac
 }

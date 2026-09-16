@@ -24,30 +24,22 @@ declare -F os_family >/dev/null 2>&1 || . "$LINKS_DIR/platform.sh"
 _links_table() {
   cat <<-EOF
 		zsh|config/zsh/.zshrc|$HOME/.zshrc||shell
-		p10k|config/p10k/.p10k.zsh|$HOME/.p10k.zsh||shell
-		starship|config/starship|$HOME/.config/starship||shell
 		ohmyposh|config/oh-my-posh/theme.omp.json|$HOME/.config/oh-my-posh/theme.omp.json||shell
 		ghostty|config/ghostty/config|$HOME/.config/ghostty/config||terminal
-		ghostty|config/ghostty/config|$HOME/Library/Application Support/Muxy/ghostty.conf||terminal||macos
 		herdr|config/herdr/herder.toml|$HOME/.config/herdr/config.toml|app-writable|ai-herdr
-		tmux|config/tmux/tmux.conf|$HOME/.config/tmux/tmux.conf||terminal
 		yazi|config/yazi/yazi.toml|$HOME/.config/yazi/yazi.toml||terminal
 		yazi|config/yazi/keymap.toml|$HOME/.config/yazi/keymap.toml||terminal
 		yazi|config/yazi/theme.toml|$HOME/.config/yazi/theme.toml||terminal
 		linearmouse|config/linearmouse/linearmouse.json|$HOME/.config/linearmouse/linearmouse.json||desktop-linearmouse||macos
-		aerospace|config/aerospace/aerospace.toml|$HOME/.config/aerospace/aerospace.toml||desktop-aerospace||macos
 		sketchybar|config/sketchybar|$HOME/.config/sketchybar||desktop-sketchybar||macos
-		yabai|config/yabai|$HOME/.config/yabai||desktop-yabai||macos
-		skhd|config/skhd|$HOME/.config/skhd||desktop-skhd||macos
-		borders|config/borders/bordersrc|$HOME/.config/borders/bordersrc||desktop-borders||macos
+		paneru|config/paneru/init.lua|$HOME/.config/paneru/init.lua||desktop-paneru||macos
 		vscode|config/vscode/settings.json|$HOME/Library/Application Support/Code/User/settings.json||vscode|code|macos
 		vscode|config/vscode/keybindings.json|$HOME/Library/Application Support/Code/User/keybindings.json||vscode|code|macos
 		hunk|config/hunk/config.toml|$HOME/.config/hunk/config.toml||git|hunk
 		lazygit|config/lazygit/config.yml|$HOME/.config/lazygit/config.yml||git|lazygit
 		git|config/git/ignore|$HOME/.config/git/ignore||git|git
-		npm|config/npm/.npmrc|$HOME/.npmrc
+		npm|config/npm/.npmrc|$HOME/.npmrc||dev
 		pi|config/pi/settings.json|$HOME/.pi/agent/settings.json||ai
-		pi|config/pi/themes/Gentleman-Cute-Terminal.json|$HOME/.pi/agent/themes/Gentleman-Cute-Terminal.json||ai
 	EOF
 }
 

@@ -242,36 +242,46 @@ ai_install() {
 
 # Apply the tracked Gentle AI model assignments without replacing its runtime
 # state, which also contains machine-specific install and telemetry metadata.
-# Source is generated from ai/gentle-ai/sdd-profile.json by profile-sync.
+# Assignments are projected from ai/gentle-ai/sdd-profile.json (single source
+# of truth) — no derived file needed.
 ai_apply_model_assignments() {
-  local source="$DOTFILES_DIR/ai/gentle-ai/model-assignments.json"
+  local profile="$DOTFILES_DIR/ai/gentle-ai/sdd-profile.json"
   local target="$HOME/.gentle-ai/state.json"
-  local temporary
+  local temporary assignments
 
-  [[ -f "$source" ]] || return 0
+  [[ -f "$profile" ]] || return 0
   [[ -f "$target" ]] || {
     echo "Gentle AI state not found; skipping model assignments" >&2
     return 0
   }
 
   if "$DRY_RUN"; then
-    echo "+ apply Gentle AI model assignments from $source"
+    echo "+ apply Gentle AI model assignments from $profile"
     return 0
   fi
+
+  assignments=$(jq --arg provider "$(jq -r '.providers.opencode' "$profile")" '
+    [.agents | to_entries[] | select(.value.opencode != false) |
+      {key, value: {provider_id: $provider, model_id: .value.model, effort: .value.effort}}] |
+    from_entries
+  ' "$profile") || {
+    echo "invalid Gentle AI profile: $profile" >&2
+    return 1
+  }
 
   jq -e '
     type == "object" and
     all(.[]; type == "object" and
       (.provider_id | type == "string") and
       (.model_id | type == "string"))
-  ' "$source" >/dev/null || {
-    echo "invalid Gentle AI model assignments: $source" >&2
+  ' <<<"$assignments" >/dev/null || {
+    echo "invalid Gentle AI model assignments from: $profile" >&2
     return 1
   }
 
   temporary=$(mktemp "$target.tmp.XXXXXX") || return 1
-  if ! jq --slurpfile assignments "$source" \
-    '.model_assignments = $assignments[0]' "$target" >"$temporary"; then
+  if ! jq --argjson assignments "$assignments" \
+    '.model_assignments = $assignments' "$target" >"$temporary"; then
     rm -f "$temporary"
     return 1
   fi

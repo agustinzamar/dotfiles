@@ -44,26 +44,21 @@ requirement_walk() {
   local declared expected
   declared=$(links_sh '_links_table' | awk -F'|' '$7 == "macos" { print $3 }' | sort)
   expected=$(printf '%s\n' \
-    "$SCRATCH_HOME/Library/Application Support/Muxy/ghostty.conf" \
     "$SCRATCH_HOME/Library/Application Support/Code/User/settings.json" \
     "$SCRATCH_HOME/Library/Application Support/Code/User/keybindings.json" \
     "$SCRATCH_HOME/.config/linearmouse/linearmouse.json" \
-    "$SCRATCH_HOME/.config/aerospace/aerospace.toml" \
     "$SCRATCH_HOME/.config/sketchybar" \
-    "$SCRATCH_HOME/.config/yabai" \
-    "$SCRATCH_HOME/.config/skhd" \
-    "$SCRATCH_HOME/.config/borders/bordersrc" | sort)
+    "$SCRATCH_HOME/.config/paneru/init.lua" | sort)
   [ "$declared" = "$expected" ]
 }
 
 @test "portable rows carry no OS declaration" {
   box_family macos
   local portable
-  portable=$(links_sh '_links_table' | awk -F'|' '$7 == "" { print $3 }')
-  [[ "$portable" == *"$SCRATCH_HOME/.zshrc"* ]]
-  [[ "$portable" == *"$SCRATCH_HOME/.config/tmux/tmux.conf"* ]]
-  # A portable row may never target the macOS-only Library tree.
-  ! grep -q '/Library/' <<<"$portable"
+portable=$(links_sh '_links_table' | awk -F'|' '$7 == "" { print $3 }')
+   [[ "$portable" == *"$SCRATCH_HOME/.zshrc"* ]]
+   # A portable row may never target the macOS-only Library tree.
+   ! grep -q '/Library/' <<<"$portable"
 }
 
 @test "all_links strips the OS column and keeps every row on macOS" {
@@ -87,10 +82,10 @@ requirement_walk() {
   filtered=$(links_sh 'all_links')
   table=$(links_sh '_links_table')
   ! grep -q '/Library/' <<<"$filtered"
-  ! grep -q '^yabai|' <<<"$filtered"
+  ! grep -q '^paneru|' <<<"$filtered"
   ! grep -q '^linearmouse|' <<<"$filtered"
   grep -q "^zsh|config/zsh/.zshrc|$SCRATCH_HOME/.zshrc|" <<<"$filtered"
-  [ "$(wc -l <<<"$filtered")" -eq "$(($(wc -l <<<"$table") - 9))" ]
+  [ "$(wc -l <<<"$filtered")" -eq "$(($(wc -l <<<"$table") - 5))" ]
 }
 
 @test "all_links_raw keeps every row on debian and still strips the OS column" {
@@ -100,7 +95,8 @@ requirement_walk() {
   table=$(links_sh '_links_table')
   [ "$(wc -l <<<"$raw")" -eq "$(wc -l <<<"$table")" ]
   # The OS token is gone; the trailing field is this row's empty requirement.
-  grep -qxF "yabai|config/yabai|$SCRATCH_HOME/.config/yabai||desktop-yabai|" <<<"$raw"
+  grep -qxF "linearmouse|config/linearmouse/linearmouse.json|$SCRATCH_HOME/.config/linearmouse/linearmouse.json||desktop-linearmouse|" <<<"$raw"
+  grep -qxF "paneru|config/paneru/init.lua|$SCRATCH_HOME/.config/paneru/init.lua||desktop-paneru|" <<<"$raw"
   ! grep -q 'macos' <<<"$raw"
   run awk -F'|' 'NF > 6 { print; found = 1 } END { exit !found }' <<<"$raw"
   [ "$status" -ne 0 ]
@@ -108,9 +104,9 @@ requirement_walk() {
 
 @test "link <name> still resolves a macOS-only name on debian" {
   box_family debian
-  run dot_cli link yabai --dry-run
+  run dot_cli link linearmouse --dry-run
   [ "$status" -eq 0 ]
-  [[ "$output" == *"config/yabai"* ]]
+  [[ "$output" == *"config/linearmouse"* ]]
 }
 
 # The set of names a user may type is the same everywhere, so help must keep
@@ -119,7 +115,7 @@ requirement_walk() {
   box_family debian
   run dot_cli help
   [ "$status" -eq 0 ]
-  [[ "$output" == *"yabai"* ]]
+  [[ "$output" == *"paneru"* ]]
   [[ "$output" == *"linearmouse"* ]]
 }
 
@@ -132,7 +128,6 @@ requirement_walk() {
   run dot_cli link --all
   [ "$status" -eq 0 ]
   [ "$(readlink "$SCRATCH_HOME/.zshrc")" = "$DOTFILES_DIR/config/zsh/.zshrc" ]
-  [ "$(readlink "$SCRATCH_HOME/.config/tmux/tmux.conf")" = "$DOTFILES_DIR/config/tmux/tmux.conf" ]
   [ ! -e "$SCRATCH_HOME/Library" ]
   [ ! -e "$SCRATCH_HOME/.config/yabai" ]
 }
@@ -142,7 +137,7 @@ requirement_walk() {
   LINK_VERBOSE=true run dot_cli link --all
   [ "$status" -eq 0 ]
   [[ "$output" == *"skipping vscode: does not apply to this OS (debian)"* ]]
-  [[ "$output" == *"skipping yabai: does not apply to this OS (debian)"* ]]
+  [[ "$output" == *"skipping linearmouse: does not apply to this OS (debian)"* ]]
 }
 
 @test "a second dot link on debian changes nothing and makes no backup" {
@@ -160,7 +155,8 @@ requirement_walk() {
   [ "$status" -eq 0 ]
   [ "$(readlink "$SCRATCH_HOME/Library/Application Support/Code/User/settings.json")" \
     = "$DOTFILES_DIR/config/vscode/settings.json" ]
-  [ "$(readlink "$SCRATCH_HOME/.config/yabai")" = "$DOTFILES_DIR/config/yabai" ]
+  [ "$(readlink "$SCRATCH_HOME/.config/linearmouse/linearmouse.json")" \
+    = "$DOTFILES_DIR/config/linearmouse/linearmouse.json" ]
 }
 
 # ---------------------------------------------------------------------------

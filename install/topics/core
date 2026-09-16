@@ -33,7 +33,6 @@ brew "starship"
 brew "powerlevel10k"
 
 # --- Multiplexers and terminals ---
-brew "tmux"
 brew "herdr"
 cask "ghostty"
 

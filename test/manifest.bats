@@ -81,7 +81,6 @@ fixture_all_links() {
 
 fixture_optional_links() {
   cat <<-EOF
-		opencode|config/opencode/opencode.jsonc|$HOME/.config/opencode/opencode.jsonc|||ai
 	EOF
 }
 
@@ -114,10 +113,6 @@ golden_json() {
     { "name": "hunk", "optional": false, "component": "git", "requirement": "hunk",
       "rows": [
         { "source": "config/hunk/config.toml", "target": "$HOME/.config/hunk/config.toml", "mode": "" }
-      ] },
-    { "name": "opencode", "optional": true, "component": "ai", "requirement": "",
-      "rows": [
-        { "source": "config/opencode/opencode.jsonc", "target": "$HOME/.config/opencode/opencode.jsonc", "mode": "" }
       ] }
   ]
 }
@@ -160,10 +155,9 @@ EOF
   for id in fzf zoxide eza poppler; do
     [ "$(jq -r --arg id "$id" '[.packages[] | select(.id == $id)][0].locked' <<<"$json")" == "true" ]
   done
-  # tmux is a real preference (some people don't want a multiplexer forced on).
   # git/gh moved here from the locked block: pre-checked, toggleable, grouped
   # under the Git category alongside lazygit/hunk in the TUI.
-  for id in lazygit hunk yazi neovim ghostty tmux git gh; do
+  for id in lazygit hunk yazi neovim ghostty git gh; do
     [ "$(jq -r --arg id "$id" '[.packages[] | select(.id == $id)][0].default' <<<"$json")" == "true" ]
     [ "$(jq -r --arg id "$id" '[.packages[] | select(.id == $id)][0].locked' <<<"$json")" == "false" ]
   done
@@ -191,10 +185,9 @@ EOF
   ctx="$(mktemp)"
   install_context_json "$ctx"
   json="$(cat "$ctx")"
-  # ghostty's second target is the macOS-only Muxy path, so the context an
-  # installer sees carries it on macOS and not anywhere else.
+  # ghostty's Muxy target went away with the tmux/p10k/starship cleanup, so the
+  # name collapses to a single row on every host.
   local ghostty_rows=1
-  [[ "$(os_family)" == macos ]] && ghostty_rows=2
   [ "$(jq '[.links[] | select(.name == "ghostty")][0].rows | length' <<<"$json")" -eq "$ghostty_rows" ]
   [ "$(jq '[.links[] | select(.name == "yazi")][0].rows | length' <<<"$json")" -eq 3 ]
   rm -f "$ctx"
@@ -243,21 +236,23 @@ EOF
   [ "$(jq -r '[.packages[] | select(.id == "codex")][0].category' <<<"$json")" == "AI" ]
   [ "$(jq -r '[.packages[] | select(.id == "discord")][0].category' <<<"$json")" == "Communication" ]
   [ "$(jq -r '[.packages[] | select(.id == "google-chrome")][0].category' <<<"$json")" == "Browsers" ]
-  [ "$(jq -r '[.packages[] | select(.id == "yabai")][0].category' <<<"$json")" == "Desktop" ]
+  [ "$(jq -r '[.packages[] | select(.id == "paneru")][0].category' <<<"$json")" == "Desktop" ]
   [ "$(jq -r '[.packages[] | select(.id == "linearmouse")][0].category' <<<"$json")" == "Tweakers" ]
-  [ "$(jq -r '[.packages[] | select(.id == "raycast")][0].category' <<<"$json")" == "Utilities" ]
+  [ "$(jq -r '[.packages[] | select(.id == "abue-ammar/tinycast/tinycast")][0].category' <<<"$json")" == "Utilities" ]
   [ "$(jq -r '[.packages[] | select(.id == "7zip")][0].category' <<<"$json")" == "Archives" ]
   [ "$(jq -r '[.packages[] | select(.id == "btop")][0].category' <<<"$json")" == "Monitoring" ]
   [ "$(jq -r '[.packages[] | select(.id == "eza")][0].category' <<<"$json")" == "Filesystem" ]
   [ "$(jq -r '[.packages[] | select(.id == "ffmpeg")][0].category' <<<"$json")" == "Media tools" ]
-  [ "$(jq -r '[.packages[] | select(.id == "spotify")][0].category' <<<"$json")" == "Entertainment" ]
+  [ "$(jq -r '[.packages[] | select(.id == "media-control")][0].category' <<<"$json")" == "Media tools" ]
+  [ "$(jq -r '[.packages[] | select(.id == "crmne/tap/spotifast")][0].category' <<<"$json")" == "Entertainment" ]
+  [ "$(jq -r '[.packages[] | select(.id == "crmne/tap/zapfast")][0].category' <<<"$json")" == "Communication" ]
   [ "$(jq -r '[.packages[] | select(.id == "mysql")][0].category' <<<"$json")" == "Databases" ]
   # Taps keep their full name as the label.
   [ "$(jq -r '[.packages[] | select(.id == "timescam/tap")][0].label' <<<"$json")" == "timescam/tap" ]
   # Installed detection via brew list: the stub reports t3-code and nothing
   # else, so a cask it does not report must come back false.
   [ "$(jq -r '[.packages[] | select(.id == "t3-code")][0].installed' <<<"$json")" == "true" ]
-  [ "$(jq -r '[.packages[] | select(.id == "raycast")][0].installed' <<<"$json")" == "false" ]
+  [ "$(jq -r '[.packages[] | select(.id == "abue-ammar/tinycast/tinycast")][0].installed' <<<"$json")" == "false" ]
   rm -f "$ctx"
 }
 

@@ -3,8 +3,9 @@
 // behavior behind an explicit selector. Flow (plan D5):
 //   1. MultiSelect the items (skills + plugins, one combined list, each tagged
 //      by kind and by the agents its `install` map supports).
-//   2. MultiSelect the agents — only the DETECTED set is selectable, pre-checked
-//      (plan D5 §3); absent agents render as dimmed, non-interactive lines
+//   2. MultiSelect the agents — only the DETECTED set is selectable, nothing
+//      pre-checked (checking is always manual — plan D5 §3); absent agents
+//      render as dimmed, non-interactive lines
 //      (MultiSelect has no per-option disabled flag, so the absent ones are not
 //      offered as options at all — see <AgentsStep>).
 //   3. ConfirmInput shows the resolved `item → [agents]` plan, then spawns
@@ -12,10 +13,14 @@
 //      runs for every detected agent.
 //   4. Spinner while the spawned installer runs; one StatusMessage on finish.
 //
+// ESC goes one step back (quits from step 1, locked while running/done);
+// going back keeps the checks already made. Cancelling the ConfirmInput
+// (n) also goes back instead of quitting.
+//
 // The install loop is NEVER reimplemented here (plan D5, requirement 7): this
 // component only gathers the selection and invokes `dot`. Cancelling the
 // ConfirmInput exits without installing anything.
-import { Box, Text, useApp } from "ink";
+import { Box, Text, useApp, useInput } from "ink";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { useEffect, useMemo, useState } from "react";
@@ -54,7 +59,9 @@ function agentsForEntry(install?: Record<string, string>): string[] {
 
 function agentSummary(agents: string[]): string {
   if (agents.length === 0) return "no agents";
-  if (ALL_AGENTS.every((a) => agents.includes(a))) return "all agents";
+  // Full coverage shows no suffix: agents are chosen in step 2, so tagging
+  // every row with "all agents" only adds noise.
+  if (ALL_AGENTS.every((a) => agents.includes(a))) return "";
   return agents.join(", ");
 }
 
@@ -136,10 +143,41 @@ async function defaultRunInstall(): Promise<number> {
 }
 
 function itemLabel(item: AiItem): string {
-  return `${item.label} [${item.kind}] — ${agentSummary(item.agents)}`;
+  const summary = agentSummary(item.agents);
+  return summary ? `${item.label} — ${summary}` : item.label;
 }
 
 type Step = "items" | "agents" | "confirm" | "running" | "done";
+
+/** ESC target per step: back one step, quit from step 1, locked while the
+ *  installer runs or after it finishes. Pure so tests pin the map. */
+export type BackTarget = "items" | "agents" | "exit" | null;
+export function backTarget(step: Step): BackTarget {
+  if (step === "items") return "exit";
+  if (step === "agents") return "items";
+  if (step === "confirm") return "agents";
+  return null;
+}
+
+/** Empty-plan guard: confirming with nothing resolved would run the installer
+ *  for zero targets (or, worse, read as approval). Instead of a y/n prompt,
+ *  show why and send the user back to step 1 on enter. */
+export function EmptyPlan({ onBack }: { onBack: () => void }) {
+  useInput((_, key) => {
+    if (key.return || key.escape) onBack();
+  });
+  return (
+    <Box flexDirection="column">
+      <Text bold color="cyan">
+        Confirm AI asset install
+      </Text>
+      <Text color="yellow">
+        Nothing to install — select at least one item and one agent.
+      </Text>
+      <Text dimColor>Press enter or esc to go back.</Text>
+    </Box>
+  );
+}
 
 export interface AiPickerProps {
   /** Override manifest location (test seam / DOTFILES_DIR alternative). */
@@ -161,7 +199,7 @@ export function AiPicker({
 
   const [step, setStep] = useState<Step>("items");
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
-  const [selectedAgents, setSelectedAgents] = useState<string[]>(detected);
+  const [selectedAgents, setSelectedAgents] = useState<string[]>([]);
   const [result, setResult] = useState<{ ok: boolean; output: string } | null>(
     null,
   );
@@ -204,15 +242,25 @@ export function AiPicker({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
+  // ESC goes one step back (quits from step 1, locked while running/done).
+  // Neither MultiSelect nor ConfirmInput binds ESC, so no double handling.
+  useInput((_, key) => {
+    if (!key.escape) return;
+    const target = backTarget(step);
+    if (target === "exit") exit();
+    else if (target) setStep(target);
+  });
+
   if (step === "items") {
     return (
       <Box flexDirection="column">
         <Text bold color="cyan">
           Step 1: Select AI items
         </Text>
+        <Text dimColor>space to toggle · enter to continue · esc to quit</Text>
         <MultiSelect
           options={items.map((it) => ({ label: itemLabel(it), value: it.id }))}
-          defaultValue={[]}
+          defaultValue={selectedItems}
           visibleOptionCount={10}
           onSubmit={(value) => {
             setSelectedItems(value);
@@ -228,14 +276,17 @@ export function AiPicker({
     return (
       <Box flexDirection="column">
         <Text bold color="cyan">
-          Step 2: Select agents (detected pre-checked)
+          Step 2: Select agents
+        </Text>
+        <Text dimColor>
+          space to toggle · enter to continue · esc to go back
         </Text>
         {ALL_AGENTS.filter((a) => !detectedSet.has(a)).map((a) => (
           <Text key={a} dimColor>{`  ${a} (not detected)`}</Text>
         ))}
         <MultiSelect
           options={detected.map((a) => ({ label: a, value: a }))}
-          defaultValue={detected}
+          defaultValue={selectedAgents}
           visibleOptionCount={Math.max(detected.length, 1)}
           onSubmit={(value) => {
             setSelectedAgents(value);
@@ -247,21 +298,55 @@ export function AiPicker({
   }
 
   if (step === "confirm") {
+    const entries = Object.entries(plan);
+    const resolvedCount = entries.reduce((n, [, ags]) => n + ags.length, 0);
+    if (resolvedCount === 0) {
+      return <EmptyPlan onBack={() => setStep("items")} />;
+    }
+    // Items usually resolve to the same agents, so show two short lists
+    // instead of repeating the agents on every item line. Only when an
+    // item targets a subset do we fall back to per-item lines.
+    const key = (ags: string[]) => [...ags].sort().join("\0");
+    const uniform =
+      entries.length > 0 &&
+      entries.every(([, ags]) => key(ags) === key(entries[0][1]));
+    if (uniform) {
+      const labels = new Map(items.map((it) => [it.id, it.label]));
+      const [, ags] = entries[0];
+      return (
+        <Box flexDirection="column">
+          <Text bold color="cyan">
+            Confirm AI asset install
+          </Text>
+          <Text bold>Items:</Text>
+          {entries.map(([id]) => (
+            <Text key={id}>{`  • ${labels.get(id) ?? id}`}</Text>
+          ))}
+          <Text bold>Agents:</Text>
+          <Text>{`  • ${ags.join(", ")}`}</Text>
+          <ConfirmInput
+            onConfirm={handleConfirm}
+            onCancel={() => setStep("agents")}
+          />
+          <Text dimColor>esc to go back</Text>
+        </Box>
+      );
+    }
     return (
       <Box flexDirection="column">
         <Text bold color="cyan">
           Confirm AI asset install
         </Text>
-        {Object.keys(plan).length === 0 ? (
-          <Text dimColor> (nothing selected)</Text>
-        ) : (
-          Object.entries(plan).map(([id, ags]) => (
-            <Text key={id}>{`  ${id} → ${
-              ags.length ? ags.join(", ") : "(no matching agent)"
-            }`}</Text>
-          ))
-        )}
-        <ConfirmInput onConfirm={handleConfirm} onCancel={() => exit()} />
+        {entries.map(([id, ags]) => (
+          <Text key={id}>{`  ${id} → ${
+            ags.length ? ags.join(", ") : "(no matching agent)"
+          }`}</Text>
+        ))}
+        <ConfirmInput
+          onConfirm={handleConfirm}
+          onCancel={() => setStep("agents")}
+        />
+        <Text dimColor>esc to go back</Text>
       </Box>
     );
   }

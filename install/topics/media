@@ -6,8 +6,14 @@ brew "ffmpegthumbnailer"
 brew "imagemagick"
 brew "webp"
 
+# Reads macOS' MediaRemote feed. The Spotifast item in sketchybar polls it
+# for the current track; without it that item simply stays hidden.
+brew "media-control"
+
 # --- Media players ---
-cask "spotify"
+# Third-party casks carry their full tap path: Homebrew refuses to load them
+# by a bare name while the tap (or that single cask) is not trusted.
+cask "crmne/tap/spotifast"
 cask "stremio"
 cask "vlc"
 cask "stupside/tap/castor"

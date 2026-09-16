@@ -11,7 +11,7 @@ fi
 
 DOCK_APPS=(
   "/Applications/System Settings.app"
-  "/Applications/WhatsApp.app"
+  "/Applications/ZapFast.app"
   "/Applications/Discord.app"
   "/Applications/Zoom.app"
   "/Applications/Slack.app"
@@ -22,7 +22,7 @@ DOCK_APPS=(
   "/Applications/Visual Studio Code.app"
   "/Applications/Ghostty.app"
   "/Applications/PhpStorm.app"
-  "/Applications/Spotify.app"
+  "/Applications/Spotifast.app"
   "/Applications/Telegram.app"
 )
 

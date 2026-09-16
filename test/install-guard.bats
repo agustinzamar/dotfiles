@@ -33,12 +33,15 @@ teardown() { box_teardown; }
   [ -z "$(find "$SCRATCH_HOME" -mindepth 1)" ]
 }
 
-@test "dot install --profile on debian refuses and never reaches the TUI" {
+# A topic is the third package-installing entry point (`dot install <topic>`, the
+# same path the TUI's apply phase drives), so it needs the same up-front refusal
+# instead of failing halfway through a `brew bundle`.
+@test "dot install <topic> on debian refuses before touching a package" {
   box_family debian
-  printf '{"components":{}}\n' >"$SCRATCH/profile.json"
-  run dot_cli install --profile "$SCRATCH/profile.json"
+  run dot_cli install core
   [ "$status" -ne 0 ]
   [[ "$output" == *"refusing"* ]]
+  [[ "$output" != *"brew install"* ]]
   [[ "$output" != *"dot-tui"* ]]
   [ -z "$(find "$SCRATCH_HOME" -mindepth 1)" ]
 }

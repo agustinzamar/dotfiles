@@ -1,10 +1,10 @@
 #!/usr/bin/env bun
 // Project sdd-profile.json (single source of truth) into the live configs:
-//   - OpenCode: ~/.config/opencode/opencode.jsonc (agent model+variant,
+//   - OpenCode: ~/.config/opencode/opencode.json (agent model+variant,
 //     surgical text edit that preserves prompts/comments) + probe cleanup in
 //     opencode.json + ~/.gentle-ai/state.json model_assignments.
 //   - Pi: ~/.pi/agent/agents/*.md frontmatter + subagents.json +
-//     settings.json default (orchestrator) + derived flat file for installs.
+//     settings.json default (orchestrator).
 //   - Claude: ~/.claude/agents/*.md effort only (unchanged legacy behavior).
 //
 // Usage: bun tools/scripts/sync-sdd-profile.ts [--dry-run]
@@ -42,7 +42,6 @@ function fail(message: string): never {
 
 const scriptDir = dirname(fileURLToPath(import.meta.url));
 const profilePath = join(scriptDir, "..", "..", "ai", "gentle-ai", "sdd-profile.json");
-const derivedPath = join(scriptDir, "..", "..", "ai", "gentle-ai", "model-assignments.json");
 
 let profile: Profile;
 try {
@@ -70,8 +69,8 @@ for (const [name, e] of opencodeRoles) {
   flat[name] = { provider_id: ocProvider, model_id: e.model, effort: e.effort };
 }
 
-// --- OpenCode jsonc (surgical, preserves everything else) --------------------
-const jsoncPath = join(homedir(), ".config", "opencode", "opencode.jsonc");
+// --- OpenCode json (surgical, preserves everything else) --------------------
+const jsonPath = join(homedir(), ".config", "opencode", "opencode.json");
 
 function setJsoncBlock(text: string, role: string, model: string, effort: string): { text: string; changed: Change[] } {
   const lines = text.split("\n");
@@ -116,9 +115,9 @@ function syncOpencode(): Report {
   const report: Report = { changes: [], skips: [], notes: [] };
   let text: string;
   try {
-    text = readFileSync(jsoncPath, "utf8");
+    text = readFileSync(jsonPath, "utf8");
   } catch (err) {
-    fail(`Cannot read ${jsoncPath}: ${(err as Error).message}`);
+    fail(`Cannot read ${jsonPath}: ${(err as Error).message}`);
   }
   for (const [name, e] of opencodeRoles) {
     const before = text;
@@ -132,8 +131,8 @@ function syncOpencode(): Report {
     text = res.text;
     report.changes.push(...res.changed);
   }
-  if (text !== readFileSync(jsoncPath, "utf8") && !dryRun) {
-    writeFileSync(jsoncPath, text);
+  if (text !== readFileSync(jsonPath, "utf8") && !dryRun) {
+    writeFileSync(jsonPath, text);
   }
   return report;
 }
@@ -155,15 +154,15 @@ function pruneOpencodeJson(): Report {
     }
   }
   try {
-    const jsonc = readFileSync(jsoncPath, "utf8");
+    const json = readFileSync(jsonPath, "utf8");
     for (const key of Object.keys(agents)) {
-      if (new RegExp(`^    "${key}": \\{$`, "m").test(jsonc)) shadowed++;
+      if (new RegExp(`^    "${key}": \\{$`, "m").test(json)) shadowed++;
     }
   } catch {
-    /* jsonc unreadable — skip shadow count */
+    /* json unreadable — skip shadow count */
   }
   if (shadowed > 0) {
-    report.notes.push(`${shadowed} opencode.json entries are shadowed by opencode.jsonc (inert)`);
+    report.notes.push(`${shadowed} opencode.json entries are shadowed (inert)`);
   }
   if (report.changes.length > 0 && !dryRun) {
     writeFileSync(jsonPath, JSON.stringify(cfg, null, 2));
@@ -171,22 +170,11 @@ function pruneOpencodeJson(): Report {
   return report;
 }
 
-// --- state.json + derived flat file ------------------------------------------
+// --- state.json ---------------------------------------------------------------
 const statePath = join(homedir(), ".gentle-ai", "state.json");
 
-function syncStateAndDerived(): Report {
+function syncState(): Report {
   const report: Report = { changes: [], skips: [], notes: [] };
-  const flatText = JSON.stringify(flat, null, 2) + "\n";
-  let prevDerived = "";
-  try {
-    prevDerived = readFileSync(derivedPath, "utf8");
-  } catch {
-    /* missing — will create */
-  }
-  if (prevDerived !== flatText) {
-    report.changes.push({ agent: "*", field: "derived file", value: derivedPath });
-    if (!dryRun) writeFileSync(derivedPath, flatText);
-  }
   if (!existsSync(statePath)) {
     report.skips.push({ agent: "*", reason: "no gentle-ai state.json" });
     return report;
@@ -359,7 +347,7 @@ function syncClaude(): Report {
 
 // --- Run + report ---------------------------------------------------------------
 const steps: Array<{ name: string; report: Report }> = [
-  { name: "Profile→derived+state", report: syncStateAndDerived() },
+  { name: "Profile→state", report: syncState() },
   { name: "OpenCode", report: syncOpencode() },
   { name: "OpenCode prune", report: pruneOpencodeJson() },
   { name: "PI", report: syncPi() },

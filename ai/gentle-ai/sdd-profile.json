@@ -1,5 +1,5 @@
 {
-  "_doc": "Única fuente de verdad del perfil de modelos SDD. Editar aquí y correr `dot ai profile-sync` (`--dry-run` para previsualizar). El comando proyecta a: OpenCode (opencode.jsonc + state.json), Pi (agents/*.md + subagents.json + settings.json) y Claude (effort en agents/*.md). 'model' es el ID sin prefijo de provider; 'effort' vale low|medium|high en OpenCode y low|medium|high|xhigh en Pi. 'pi_file' existe solo cuando el archivo Pi se llama distinto al rol. 'pi_target=default' escribe el defaultModel de Pi (solo gentle-orchestrator). 'opencode=false' marca roles solo-Pi.",
+  "_doc": "Única fuente de verdad del perfil de modelos SDD. Editar aquí y correr `dot ai profile-sync` (`--dry-run` para previsualizar). El comando proyecta a: OpenCode (opencode.json + state.json), Pi (agents/*.md + subagents.json + settings.json) y Claude (effort en agents/*.md). 'model' es el ID sin prefijo de provider; 'effort' vale low|medium|high en OpenCode y low|medium|high|xhigh en Pi. 'pi_file' existe solo cuando el archivo Pi se llama distinto al rol. 'pi_target=default' escribe el defaultModel de Pi (solo gentle-orchestrator). 'opencode=false' marca roles solo-Pi.",
   "providers": {
     "opencode": "openai",
     "pi": "openai-codex"

@@ -6,27 +6,24 @@ cask "brave-browser"
 # Communication
 cask "discord"
 cask "telegram"
-cask "whatsapp"
+# Third-party casks carry their full tap path: Homebrew refuses to load them
+# by a bare name while the tap (or that single cask) is not trusted.
+cask "crmne/tap/zapfast"
 cask "slack"
 
 # Tiling window manager + status bar (Catppuccin / gentleman style)
-tap "koekeishiya/formulae"
-brew "yabai"
-brew "skhd"
 tap "FelixKratz/formulae"
 brew "sketchybar"
 
 # Quality of life
-cask "raycast"
+cask "abue-ammar/tinycast/tinycast"
 cask "finetune"
 cask "typewhisper"
 cask "rectangle"
-cask "aerospace"
 cask "linearmouse"
 cask "localsend"
 cask "hyperkey"
 cask "alt-tab"
 cask "claude"
 cask "chatgpt"
-tap "FelixKratz/JankyBorders"
-brew "borders"
+brew "paneru"

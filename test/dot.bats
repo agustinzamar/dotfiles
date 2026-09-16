@@ -395,9 +395,9 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" == *"install/topics/core"* ]]
 
-  HOME="$(mktemp -d)" run "$DOT" link starship --dry-run
+  HOME="$(mktemp -d)" run "$DOT" link ohmyposh --dry-run
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Linking starship"* ]]
+  [[ "$output" == *"Linking ohmyposh"* ]]
 }
 
 @test "an unknown install target exits 1" {
@@ -449,7 +449,11 @@ EOF
   # Consumed directly by their own install/*.sh, not through links.sh.
   local handled="config/git/config"
   # Installed via `herdr plugin link` (see herder.toml), not the dot map.
-  local known_gaps="config/herdr/workspace-layout"
+  # Run by hand (Mission Control "new desktop" helper), so there is no config to
+  # link either. The Space walker is a program, not a config: sketchybar's
+  # focus-native-space.sh invokes it, nothing links it into $HOME.
+  local known_gaps="config/herdr/workspace-layout config/yabai/new-desktop.applescript \
+    config/tinycast/lib/go-to-native-space.sh"
 
   local sources
   # Unfiltered: an orphan guard that only sees the rows applicable to the
@@ -522,7 +526,7 @@ EOF
   [[ "$output" != *"config/starship"* ]]
 }
 
-# A name can cover several targets (ghostty -> ghostty + Muxy), and must not
+# A name can cover several targets (yazi -> yazi + keymap + theme), and must not
 # pull in unrelated configs.
 @test "link <name> links only that config" {
   local home
@@ -711,7 +715,12 @@ EOF
   HOME="$home" PATH="$stub:$PATH" run "$DOT" ai opencode --plugins
   [ "$status" -eq 0 ]
   jq -e '.sentinel == "keep"' "$home/.gentle-ai/state.json" >/dev/null
-  jq -e --slurpfile expected "$DOTFILES_DIR/ai/gentle-ai/model-assignments.json" '.model_assignments == $expected[0]' "$home/.gentle-ai/state.json" >/dev/null
+  jq -e --slurpfile profile "$DOTFILES_DIR/ai/gentle-ai/sdd-profile.json" '
+    .model_assignments == (
+      $profile[0] | .providers.opencode as $provider
+      | .agents | with_entries(select(.value.opencode != false)
+        | {key, value: {provider_id: $provider, model_id: .value.model, effort: .value.effort}})
+    )' "$home/.gentle-ai/state.json" >/dev/null
 }
 
 @test "AI model assignment application is dry-run safe and skips missing state" {
