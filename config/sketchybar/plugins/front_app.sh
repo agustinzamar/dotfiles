@@ -30,6 +30,9 @@ case $INFO in
     ICON_PADDING_RIGHT=7
     ICON=
     ;;
+"Ghostty")
+    ICON=
+    ;;
 "IINA")
     ICON_PADDING_RIGHT=4
     ICON=󰕼
@@ -52,7 +55,7 @@ case $INFO in
     ICON_PADDING_RIGHT=3
     ICON=
     ;;
-"Spotify")
+"Spotifast")
     ICON_PADDING_RIGHT=2
     ICON=
     ;;

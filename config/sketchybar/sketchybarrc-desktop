@@ -3,11 +3,10 @@
 FONT_FACE="JetBrainsMono Nerd Font"
 PLUGIN_DIR="$HOME/.config/sketchybar/plugins-desktop"
 PLUGIN_SHARED_DIR="$HOME/.config/sketchybar/plugins"
-
-SPOTIFY_EVENT="com.spotify.client.PlaybackStateChanged"
+IMAGES_DIR="$HOME/.config/sketchybar/images"
 
 sketchybar --bar \
-    height=32 \
+    height=44 \
     color=0x66494d64 \
     margin=0 \
     sticky=on \
@@ -17,23 +16,44 @@ sketchybar --bar \
     display=main
 
 sketchybar --default \
-    background.height=32 \
+    background.height=40 \
     icon.color=0xff24273a \
-    icon.font="$FONT_FACE:Medium:20.0" \
-    icon.padding_left=5 \
-    icon.padding_right=5 \
+    icon.font="$FONT_FACE:Medium:24.0" \
+    icon.padding_left=7 \
+    icon.padding_right=7 \
     label.color=0xff24273a \
-    label.font="$FONT_FACE:Bold:14.0" \
+    label.font="$FONT_FACE:Bold:17.0" \
     label.y_offset=1 \
     label.padding_left=0 \
-    label.padding_right=5
+    label.padding_right=7
 
+# Native macOS Spaces and the Paneru indicator stay on the left, ahead of
+# front_app.
+for slot in {1..10}; do
+    sketchybar --add item "native_space.$slot" left \
+        --set "native_space.$slot" \
+        drawing=off \
+        icon.drawing=off \
+        icon.color=0xff24273a \
+        label.drawing=on \
+        label.padding_left=7 \
+        label.color=0xff24273a \
+        background.color=0x66494d64
+done
+sketchybar --set native_space.1 update_freq=1 updates=on \
+    script="zsh \"$PLUGIN_SHARED_DIR/native_spaces.sh\""
+
+# The Paneru virtual-space indicator sits between the native Space pool and the
+# front-app cluster. sketchybar lays left-side items out left-to-right in
+# creation order, so this item must be added after the native_space pool and
+# before front_app; a right-side item is instead laid out from the display edge
+# inward and can never reach this position.
 sketchybar --add item current_space left \
     --set current_space \
     background.color=0xfff5a97f \
     label.drawing=off \
-    script="$PLUGIN_SHARED_DIR/current_space.sh" \
-    --subscribe current_space space_change mouse.clicked
+    update_freq=1 \
+    script="$PLUGIN_SHARED_DIR/current_space.sh"
 
 sketchybar --add item front_app left \
     --set front_app \
@@ -74,15 +94,49 @@ sketchybar --add item clock right \
     update_freq=10 \
     script="$PLUGIN_SHARED_DIR/clock.sh"
 
-sketchybar --add event spotify_change $SPOTIFY_EVENT \
-    --add item spotify right \
-    --set spotify \
+# Spotifast publishes no playback event, so this item polls media-control
+# instead of subscribing to a notification the app never posts.
+sketchybar --add item spotifast right \
+    --set spotifast \
     icon= \
     icon.y_offset=1 \
     label.drawing=off \
     label.padding_left=3 \
-    script="$PLUGIN_DIR/spotify.sh" \
-    --subscribe spotify spotify_change mouse.clicked
+    update_freq=5 \
+    script="$PLUGIN_SHARED_DIR/spotifast.sh" \
+    --subscribe spotifast mouse.clicked
+
+# Provider logos with session/weekly quotas, plus a fixed third monthly slot.
+for provider in codex claude opencode; do
+    case "$provider" in
+        codex) usage_image="$IMAGES_DIR/$provider.png"; usage_color=0xffa6da95 ;;
+        claude) usage_image="$IMAGES_DIR/$provider.png"; usage_color=0xfff5a97f ;;
+        opencode) usage_image="$IMAGES_DIR/$provider.png"; usage_color=0xff8aadf4 ;;
+    esac
+    sketchybar --add item "usage.$provider" right \
+        --set "usage.$provider" \
+        background.color=0x66494d64 \
+        background.padding_left=2 \
+        background.padding_right=2 \
+        icon="" \
+        icon.width=66 \
+        icon.padding_left=2 \
+        icon.padding_right=2 \
+        icon.background.drawing=on \
+        icon.background.image="$usage_image" \
+        icon.background.image.drawing=on \
+        icon.background.image.scale=0.5 \
+        label="" \
+        label.padding_left=0 \
+        label.padding_right=0 \
+        label.color="$usage_color" \
+        label.font="$FONT_FACE:Medium:13.0" \
+        update_freq=0
+done
+# Only Codex schedules the shared request; the plugin updates all three items.
+sketchybar --set 'usage.codex' update_freq=60 \
+    script="$PLUGIN_SHARED_DIR/usage_quotas.sh" \
+    --subscribe 'usage.codex' system_woke
 
 ##### Finalizing Setup #####
 sketchybar --update

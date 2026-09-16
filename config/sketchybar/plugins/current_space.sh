@@ -1,41 +1,38 @@
 #!/usr/bin/env zsh
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
-# Shows the focused yabai space on the sketchybar. yabai triggers
-# `space_change` (see config/yabai/yabairc); we query yabai for the focused
-# space index so this stays correct regardless of which display is active.
+# Shows the active paneru virtual workspace on the sketchybar. paneru has no
+# sketchybar-event integration, so this item polls on a short update_freq
+# (see sketchybarrc-laptop / sketchybarrc-desktop) instead of subscribing to
+# a custom event the way the old yabai-backed version did.
+#
+# Protocol reference: paneru's QUERY_AND_SUBSCRIBE_FORMAT.md documents
+# `paneru query active --json` returning an object with a
+# `virtual_workspace_number` field (one-based, or null when unknown).
 
-update_space() {
-    SPACE_INDEX=$(yabai -m query --spaces --display | jq 'map(select(.focused == 1))[0].index // 1')
+PANERU_ACTIVE=$(paneru query active --json 2>/dev/null)
+SPACE_INDEX=$(echo "$PANERU_ACTIVE" | jq -r '.virtual_workspace_number // 1' 2>/dev/null)
 
-    case $SPACE_INDEX in
-    1)
-        ICON=󰀏
-        ICON_PADDING_LEFT=7
-        ICON_PADDING_RIGHT=7
-        ;;
-    *)
-        ICON=$SPACE_INDEX
-        ICON_PADDING_LEFT=9
-        ICON_PADDING_RIGHT=10
-        ;;
-    esac
+# If paneru isn't reachable (daemon not running, IPC error, empty/malformed
+# output) the pipeline above can yield an empty string instead of a number,
+# which previously left the item's icon blank/invisible. Always fall back to
+# a visible default instead of rendering nothing.
+[[ "$SPACE_INDEX" =~ ^[0-9]+$ ]] || SPACE_INDEX=1
 
-    sketchybar --set $NAME \
-        icon=$ICON \
-        icon.padding_left=$ICON_PADDING_LEFT \
-        icon.padding_right=$ICON_PADDING_RIGHT
-}
-
-case "$SENDER" in
-"mouse.clicked")
-    # Focus the clicked space, then refresh.
-    SPACE_INDEX=$(yabai -m query --spaces --display | jq 'map(select(.focused == 1))[0].index // 1')
-    yabai -m space --focus "$SPACE_INDEX" 2>/dev/null
-    sketchybar --remove '/.*/'
-    source $HOME/.config/sketchybar/sketchybarrc
+case $SPACE_INDEX in
+1)
+    ICON=󰀏
+    ICON_PADDING_LEFT=7
+    ICON_PADDING_RIGHT=7
     ;;
 *)
-    update_space
+    ICON=$SPACE_INDEX
+    ICON_PADDING_LEFT=9
+    ICON_PADDING_RIGHT=10
     ;;
 esac
+
+sketchybar --set $NAME \
+    icon=$ICON \
+    icon.padding_left=$ICON_PADDING_LEFT \
+    icon.padding_right=$ICON_PADDING_RIGHT
