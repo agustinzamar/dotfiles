@@ -19,18 +19,11 @@ SPACE_INDEX=$(echo "$PANERU_ACTIVE" | jq -r '.virtual_workspace_number // 1' 2>/
 # a visible default instead of rendering nothing.
 [[ "$SPACE_INDEX" =~ ^[0-9]+$ ]] || SPACE_INDEX=1
 
-case $SPACE_INDEX in
-1)
-    ICON=󰀏
-    ICON_PADDING_LEFT=7
-    ICON_PADDING_RIGHT=7
-    ;;
-*)
-    ICON=$SPACE_INDEX
-    ICON_PADDING_LEFT=9
-    ICON_PADDING_RIGHT=10
-    ;;
-esac
+# Every workspace renders as its number — no special-cased icon glyph for
+# space 1.
+ICON=$SPACE_INDEX
+ICON_PADDING_LEFT=9
+ICON_PADDING_RIGHT=10
 
 sketchybar --set $NAME \
     icon=$ICON \
