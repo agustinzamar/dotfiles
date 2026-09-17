@@ -10,7 +10,7 @@ export PATH="/opt/homebrew/bin:$PATH"
 export PATH="${DOTFILES_DIR}/bin:$PATH"
 export PATH="$PATH:$HOME/.local/bin"
 
-# App-specific exports (composer, mise, pnpm, direnv, ...). See system/.exports.
+# App-specific exports (composer, mise, pnpm, ...). See system/.exports.
 source "$DOTFILES_DIR/system/.exports"
 
 # Set nvim as default editor
