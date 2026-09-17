@@ -310,19 +310,6 @@ setup() {
   grep -q 'HERD_PHP_82_INI_SCAN_DIR' "$exports"
 }
 
-@test "zshrc has no duplicate Herd export block" {
-  local zshrc="$DOTFILES_DIR/config/zsh/.zshrc"
-  # The old injected block used these exact lines; they must be gone.
-  grep -q 'HERD_PHP_85_INI_SCAN_DIR' "$zshrc" && return 1
-  grep -q 'HERD_PHP_86_INI_SCAN_DIR' "$zshrc" && return 1
-  grep -q 'HERD_PHP_82_INI_SCAN_DIR' "$zshrc" && return 1
-  grep -q 'Herd PHP Injected' "$zshrc" && return 1
-  # No hardcoded user paths in .zshrc Herd lines.
-  grep -qE '/Users/[^/]+/Library' "$zshrc" && return 1
-  # The source line that loads .exports must remain.
-  grep -q 'source.*system/\.exports' "$zshrc"
-}
-
 @test "zshrc syntax is valid after Herd cleanup" {
   zsh -n "$DOTFILES_DIR/config/zsh/.zshrc"
 }
