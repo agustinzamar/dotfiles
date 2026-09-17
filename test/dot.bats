@@ -343,7 +343,7 @@ EOF
 
 @test "install runs every phase through the failure-collecting loop" {
   local phase
-  for phase in brew npm link zsh code macos duti git; do
+  for phase in brew php npm link zsh code macos duti git; do
     grep -q "for phase in .*\b$phase\b" "$DOT" || {
       echo "phase '$phase' missing from the full-install loop"
       return 1

@@ -16,7 +16,7 @@ brew "bats-core"
 # --- PHP and Composer ---
 # php 8.5 is the CLI default; the older versions serve the projects that pin
 # them through `valet isolate`. Homebrew's php ships a base extension set, so
-# after installing run `pecl install redis imagick` for every version in use.
+# the `php` install phase builds redis and imagick for every version present.
 brew "php"
 brew "php@8.2"
 brew "php@8.3"

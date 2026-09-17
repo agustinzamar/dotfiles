@@ -34,6 +34,8 @@ set -- ${args[@]+"${args[@]}"}
 . "$DOTFILES_DIR/install/git.sh"
 # shellcheck source=../install/ai.sh
 . "$DOTFILES_DIR/install/ai.sh"
+# shellcheck source=../install/php.sh
+. "$DOTFILES_DIR/install/php.sh"
 
 sub_help() {
   echo "Usage: $BIN_NAME <command> [options]"
@@ -339,7 +341,7 @@ sub_ai() {
 sub_full() {
   log "Full install"
   local phase failures=()
-  for phase in bootstrap brew npm link zsh code macos duti git; do
+  for phase in bootstrap brew php npm link zsh code macos duti git; do
     "sub_$phase" || failures+=("$phase")
   done
 
@@ -407,6 +409,11 @@ sub_brew() {
     log "topics that failed: ${failures[*]}"
     return 1
   fi
+}
+
+sub_php() {
+  log "PHP extensions (pecl)"
+  install_php_extensions
 }
 
 sub_zsh() {
