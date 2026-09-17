@@ -4,4 +4,13 @@
 .vscode
 node_modules
 npm-debug.log
+
+# Gentle AI and agent-generated project state
+.atl/
+.codegraph/
+.gentle-ai/
+.gentle-ai-instance
+openspec/
+.pi/gentle-ai/
+
 **/.claude/settings.local.json
