@@ -11,12 +11,22 @@ same_file() {
   }
 }
 
+# A copy of this wrapper is not the native binary: delegating to it would bounce
+# between the two forever. Match the marker on line 2 rather than the path, so
+# copies in another checkout are caught too. head -c keeps the probe bounded.
+WRAPPER_MARKER='# Repository-owned wrapper for the native gentle-ai command.'
+
+is_wrapper_copy() {
+  head -c 1024 "$1" 2>/dev/null | grep -qF "$WRAPPER_MARKER"
+}
+
 find_native() {
   local entry candidate candidate_dir
 
   if [ -n "${GENTLE_AI_NATIVE_BIN:-}" ]; then
     same_file "$GENTLE_AI_NATIVE_BIN" && return 1
     [ -x "$GENTLE_AI_NATIVE_BIN" ] || return 1
+    is_wrapper_copy "$GENTLE_AI_NATIVE_BIN" && return 1
     printf '%s\n' "$GENTLE_AI_NATIVE_BIN"
     return 0
   fi
@@ -30,6 +40,7 @@ find_native() {
     candidate_dir=$(cd "$(dirname "$candidate")" 2>/dev/null && pwd -P) || continue
     candidate="$candidate_dir/$(basename "$candidate")"
     same_file "$candidate" && continue
+    is_wrapper_copy "$candidate" && continue
     IFS=$old_ifs
     printf '%s\n' "$candidate"
     return 0
@@ -43,11 +54,22 @@ native=$(find_native) || {
   exit 127
 }
 
+# gentle-ai resolves its own name through PATH (exec.LookPath) when it verifies
+# which package manager owns it. This wrapper shadows that lookup, so the
+# delegated process gets the native directory first: we are the caller, not the
+# install. Scope it to the child so the caller's PATH is untouched, and skip a
+# bare name (no directory component) so a relative "gentle-ai" cannot re-enter
+# this wrapper.
+NATIVE_DIR=""
+case "$native" in
+  */*) NATIVE_DIR=$(dirname "$native") ;;
+esac
+
 if [ "${1:-}" != sync ]; then
-  exec "$native" "$@"
+  PATH="${NATIVE_DIR:+$NATIVE_DIR:}$PATH" exec "$native" "$@"
 fi
 
-"$native" "$@"
+PATH="${NATIVE_DIR:+$NATIVE_DIR:}$PATH" "$native" "$@"
 native_status=$?
 [ "$native_status" -eq 0 ] || exit "$native_status"
 

@@ -8,15 +8,17 @@ setup() {
   mkdir -p "$HOME"
   NATIVE="$TEST_ROOT/native-gentle-ai"
   NATIVE_LOG="$TEST_ROOT/native.log"
+  NATIVE_PATH_LOG="$TEST_ROOT/native-path.log"
   export GENTLE_AI_NATIVE_BIN="$NATIVE"
   export PATH="$REPO_ROOT/bin:$PATH"
   cat >"$NATIVE" <<'EOF'
 #!/usr/bin/env bash
 printf '%s\n' "$*" >>"$NATIVE_LOG"
+printf '%s\n' "$PATH" >>"$NATIVE_PATH_LOG"
 exit "${NATIVE_STATUS:-0}"
 EOF
   chmod +x "$NATIVE"
-  export NATIVE_LOG
+  export NATIVE_LOG NATIVE_PATH_LOG
 }
 
 teardown() {
@@ -37,6 +39,16 @@ managed Gentle AI instructions
 <!-- /gentle-ai: managed -->
 EOF
   done
+}
+
+# Put the fake native in a directory of its own — never the wrapper dir — so PATH
+# lookup finds a real candidate. NATIVE_BIN_DIR names that directory.
+seed_native_on_path() {
+  NATIVE_BIN_DIR="$TEST_ROOT/native-bin"
+  mkdir -p "$NATIVE_BIN_DIR"
+  cp "$NATIVE" "$NATIVE_BIN_DIR/gentle-ai"
+  chmod +x "$NATIVE_BIN_DIR/gentle-ai"
+  unset GENTLE_AI_NATIVE_BIN
 }
 
 @test "sync refreshes all targets from the repository source and preserves managed blocks" {
@@ -83,13 +95,57 @@ EOF
 }
 
 @test "PATH lookup skips the repository wrapper" {
-  mkdir -p "$TEST_ROOT/native-bin"
-  cp "$NATIVE" "$TEST_ROOT/native-bin/gentle-ai"
-  chmod +x "$TEST_ROOT/native-bin/gentle-ai"
-  unset GENTLE_AI_NATIVE_BIN
-  export PATH="$REPO_ROOT/bin:$TEST_ROOT/native-bin:/opt/homebrew/bin:/usr/bin:/bin"
+  seed_native_on_path
+  export PATH="$REPO_ROOT/bin:$NATIVE_BIN_DIR:/opt/homebrew/bin:/usr/bin:/bin"
 
   run gentle-ai status
+
+  [ "$status" -eq 0 ]
+  [ "$(cat "$NATIVE_LOG")" = 'status' ]
+}
+
+@test "delegated invocation puts the native directory first on the child PATH" {
+  seed_native_on_path
+  # The wrapper dir comes first and the native dir does not, so without the fix
+  # the child inherits a PATH that resolves `gentle-ai` back to the wrapper.
+  export PATH="$REPO_ROOT/bin:/usr/bin:$NATIVE_BIN_DIR:/opt/homebrew/bin:/bin"
+
+  run gentle-ai status
+
+  [ "$status" -eq 0 ]
+  child_path=$(cat "$NATIVE_PATH_LOG")
+  # Compare by identity: mktemp paths differ from their physical form on macOS.
+  [ "${child_path%%:*}" -ef "$NATIVE_BIN_DIR" ]
+}
+
+@test "sync also puts the native directory first on the child PATH" {
+  seed_native_on_path
+  export PATH="$REPO_ROOT/bin:/usr/bin:$NATIVE_BIN_DIR:/opt/homebrew/bin:/bin"
+
+  run gentle-ai sync
+
+  [ "$status" -eq 0 ]
+  child_path=$(cat "$NATIVE_PATH_LOG")
+  [ "${child_path%%:*}" -ef "$NATIVE_BIN_DIR" ]
+}
+
+@test "a wrapper copy on PATH is skipped instead of bouncing between copies" {
+  seed_native_on_path
+  # A second checkout of this repo puts another copy of the wrapper on PATH, and
+  # that copy is the entry point here. Without the guard the two wrappers exec
+  # each other forever, so a watchdog bounds the wait: this must fail, not hang.
+  mkdir -p "$TEST_ROOT/other-clone/bin"
+  cp "$REPO_ROOT/bin/gentle-ai" "$TEST_ROOT/other-clone/bin/gentle-ai"
+  chmod +x "$TEST_ROOT/other-clone/bin/gentle-ai"
+  export PATH="$TEST_ROOT/other-clone/bin:$REPO_ROOT/bin:$NATIVE_BIN_DIR:/usr/bin:/bin"
+
+  gentle-ai status &
+  target=$!
+  (sleep 5 && kill -9 "$target" 2>/dev/null) &
+  watchdog=$!
+  wait "$target"
+  status=$?
+  kill "$watchdog" 2>/dev/null
 
   [ "$status" -eq 0 ]
   [ "$(cat "$NATIVE_LOG")" = 'status' ]
