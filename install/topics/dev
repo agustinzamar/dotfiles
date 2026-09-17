@@ -2,6 +2,7 @@
 brew "make"
 brew "go"
 brew "node"
+brew "mise"
 brew "python@3.14"
 brew "pnpm"
 brew "bun"
@@ -11,6 +12,19 @@ brew "rust"
 brew "shellcheck"
 brew "shfmt"
 brew "bats-core"
+
+# --- PHP and Composer ---
+# php 8.5 is the CLI default; the older versions serve the projects that pin
+# them through `valet isolate`. Homebrew's php ships a base extension set, so
+# after installing run `pecl install redis imagick` for every version in use.
+brew "php"
+brew "php@8.2"
+brew "php@8.3"
+brew "php@8.4"
+# Valet (`.test` sites with TLS) is not a brew package. It is declared as a
+# global Composer dependency in config/composer/composer.json, so
+# `dot link composer && composer global install` is what installs it.
+brew "composer"
 
 # --- CLI tools ---
 brew "act"
@@ -40,7 +54,6 @@ brew "redis"
 brew "sqlite"
 
 # --- Services ---
-cask "herd"
 cask "orbstack"
 
 # --- Fancy tools ---

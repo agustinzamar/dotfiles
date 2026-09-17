@@ -263,7 +263,6 @@ EOF
   json="$(cat "$ctx")"
   [ "$(jq -r '[.packages[] | select(.id == "lazygit")][0].category' <<<"$json")" == "Git" ]
   [ "$(jq -r '[.packages[] | select(.id == "hunk")][0].category' <<<"$json")" == "Git" ]
-  [ "$(jq -r '[.packages[] | select(.id == "herd")][0].category' <<<"$json")" == "Services" ]
   [ "$(jq -r '[.packages[] | select(.id == "orbstack")][0].category' <<<"$json")" == "Services" ]
   # `code` lands in the Editors category in the main selector.
   [ "$(jq -r '[.packages[] | select(.id == "code")][0].category' <<<"$json")" == "Editors" ]

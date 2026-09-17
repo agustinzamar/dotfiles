@@ -1,16 +1,16 @@
 alias ar="php artisan"
 alias mfs="php artisan migrate:fresh --seed"
 
-alias cu="herd composer update"
-alias cr="herd composer require"
-alias ci="herd composer install"
-alias cda="herd composer dump-autoload -o"
+alias cu="composer update"
+alias cr="composer require"
+alias ci="composer install"
+alias cda="composer dump-autoload -o"
 
 function pint() {
   if [ -f vendor/bin/pint ]; then
     vendor/bin/pint "$@"
   else
-    echo "Pint is not installed. Please run 'herd composer require laravel/pint' to install it."
+    echo "Pint is not installed. Please run 'composer require laravel/pint' to install it."
   fi
 }
 
