@@ -83,7 +83,7 @@ area_for_package() {
     opencode | anomalyco/tap/opencode | pi-coding-agent | claude-code@latest | codex | t3-code) echo "ai" ;;
     herdr) echo "ai-herdr" ;;
     # --- Dev ---
-    make | go | node | python@3.14 | pnpm | bun | npm-check-updates | pipx | rust | shellcheck | shfmt | bats-core | act | sshpass | phpstorm | actionlint | swiftformat | mysql | mysql-client | postgresql | redis | sqlite | mise | composer | php | php@8.2 | php@8.3 | php@8.4 | orbstack | openusage | direnv) echo "dev" ;;
+    make | go | node | python@3.14 | pnpm | bun | npm-check-updates | pipx | rust | shellcheck | shfmt | bats-core | act | sshpass | phpstorm | actionlint | swiftformat | mysql | mysql-client | postgresql | redis | sqlite | mise | composer | php | php@8.2 | php@8.3 | php@8.4 | orbstack | openusage) echo "dev" ;;
     # --- Desktop (subareas match links.sh component tokens) ---
     linearmouse) echo "desktop-linearmouse" ;;
     sketchybar) echo "desktop-sketchybar" ;;
@@ -223,8 +223,8 @@ manifest_category() {
     git | gh | lazygit | hunk) echo "Git" ;;
     # --- Editors and IDEs ---
     neovim | visual-studio-code | phpstorm) echo "Editors" ;;
-    # --- Dev languages, runtimes and CLI tools (direnv: per-project env) ---
-    make | go | node | python@3.14 | pnpm | bun | npm-check-updates | pipx | rust | bats-core | act | sshpass | mise | composer | php | php@8.2 | php@8.3 | php@8.4 | direnv) echo "Dev" ;;
+    # --- Dev languages, runtimes and CLI tools ---
+    make | go | node | python@3.14 | pnpm | bun | npm-check-updates | pipx | rust | bats-core | act | sshpass | mise | composer | php | php@8.2 | php@8.3 | php@8.4) echo "Dev" ;;
     # --- Linters and formatters ---
     shellcheck | shfmt | actionlint | swiftformat) echo "Linters" ;;
     # --- Local dev environments and service runtimes ---

@@ -9,7 +9,6 @@ brew "poppler"
 brew "ripgrep"
 brew "grip"
 brew "watch"
-brew "direnv"
 
 # --- System monitoring and utilities ---
 brew "btop"

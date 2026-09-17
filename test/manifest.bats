@@ -277,9 +277,8 @@ EOF
   [ "$(jq -r '[.packages[] | select(.id == "powerlevel10k")][0].category' <<<"$json")" == "Terminals" ]
   [ "$(jq -r '[.packages[] | select(.id == "poppler")][0].category' <<<"$json")" == "Filesystem" ]
   [ "$(jq -r '[.packages[] | select(.id == "dockutil")][0].category' <<<"$json")" == "Utilities" ]
-  # direnv joined Dev; pay-respects/timescam-tap/fzf/zoxide joined Terminals
+  # pay-respects/timescam-tap/fzf/zoxide joined Terminals
   # — the standalone Shell category is gone.
-  [ "$(jq -r '[.packages[] | select(.id == "direnv")][0].category' <<<"$json")" == "Dev" ]
   [ "$(jq -r '[.packages[] | select(.id == "pay-respects")][0].category' <<<"$json")" == "Terminals" ]
   # No toggleable package (kind brew/cask/tap) may ever fall back to a raw
   # lowercase topic name (core/desktop/dev/media) — every real package gets
