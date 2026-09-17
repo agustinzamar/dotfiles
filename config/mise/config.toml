@@ -1,0 +1,15 @@
+# Global tool versions for this machine.
+#
+# Node: each project under ~/Repositories/ pins its own runtime in .nvmrc, and
+# idiomatic version files are enabled so mise reads those files directly and
+# switches on cd. A single version here is the default outside any project;
+# listing several would put all of them on PATH and the first one would win,
+# which is not a default. Missing project versions install on demand
+# (not_found_auto_install is on).
+#
+# Versions the projects currently pin: 20.19.4, 22.16.0, 24.13.0, 24.18.0.
+[settings]
+idiomatic_version_file_enable_tools = ["node"]
+
+[tools]
+node = "24.21.0"

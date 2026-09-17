@@ -17,24 +17,16 @@ if [[ -d "$HOME/Library/pnpm" ]]; then
   export PATH="$PNPM_HOME/bin:$PNPM_HOME:$PATH"
 fi
 
-# Herd: ahead of /opt/homebrew/bin, so `php` is Herd's switchable one.
-if [[ -d "$HOME/Library/Application Support/Herd/bin" ]]; then
-  export PATH="$HOME/Library/Application Support/Herd/bin:$PATH"
+# Composer's global bin holds `valet`, installed with
+# `composer global require laravel/valet`. Homebrew's php 8.5 is the default CLI;
+# the other PHP versions stay keg-only and Valet switches them per site.
+COMPOSER_GLOBAL_BIN="$HOME/.composer/vendor/bin"
+[[ -d "$COMPOSER_GLOBAL_BIN" ]] && export PATH="$COMPOSER_GLOBAL_BIN:$PATH"
 
-  # NVM
-  export NVM_DIR="$HOME/Library/Application Support/Herd/config/nvm"
-  [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-  [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
-
-  # Herd shell integration
-  [[ -f "/Applications/Herd.app/Contents/Resources/config/shell/zshrc.zsh" ]] &&
-    builtin source "/Applications/Herd.app/Contents/Resources/config/shell/zshrc.zsh"
-
-  # PHP Binaries
-  export HERD_PHP_85_INI_SCAN_DIR="$HOME/Library/Application Support/Herd/config/php/85/"
-  export HERD_PHP_84_INI_SCAN_DIR="$HOME/Library/Application Support/Herd/config/php/84/"
-  export HERD_PHP_83_INI_SCAN_DIR="$HOME/Library/Application Support/Herd/config/php/83/"
-  export HERD_PHP_82_INI_SCAN_DIR="$HOME/Library/Application Support/Herd/config/php/82/"
+# mise: pinned global runtimes from config/mise/config.toml, plus per-project
+# switching driven by the .nvmrc files under ~/Repositories/.
+if command -v mise &>/dev/null; then
+  eval "$(mise activate zsh)"
 fi
 
 # Direnv

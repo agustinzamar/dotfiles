@@ -39,6 +39,7 @@ _links_table() {
 		lazygit|config/lazygit/config.yml|$HOME/.config/lazygit/config.yml||git|lazygit
 		git|config/git/ignore|$HOME/.config/git/ignore||git|git
 		npm|config/npm/.npmrc|$HOME/.npmrc||dev
+		mise|config/mise/config.toml|$HOME/.config/mise/config.toml||dev
 		pi|config/pi/settings.json|$HOME/.pi/agent/settings.json||ai
 	EOF
 }

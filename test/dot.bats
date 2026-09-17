@@ -289,28 +289,21 @@ setup() {
   [ "$output" = "$DOTFILES_DIR" ]
 }
 
-# Herd PHP exports must live in exactly one tracked file (system/.exports),
-# not duplicated in .zshrc. Paths must use $HOME, not a hardcoded user home.
-@test "Herd exports exist only in system/.exports with $HOME paths" {
+# .exports is the one tracked file for app-specific environment. Its paths must
+# use $HOME so the file stays portable, and it must wire the tools the shell
+# depends on: Composer's global bin (which holds `valet`) and mise.
+@test ".exports is portable and wires Composer's global bin and mise" {
   local exports="$DOTFILES_DIR/system/.exports"
   [ -f "$exports" ]
 
-  # Exactly one conditional Herd block in .exports.
-  local herd_count
-  herd_count=$(grep -c 'Herd.*bin' "$exports" || true)
-  [ "$herd_count" -ge 1 ]
+  # Every path uses $HOME, never a hardcoded home.
+  grep -qE '/Users/[^/]+/' "$exports" && return 1
 
-  # Every Herd path uses $HOME, never a hardcoded home.
-  grep -qE '/Users/[^/]+/Library' "$exports" && return 1
-
-  # Four PHP version exports are present.
-  grep -q 'HERD_PHP_85_INI_SCAN_DIR' "$exports"
-  grep -q 'HERD_PHP_84_INI_SCAN_DIR' "$exports"
-  grep -q 'HERD_PHP_83_INI_SCAN_DIR' "$exports"
-  grep -q 'HERD_PHP_82_INI_SCAN_DIR' "$exports"
+  grep -qF 'COMPOSER_GLOBAL_BIN="$HOME/.composer/vendor/bin"' "$exports"
+  grep -qF 'eval "$(mise activate zsh)"' "$exports"
 }
 
-@test "zshrc syntax is valid after Herd cleanup" {
+@test "zshrc syntax is valid" {
   zsh -n "$DOTFILES_DIR/config/zsh/.zshrc"
 }
 
