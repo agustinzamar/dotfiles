@@ -37,11 +37,13 @@ _links_table() {
 		vscode|config/vscode/keybindings.json|$HOME/Library/Application Support/Code/User/keybindings.json||vscode|code|macos
 		hunk|config/hunk/config.toml|$HOME/.config/hunk/config.toml||git|hunk
 		lazygit|config/lazygit/config.yml|$HOME/.config/lazygit/config.yml||git|lazygit
-		git|config/git/ignore|$HOME/.config/git/ignore||git|git
-		git|config/git/config|$HOME/.config/git/config||git|git
-		mise|config/mise/config.toml|$HOME/.config/mise/config.toml||dev
-		composer|config/composer/composer.json|$HOME/.composer/composer.json||dev
-		pi|config/pi/settings.json|$HOME/.pi/agent/settings.json||ai
+git|config/git/ignore|$HOME/.config/git/ignore||git|git
+	git|config/git/config|$HOME/.config/git/config||git|git
+	mise|config/mise/config.toml|$HOME/.config/mise/config.toml||dev
+	composer|config/composer/composer.json|$HOME/.composer/composer.json||dev
+	ai|config/ai/AGENTS.md|$HOME/.agents/AGENTS.md||ai
+	ai|config/ai/skills.json|$HOME/.agents/skills.json||ai
+	pi|config/pi/settings.json|$HOME/.pi/agent/settings.json||ai
 		claude|config/claude/settings.json|$HOME/.claude/settings.json||ai
 		claude|config/claude/statusline-command.sh|$HOME/.claude/statusline-command.sh||ai
 		opencode|config/opencode/opencode.json|$HOME/.config/opencode/opencode.json||ai

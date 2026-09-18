@@ -1,0 +1,3 @@
+# This topic is handled by sub_skills() in bin/dot
+# It reads from config/ai/skills.json and installs selected skills via the skills CLI
+# Format: each line is a skill identifier from skills.json

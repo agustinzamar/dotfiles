@@ -92,7 +92,9 @@ sub_install() {
   case "$cmd" in
     --all | -a)
       _reject_package_install install "$cmd" || return 1
-      sub_full
+      local dry_run=false
+      [[ "${1:-}" == "--dry-run" ]] && dry_run=true
+      sub_full "$dry_run"
       return $?
       ;;
     link | links)
@@ -165,7 +167,7 @@ install_headless() {
   fi
 
   local phase failures=()
-  for phase in bootstrap brew php link zsh code macos duti git; do
+  for phase in bootstrap brew php link zsh code macos duti git skills; do
     if [[ "$dry_run" == true ]]; then
       echo "🔧 Would run: sub_$phase"
     else
@@ -191,10 +193,16 @@ sub_baseline() {
 }
 
 sub_full() {
+  local dry_run="${1:-false}"
+  [[ "$dry_run" == true ]] && export DRY_RUN=true
   log "Full install"
   local phase failures=()
-  for phase in bootstrap brew php link zsh code macos duti git; do
-    "sub_$phase" || failures+=("$phase")
+  for phase in bootstrap brew php link zsh code macos duti git skills; do
+    if [[ "$dry_run" == true ]]; then
+      echo "🔧 Would run: sub_$phase"
+    else
+      "sub_$phase" || failures+=("$phase")
+    fi
   done
 
   if ((${#failures[@]})); then
@@ -358,6 +366,111 @@ sub_git() {
     [[ -f "$key" ]] || continue
     run ssh-add ${flags[@]+"${flags[@]}"} "$key"
   done
+}
+
+sub_skills() {
+  if ! is_executable pnpm; then
+    echo "⚠️ pnpm not installed; skipping skills installation" >&2
+    return 0
+  fi
+
+  local skills_file="$DOTFILES_DIR/config/ai/skills.json"
+  [[ -f "$skills_file" ]] || {
+    echo "⚠️ $skills_file not found" >&2
+    return 0
+  }
+
+  # In dry-run mode, just show what would be installed
+  if [[ "$DRY_RUN" == true ]]; then
+    echo "Skills installation (dry-run)"
+    echo "-------------------"
+    echo "Would prompt for scope (local/global) and skill selection"
+    echo "Skills available:"
+    jq -r '
+      .skills[] |
+      if .skills then
+        .skills[] as $s | "  - \($s) from \(.source)"
+      else
+        "  - \(.id) (\(.label)) from \(.source)"
+      end
+    ' "$skills_file"
+    return 0
+  fi
+
+  echo "Skills installation"
+  echo "-------------------"
+
+  # Ask for scope: local or global
+  local scope=""
+  while [[ -z "$scope" ]]; do
+    read -r -p "Install scope [local/global]: " scope
+    case "$scope" in
+      local|global) ;;
+      *) echo "Please enter 'local' or 'global'"; scope="" ;;
+    esac
+  done
+
+  # Extract all individual skills from skills.json using jq
+  local skills=()
+  local labels=()
+  local sources=()
+
+  while IFS=$'\t' read -r skill label source; do
+    skills+=("$skill")
+    labels+=("$label")
+    sources+=("$source")
+  done < <(jq -r '
+    .skills[] |
+    if .skills then
+      .skills[] as $s | "\($s)\t\($s)\t\(.source)"
+    else
+      "\(.id)\t\(.label)\t\(.source)"
+    end
+  ' "$skills_file")
+
+  if [[ ${#skills[@]} -eq 0 ]]; then
+    echo "No skills found in $skills_file"
+    return 0
+  fi
+
+  echo ""
+  echo "Available skills:"
+  for i in "${!skills[@]}"; do
+    printf "  %2d) %s (%s from %s)\n" $((i+1)) "${labels[i]}" "${skills[i]}" "${sources[i]}"
+  done
+  echo ""
+
+  # Interactive selection using checkboxes
+  local selected=()
+  for i in "${!skills[@]}"; do
+    local default="y"
+    read -r -p "Install ${labels[i]} (${skills[i]})? [Y/n]: " choice
+    case "$choice" in
+      [Nn]*) default="n" ;;
+      *) default="y" ;;
+    esac
+    if [[ "$default" == "y" ]]; then
+      selected+=("${skills[i]}")
+    fi
+  done
+
+  if [[ ${#selected[@]} -eq 0 ]]; then
+    echo "No skills selected."
+    return 0
+  fi
+
+  echo ""
+  echo "Installing ${#selected[@]} skill(s) with scope: $scope"
+  for skill in "${selected[@]}"; do
+    echo "  → $skill"
+    if [[ "$DRY_RUN" == true ]]; then
+      echo "    (dry-run) pnpm dlx @mattpocock/skills add $skill --scope $scope --yes"
+    else
+      run pnpm dlx @mattpocock/skills add "$skill" --scope "$scope" --yes
+    fi
+  done
+
+  echo "✅ Skills installation complete"
 }
 
 sub_link() {
