@@ -1,11 +1,8 @@
 # --- Languages, runtimes and tooling ---
 brew "make"
 brew "go"
-brew "node"
 brew "mise"
 brew "python@3.14"
-brew "pnpm"
-brew "bun"
 brew "pipx"
 brew "rust"
 brew "shellcheck"

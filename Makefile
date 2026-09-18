@@ -13,7 +13,7 @@ SCRIPTS := bin/dot install/*.sh system/defaults/*.sh remote-install.sh
 # Everything else is `dot <command>` — this file only carries the first-init
 # entry point and the lint targets CI runs.
 # `install` and `test` are also directory names, so these must stay phony.
-.PHONY: help install test check lint format bun-test build-tui
+.PHONY: help install test check lint format
 
 help:
 	@echo "Usage: make <target>"
@@ -21,11 +21,9 @@ help:
 	@echo "Targets:"
 	@echo "  install       First-init entry point (runs dot install)"
 	@echo "  test          Run the Bats test suite"
-	@echo "  check         Syntax-check shell scripts and TypeScript"
-	@echo "  lint          Check formatting (Prettier + shfmt + shellcheck)"
+	@echo "  check         Syntax-check shell scripts"
+	@echo "  lint          Check formatting (shfmt + shellcheck)"
 	@echo "  format        Auto-fix formatting"
-	@echo "  bun-test      Run Bun tests for tools/tui"
-	@echo "  build-tui     Build the installer TUI binary"
 
 install:
 	$(DOT) install
@@ -35,24 +33,12 @@ test:
 
 check:
 	bash -n $(SCRIPTS)
-	cd tools/tui && ./node_modules/.bin/tsc --noEmit
 
 lint:
-	cd tools/tui && bunx prettier --check src
 	shellcheck -x $(SCRIPTS)
 	shfmt -d $(SCRIPTS)
 
-# Canonical formatting for the repo: Prettier for TS/TSX (tools/tui/src) +
-# shfmt for shell. `make lint`/CI enforce this; run `make format` to write it.
+# Canonical formatting for the repo: shfmt for shell.
+# `make lint`/CI enforce this; run `make format` to write it.
 format:
-	cd tools/tui && bunx prettier --write src
 	shfmt -w $(SCRIPTS)
-
-bun-test:
-	cd tools/tui && bun test
-
-# Self-contained installer binary; gitignored, built on demand here or by
-# bin/dot's resolver when it is missing and Bun is available.
-build-tui:
-	cd $(DOTFILES_DIR)/tools/tui && bun install --frozen-lockfile \
-		&& bun build --compile --minify src/main.ts --outfile $(DOTFILES_DIR)/bin/dot-tui

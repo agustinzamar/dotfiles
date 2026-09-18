@@ -170,13 +170,11 @@ EOF
   ctx="$(mktemp)"
   install_context_json "$ctx"
   json="$(cat "$ctx")"
-  # `code` and `npm` are topic rows; duti/dock/macos are subcommands now.
-  [ "$(jq '[.packages[] | select(.kind == "topic")] | length' <<<"$json")" -eq 2 ]
+  # `code` is a topic row; duti/dock/macos are subcommands now.
+  [ "$(jq '[.packages[] | select(.kind == "topic")] | length' <<<"$json")" -eq 1 ]
   [ "$(jq -r '[.packages[] | select(.id == "code")][0].topic' <<<"$json")" == "code" ]
-  [ "$(jq -r '[.packages[] | select(.id == "npm")][0].topic' <<<"$json")" == "npm" ]
-  # Human labels for the delegating rows.
+  # Human label for the delegating row.
   [ "$(jq -r '[.packages[] | select(.id == "code")][0].label' <<<"$json")" == "VS Code extensions" ]
-  [ "$(jq -r '[.packages[] | select(.id == "npm")][0].label' <<<"$json")" == "NPM global tools" ]
   rm -f "$ctx"
 }
 
@@ -306,67 +304,6 @@ EOF
 # AI assets manifest (install/ai.sh, ai/skills.json, ai/plugins.json)
 # ---------------------------------------------------------------------------
 
-# Source the AI module without pulling in the rest of the installer. At source
-# time ai.sh only defines functions plus the AI_AGENTS array; the helpers it
-# calls from those functions (is_executable/log/run) are not needed by the
-# bits this suite exercises, so a bare source is enough.
-source_ai() {
-  # shellcheck source=../install/ai.sh
-  . "$DOTFILES_DIR/install/ai.sh"
-}
-
-@test "AI manifest schema: skills.json and plugins.json parse and every entry has an id and an install mechanism" {
-  source_ai
-  local skills="$DOTFILES_DIR/ai/skills.json"
-  local plugins="$DOTFILES_DIR/ai/plugins.json"
-  [ -f "$skills" ] && [ -f "$plugins" ]
-  # Both files must be valid JSON.
-  jq empty "$skills" || fail "ai/skills.json is not valid JSON"
-  jq empty "$plugins" || fail "ai/plugins.json is not valid JSON"
-  # Every entry needs an id (or name) plus a resolvable install mechanism.
-  # Plugins carry an explicit `install` map. Skills resolve through the default
-  # skills CLI command keyed by `source`, so `install` is absent by design.
-  local bad
-  bad="$(jq -r '.skills[] | select(((.id == null) and (.name == null)) or ((.install == null) and (.source == null))) | (.id // .name // "<entry>")' "$skills")"
-  [ -z "$bad" ] || fail "skills.json entry missing id/name or install mechanism: $bad"
-  bad="$(jq -r '.plugins[] | select(((.id == null) and (.name == null)) or (.install == null)) | (.id // .name // "<entry>")' "$plugins")"
-  [ -z "$bad" ] || fail "plugins.json entry missing id/name or install map: $bad"
-}
-
-@test "AI manifest: plugins.json declares gentle-ai as interactive" {
-  source_ai
-  local plugins="$DOTFILES_DIR/ai/plugins.json"
-  local n
-  n="$(jq -r '[.plugins[] | select(.id == "gentle-ai" or .name == "gentle-ai") | select(.interactive == true)] | length' "$plugins")"
-  [ "$n" -ge 1 ] || fail "plugins.json has no interactive gentle-ai entry"
-}
-
-@test "AI agents: AI_AGENTS declares pi:pi" {
-  source_ai
-  printf '%s\n' "${AI_AGENTS[@]}" | grep -qx 'pi:pi' || fail "AI_AGENTS is missing pi:pi"
-}
-
-# ---------------------------------------------------------------------------
-# npm delegating topic row
-# ---------------------------------------------------------------------------
-
-@test "npm becomes one delegating topic row with correct label and category" {
-  local ctx json
-  ctx="$(mktemp)"
-  install_context_json "$ctx"
-  json="$(cat "$ctx")"
-  # Exactly one npm topic row.
-  local count
-  count="$(jq '[.packages[] | select(.id == "npm" and .kind == "topic")] | length' <<<"$json")"
-  [ "$count" -eq 1 ]
-  # Human label.
-  [ "$(jq -r '[.packages[] | select(.id == "npm")][0].label' <<<"$json")" == "NPM global tools" ]
-  # Category and area.
-  [ "$(jq -r '[.packages[] | select(.id == "npm")][0].category' <<<"$json")" == "Dev" ]
-  [ "$(jq -r '[.packages[] | select(.id == "npm")][0].area' <<<"$json")" == "dev" ]
-  rm -f "$ctx"
-}
-
 @test "npm is excluded from brew parsing in package_rows" {
   # The npm topic file contains plain package names, not brew/cask entries.
   # package_rows must skip it (like code/duti) so brew bundle never sees it.
@@ -383,15 +320,4 @@ source_ai() {
   ! grep -q 'npm' <<<"$rows"
   # core topic must still be present.
   grep -q 'core.*brew.*fzf' <<<"$rows"
-}
-
-@test "real tree: code row remains present alongside npm" {
-  local ctx json
-  ctx="$(mktemp)"
-  install_context_json "$ctx"
-  json="$(cat "$ctx")"
-  # Both code and npm are topic rows.
-  [ "$(jq '[.packages[] | select(.id == "code" and .kind == "topic")] | length' <<<"$json")" -eq 1 ]
-  [ "$(jq '[.packages[] | select(.id == "npm" and .kind == "topic")] | length' <<<"$json")" -eq 1 ]
-  rm -f "$ctx"
 }

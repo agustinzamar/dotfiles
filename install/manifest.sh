@@ -67,8 +67,6 @@ area_for_package() {
   case "$1" in
     # Area tokens used directly as link components resolve to themselves.
     base | shell | git | terminal | vscode | ai | ai-herdr | claude | dev | media | desktop | system | desktop-*) echo "$1" ;;
-    # --- NPM global tools ---
-    npm) echo "dev" ;;
     # --- System settings (dot dock / dot macos apply_defaults scripts) ---
     dock | macos) echo "system" ;;
     # --- Shell (locked block; also p10k/starship link component) ---
@@ -83,7 +81,7 @@ area_for_package() {
     opencode | anomalyco/tap/opencode | pi-coding-agent | claude-code@latest | codex | t3-code) echo "ai" ;;
     herdr) echo "ai-herdr" ;;
     # --- Dev ---
-    make | go | node | python@3.14 | pnpm | bun | pipx | rust | shellcheck | shfmt | bats-core | act | sshpass | phpstorm | actionlint | swiftformat | mysql | mysql-client | postgresql | redis | sqlite | mise | composer | php | php@8.2 | php@8.3 | php@8.4 | orbstack | openusage) echo "dev" ;;
+    make | go | mise | python@3.14 | pipx | rust | shellcheck | shfmt | bats-core | act | sshpass | phpstorm | actionlint | swiftformat | mysql | mysql-client | postgresql | redis | sqlite | composer | php | php@8.2 | php@8.3 | php@8.4 | orbstack | openusage) echo "dev" ;;
     # --- Desktop (subareas match links.sh component tokens) ---
     linearmouse) echo "desktop-linearmouse" ;;
     sketchybar) echo "desktop-sketchybar" ;;
@@ -129,7 +127,7 @@ package_rows() {
   for file in "$MANIFEST_TOPIC_DIR"/*; do
     topic=$(basename "$file")
     case "$topic" in
-      code | duti | npm) continue ;;
+      code | duti) continue ;;
     esac
     while IFS= read -r line; do
       line=${line%%#*}
@@ -145,7 +143,6 @@ package_rows() {
   # Special-installer topics: one delegating row each.
   # (dock/macos/duti use their own bin/dot subcommands, not `dot install`.)
   printf 'code\ttopic\tcode\n'
-  printf 'npm\ttopic\tnpm\n'
 }
 
 # Emit the link map verbatim (all_links then optional_links). manifest.sh adds
@@ -168,7 +165,6 @@ _manifest_label() {
     # step-1 rows instead of being hidden away in a step-2 corner.
     case "$id" in
       code) printf 'VS Code extensions' ;;
-      npm) printf 'NPM global tools' ;;
       duti-defaults) printf 'Default file handlers' ;;
       dock) printf 'Dock defaults' ;;
       macos) printf 'macOS defaults' ;;
@@ -190,8 +186,6 @@ manifest_category() {
     duti-defaults | dock | macos) echo "System" ;;
     # --- VS Code extensions (`code` delegates to dot install code) ---
     code) echo "Editors" ;;
-    # --- NPM global tools (`npm` delegates to dot install npm) ---
-    npm) echo "Dev" ;;
     # --- AI agents and AI apps ---
     claude-code@latest | codex | t3-code | anomalyco/tap/opencode | pi-coding-agent | claude | chatgpt | herdr | openusage) echo "AI" ;;
     # --- Browsers ---
@@ -224,7 +218,7 @@ manifest_category() {
     # --- Editors and IDEs ---
     neovim | visual-studio-code | phpstorm) echo "Editors" ;;
     # --- Dev languages, runtimes and CLI tools ---
-    make | go | node | python@3.14 | pnpm | bun | pipx | rust | bats-core | act | sshpass | mise | composer | php | php@8.2 | php@8.3 | php@8.4) echo "Dev" ;;
+    make | go | python@3.14 | pipx | rust | bats-core | act | sshpass | mise | composer | php | php@8.2 | php@8.3 | php@8.4) echo "Dev" ;;
     # --- Linters and formatters ---
     shellcheck | shfmt | actionlint | swiftformat) echo "Linters" ;;
     # --- Local dev environments and service runtimes ---

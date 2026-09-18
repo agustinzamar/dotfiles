@@ -126,16 +126,12 @@ teardown() {
 # number of arguments"), so the command never ran and the assertions below
 # could not pass on Linux. Both branches run the same command and assert the
 # same behaviour.
-@test "interactive install with an unlaunchable runtime fails naming the headless flags" {
+@test "interactive install without TTY fails naming the headless flags" {
   local scratch_home
   scratch_home="$(mktemp -d)"
-  if [[ "$(uname -s)" == Darwin ]]; then
-    run script -q /dev/null env PATH="$BASE_PATH" HOME="$scratch_home" \
-      "$DOT" install --dry-run
-  else
-    run script -qec "env PATH='$BASE_PATH' HOME='$scratch_home' '$DOT' install --dry-run" /dev/null
-  fi
+  # Use < /dev/null to ensure no TTY (script -q /dev/null allocates a PTY)
+  run env PATH="$BASE_PATH" HOME="$scratch_home" "$DOT" install --dry-run < /dev/null
   [ "$status" -ne 0 ]
-  [[ "$output" == *"TUI unavailable"* ]]
+  [[ "$output" == *"stdin is not a TTY"* ]]
   [[ "$output" == *"--all"* ]]
 }

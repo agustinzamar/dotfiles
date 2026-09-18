@@ -32,8 +32,6 @@ set -- ${args[@]+"${args[@]}"}
 . "$DOTFILES_DIR/install/manifest.sh"
 # shellcheck source=../install/git.sh
 . "$DOTFILES_DIR/install/git.sh"
-# shellcheck source=../install/ai.sh
-. "$DOTFILES_DIR/install/ai.sh"
 # shellcheck source=../install/php.sh
 . "$DOTFILES_DIR/install/php.sh"
 
@@ -53,13 +51,6 @@ sub_help() {
   echo "Config links:"
   echo "   link [--dry-run]        Symlink selected configs whose tools are available"
   echo "   link <name> [--dry-run] Symlink one config or group: $(link_names)"
-  echo
-  echo "AI extras (opt-in — no install phase runs these):"
-  echo "   ai                   Open the AI picker (skills/plugins selector)"
-  echo "   ai <agent>           Limit to one agent: $(ai_agent_names)"
-  echo "   ai --all             Install every skill/plugin for every detected agent"
-  echo "   ai --skills          Skills only (add --plugins for plugins only)"
-  echo "   ai --dry-run         Compose with the above: print commands, run none"
 }
 
 # Resolve an `install` subcommand or topic name to what runs it. Echoes the
@@ -104,10 +95,6 @@ sub_install() {
       sub_full
       return $?
       ;;
-    ai)
-      sub_ai "$@"
-      return $?
-      ;;
     link | links)
       echo "'install $cmd' is gone — use \`dot $cmd\` directly (see \`dot link help\`)" >&2
       return 1
@@ -134,41 +121,26 @@ sub_install() {
   esac
 }
 
-# Interactive default for bare `dot install` (user decision: TUI first, then
-# bootstrap on confirm). Order: TTY guard FIRST (piped curl dies in ms), then
-# only the installer's own runtime — a prebuilt bin/dot-tui needs nothing, so
-# on the normal path nothing is provisioned before the selector. Xcode CLT /
-# Homebrew / bun are installed by the `dot bootstrap` step the TUI runs at the
-# START of its apply phase (post-confirm), never before the user chooses.
+# Interactive default for bare `dot install` — runs headless install with all topics.
+# Order: TTY guard FIRST (piped curl dies in ms), then headless install with --all.
 # Exit mapping: 0 → applied summary, 10 → aborted (nothing installed/linked),
-# any other non-zero → propagate loudly. PATH is normalized so the TUI's brew
-# steps and subprocesses see the known package-manager locations even when the
-# launching shell runs a bare macOS GUI PATH.
+# any other non-zero → propagate loudly. PATH is normalized so the installer's
+# brew steps and subprocesses see the known package-manager locations even when
+# the launching shell runs a bare macOS GUI PATH.
 run_interactive_install() {
   if [[ ! -t 0 ]]; then
     echo "stdin is not a TTY — use \`dot install --all\` or \`dot install <topic>\`" >&2
     return 1
   fi
 
-  # Known Homebrew/bun locations, prepended: GUI-launched terminals and the
-  # TUI's `sh -c` steps inherit this and can actually find brew/bun. Applied
-  # AFTER resolving the runtime so the resolver sees the caller's environment.
-  local bin ctx exit_code=0
-  bin=$(dot_runtime_path) || {
-    echo "TUI unavailable — use \`dot install --all\` or \`dot install <topic>\` for a headless install" >&2
-    return 1
-  }
+  # Known Homebrew/bun locations, prepended so subprocesses see them.
   export PATH="$HOME/.bun/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
-  ctx=$(mktemp) || return 1
-  install_context_json "$ctx" || {
-    rm -f "$ctx"
-    return 1
-  }
 
-  local args=(--context "$ctx")
+  # Run headless install with --all (no TUI)
+  local exit_code=0
+  local args=()
   "$DRY_RUN" && args+=(--dry-run)
-  "$bin" "${args[@]}" || exit_code=$?
-  rm -f "$ctx"
+  install_headless "${args[@]}" || exit_code=$?
 
   case "$exit_code" in
     0)
@@ -185,56 +157,29 @@ run_interactive_install() {
   esac
 }
 
-# Resolve the TUI binary (prebuilt or one-time build) without provisioning a
-# package manager. Lookup order for bun: PATH honors the environment and any
-# stubs, then known Homebrew/~/.bun locations catch GUI-launched terminals
-# that never put those dirs on PATH. Set DOT_RUNTIME_BUN_LOOKUP=path to force
-# PATH-only (the bats suite does, so its fake-bun stubs stay deterministic).
-dot_runtime_path() {
-  local bin="$DOTFILES_DIR/bin/dot-tui"
-  # Version-gated prebuilt: only trust a binary whose marker matches the
-  # current TUI contract. A stale/foreign binary (old pre-delta build) prints
-  # nothing or an old marker, so it falls through to a rebuild — a checked-out
-  # repo can never silently run an outdated installer UI.
-  if [[ -x "$bin" ]] && [[ "$("$bin" --version 2>/dev/null)" == "dot-tui-context-v13" ]]; then
-    printf '%s\n' "$bin"
-    return 0
+# Headless install with --all (no TUI). Supports --dry-run flag.
+install_headless() {
+  local dry_run=false
+  if [[ "$1" == "--dry-run" ]]; then
+    dry_run=true
   fi
 
-  local required installed bun_bin=""
-  if [[ "${DOT_RUNTIME_BUN_LOOKUP:-}" != path ]]; then
-    for candidate in "$HOME/.bun/bin/bun" /opt/homebrew/bin/bun /usr/local/bin/bun; do
-      [[ -x "$candidate" ]] && bun_bin=$candidate
-    done
-  fi
-  if [[ -z "$bun_bin" ]]; then
-    bun_bin=$(command -v bun 2>/dev/null || true)
-  fi
-  [[ -n "$bun_bin" ]] || {
-    echo "dot-tui binary missing and Bun required to build it is not installed." >&2
-    echo "Run the official bootstrap script (installs everything needed):" >&2
-    echo "  curl -fsSL https://raw.githubusercontent.com/agustinzamar/dotfiles/main/remote-install.sh | bash" >&2
-    return 1
-  }
+  local phase failures=()
+  for phase in bootstrap brew php link zsh code macos duti git; do
+    if [[ "$dry_run" == true ]]; then
+      echo "🔧 Would run: sub_$phase"
+    else
+      "sub_$phase" || failures+=("$phase")
+    fi
+  done
 
-  required=$(<"$DOTFILES_DIR/.bun-version")
-  installed=$("$bun_bin" --version 2>/dev/null) || return 1
-  if ! version_at_least "$installed" "$required"; then
-    echo "dot-tui binary missing and Bun >= $required not found (found $installed)." >&2
-    echo "Run the official bootstrap script (installs everything needed):" >&2
-    echo "  curl -fsSL https://raw.githubusercontent.com/agustinzamar/dotfiles/main/remote-install.sh | bash" >&2
+  if ((${#failures[@]})); then
+    echo "❌ Finished with failures: ${failures[*]}" >&2
     return 1
   fi
-  echo "==> Building dot-tui (one-time)" >&2
-  (
-    cd "$DOTFILES_DIR/tools/tui" &&
-      "$bun_bin" install --frozen-lockfile &&
-      "$bun_bin" build --compile --minify src/main.ts --outfile "$bin"
-  ) || {
-    echo "dot-tui build failed." >&2
-    return 1
-  }
-  printf '%s\n' "$bin"
+  if [[ "$dry_run" == false ]]; then
+    log "Installation complete"
+  fi
 }
 
 sub_baseline() {
@@ -245,70 +190,10 @@ sub_baseline() {
   sub_git
 }
 
-# dot ai [--all] [<agent>...] [--skills|--plugins]
-#
-# Opt-in: no install phase calls this. Bare `dot ai` opens the picker TUI
-# (tools/tui/src/ai.tsx). `--all` keeps the old headless behavior (install
-# everything for every detected agent). A named agent limits to that agent.
-# `--skills`/`--plugins` still install for every detected agent, just like
-# before. `--dry-run` composes with all of the above (printed by bin/dot before dispatch).
-sub_ai() {
-  local do_skills=false do_plugins=false agents=() arg failures=()
-  local do_all=false explicit_kind=false
-  for arg in "$@"; do
-    case "$arg" in
-      --skills)
-        do_skills=true
-        explicit_kind=true
-        ;;
-      --plugins)
-        do_plugins=true
-        explicit_kind=true
-        ;;
-      --all) do_all=true ;;
-      -*)
-        echo "Usage: dot ai [--all] [<agent>] [--skills|--plugins]" >&2
-        return 1
-        ;;
-      *)
-        ai_agent_cli "$arg" >/dev/null || {
-          echo "unknown agent: $arg — try: $(ai_agent_names)" >&2
-          return 1
-        }
-        agents+=("$arg")
-        ;;
-    esac
-  done
-  $do_skills || $do_plugins || {
-    do_skills=true
-    do_plugins=true
-  }
-
-  # Bare `dot ai` (nothing requested) opens the picker.
-  if ! $do_all && ((${#agents[@]} == 0)) && ! $explicit_kind; then
-    ai_open_picker || return $?
-    return 0
-  fi
-
-  # --all, or a --skills/--plugins-only call, installs for every detected agent.
-  if $do_all || ((${#agents[@]} == 0)); then
-    read -ra agents <<<"$(ai_agent_names)"
-  fi
-
-  if $do_skills; then ai_install skills "${agents[@]}" || failures+=("skills"); fi
-  if $do_plugins; then ai_install plugins "${agents[@]}" || failures+=("plugins"); fi
-
-  if ((${#failures[@]})); then
-    echo "❌ Finished with failures: ${failures[*]}" >&2
-    return 1
-  fi
-  return 0
-}
-
 sub_full() {
   log "Full install"
   local phase failures=()
-  for phase in bootstrap brew php npm link zsh code macos duti git; do
+  for phase in bootstrap brew php link zsh code macos duti git; do
     "sub_$phase" || failures+=("$phase")
   done
 
@@ -451,22 +336,6 @@ sub_duti() {
     rm -f "$tmp"
   else
     echo "⚠️ duti not installed; skipping default app setup" >&2
-  fi
-}
-
-sub_npm() {
-  if is_executable npm; then
-    log "Installing NPM global tools"
-    local pkg failures=()
-    while read -r pkg; do
-      run npm install -g "$pkg" || failures+=("$pkg")
-    done < <(read_package_file "$TOPIC_DIR/npm")
-    if ((${#failures[@]})); then
-      log "npm packages that failed: ${failures[*]}"
-      return 1
-    fi
-  else
-    echo "⚠️ npm not installed; skipping NPM global tools" >&2
   fi
 }
 
@@ -621,7 +490,6 @@ sub_clean() {
     run_step "Mole cleanup" complete mole clean </dev/null || return 1
   fi
   run_step "Homebrew cleanup" complete brew cleanup
-  if is_executable pnpm; then run_step "pnpm store cleanup" complete pnpm store prune; fi
 }
 
 sub_edit() {
@@ -643,7 +511,7 @@ sub_agents() {
   esac
 }
 
-TOP_COMMANDS=" agents ai backup clean doctor edit help install link unlink update "
+TOP_COMMANDS=" agents backup clean doctor edit help install link unlink update "
 
 COMMAND_NAME=${1:-}
 case "$COMMAND_NAME" in
