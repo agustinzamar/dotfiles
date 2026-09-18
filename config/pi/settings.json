@@ -15,7 +15,8 @@
     "anthropic/claude-sonnet-5",
     "nvidia/moonshotai/kimi-k3",
     "opencode-go/deepseek-v4.1-flash",
-    "nvidia/deepseek-ai/deepseek-v4-flash-0731"
+    "nvidia/deepseek-ai/deepseek-v4-flash-0731",
+    "kilo/kilo-auto/free"
   ],
   "followUpMode": "all",
   "fullscreenExitOutput": "resume-hint",
