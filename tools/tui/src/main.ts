@@ -464,9 +464,7 @@ if (import.meta.main) {
   const exitCode =
     flags.context === ""
       ? await (() => {
-          console.error(
-            "missing --context FILE for the interactive installer",
-          );
+          console.error("missing --context FILE for the interactive installer");
           return EXIT_ERROR;
         })()
       : await runInteractive(flags.context, flags.dryRun);

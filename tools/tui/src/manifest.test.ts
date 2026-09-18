@@ -212,4 +212,3 @@ describe("selectedPackages", () => {
     expect(picked.map((p) => p.id)).toEqual(["tmux", "ghostty", "code"]);
   });
 });
-

@@ -672,4 +672,3 @@ describe("applyConfirmed — component-driven ui seam (@inkjs/ui)", () => {
     expect(calls).toEqual([]);
   });
 });
-
