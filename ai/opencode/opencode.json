@@ -3,35 +3,10 @@
   "permission": {
     "*": "allow",
     "bash": {
-      "*": "allow",
-      "scp": "ask",
-      "scp *": "ask",
-      "sftp": "ask",
-      "sftp *": "ask",
-      "ssh": "ask",
-      "ssh *": "ask",
-      "git commit *": "ask",
-      "git push": "ask",
-      "git push *": "ask",
-      "git push --force *": "ask",
-      "git rebase *": "ask",
-      "git reset --hard *": "ask"
+      "*": "allow"
     },
     "read": {
-      "*": "allow",
-      "**/*.key": "deny",
-      "**/*.pem": "deny",
-      "**/.aws/credentials": "deny",
-      "**/.config/gh/hosts.yml": "deny",
-      "**/.credentials/**": "deny",
-      "**/.env": "deny",
-      "**/.env.*": "deny",
-      "**/.ssh/**": "deny",
-      "**/Library/Keychains/**": "deny",
-      "**/credentials.json": "deny",
-      "**/secrets/**": "deny",
-      "*.env": "deny",
-      "*.env.*": "deny"
+      "*": "allow"
     }
   },
   "lsp": true,
@@ -73,31 +48,7 @@
       "mode": "primary",
       "options": {},
       "permission": {
-        "task": {
-          "*": "deny",
-          "explore": "allow",
-          "general": "allow",
-          "jd-fix-agent": "allow",
-          "jd-judge-a": "allow",
-          "jd-judge-b": "allow",
-          "review-readability": "allow",
-          "review-refuter": "allow",
-          "review-reliability": "allow",
-          "review-resilience": "allow",
-          "review-risk": "allow",
-          "review-validator": "allow",
-          "sdd-apply": "allow",
-          "sdd-archive": "allow",
-          "sdd-design": "allow",
-          "sdd-explore": "allow",
-          "sdd-init": "allow",
-          "sdd-onboard": "allow",
-          "sdd-propose": "allow",
-          "sdd-research": "allow",
-          "sdd-spec": "allow",
-          "sdd-tasks": "allow",
-          "sdd-verify": "allow"
-        },
+        "task": "allow",
         "question": "allow"
       }
     },
