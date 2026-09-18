@@ -13,10 +13,10 @@ setup() {
   chmod +x "$MACOS_BIN/uname"
 }
 
-@test "dot with no arguments prints usage" {
+@test "dot with no arguments prints help" {
   run "$DOT"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Usage: dot <command>"* ]]
+  [[ "$output" == *"Install (use"* ]]
 }
 
 @test "dot help lists commands" {
@@ -85,7 +85,7 @@ setup() {
 @test "install keeps a top-level help line" {
   run "$DOT" help
   [ "$status" -eq 0 ]
-  grep -q '^   install  ' <<<"$output"
+  grep -q '^   install ' <<<"$output"
 }
 
 # The completion parses `dot help`, so a change to the help format silently
@@ -121,8 +121,9 @@ setup() {
     # the parsed command set must exclude tui and stay exactly the advertised set.
     @test "completion from help excludes tui and lists every advertised command" {
       local parsed expected
-      parsed=$("$DOT" help | sed -n 's/^   \([a-z][a-z0-9-]*\)   *\(.*\)$/\1/p' | sort -u)
-      expected=$(printf '%s\n' ai doctor help install link test unlink update | sort -u)
+      # Match command names whether followed by " [--dry-run]" or multiple spaces
+      parsed=$("$DOT" help | sed -n 's/^   \([a-z][a-z0-9-]*\)\( \[[^]]*\]\)\{0,1\}  .*/\1/p' | sort -u)
+      expected=$(printf '%s\n' ai doctor help install link unlink update | sort -u)
       ! grep -qw tui <<<"$parsed"
       [ "$parsed" = "$expected" ]
     }
@@ -364,16 +365,16 @@ EOF
   [[ "$output" == *"dock.sh"* ]]
 }
 
-# bin/dot brew/link/etc used to only dispatch through `dot install <name>`;
-# the README documents them as top-level commands in their own right.
-@test "install subcommands and topics work as bare top-level commands" {
-  PATH="$MACOS_BIN:$PATH" run "$DOT" brew --dry-run
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"install/topics/core"* ]]
+# bin/dot no longer dispatches install subcommands/topics as bare commands.
+# They must be called via `dot install <name>`.
+@test "install subcommands and topics NO LONGER work as bare top-level commands" {
+  run "$DOT" brew --dry-run
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"not a known command"* ]]
 
-  PATH="$MACOS_BIN:$PATH" run "$DOT" core --dry-run
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"install/topics/core"* ]]
+  run "$DOT" core --dry-run
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"not a known command"* ]]
 
   HOME="$(mktemp -d)" run "$DOT" link ohmyposh --dry-run
   [ "$status" -eq 0 ]
@@ -924,16 +925,16 @@ EOF
 # npm global tools (topics/npm)
 # ---------------------------------------------------------------------------
 
-@test "dot npm warns and succeeds when npm is missing" {
+@test "dot install npm warns and succeeds when npm is missing" {
   local stub
   stub="$(mktemp -d)"
   # No npm on PATH: only sh and basic utils.
-  PATH="$MACOS_BIN:/usr/bin:/bin" run "$DOT" npm
+  PATH="$MACOS_BIN:/usr/bin:/bin" run "$DOT" install npm
   [ "$status" -eq 0 ]
   [[ "$output" == *"npm not installed"* ]]
 }
 
-@test "dot npm installs packages globally with correct arguments" {
+@test "dot install npm installs packages globally with correct arguments" {
   local stub log
   stub="$(mktemp -d)"
   log="$stub/log"
@@ -944,7 +945,7 @@ exit 0
 EOF
   chmod +x "$stub/npm"
 
-  NPM_LOG="$log" PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" npm
+  NPM_LOG="$log" PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" install npm
   [ "$status" -eq 0 ]
   grep -q '\-g' "$log"
   grep -q 'typescript-language-server' "$log"
@@ -989,7 +990,7 @@ typescript-language-server
 # Another comment
 EOF
 
-  NPM_LOG="$log" PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" npm
+  NPM_LOG="$log" PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" install npm
   local status=$?
   cp "$backup" "$real_npm"
   [ "$status" -eq 0 ]
@@ -1019,7 +1020,7 @@ typescript-language-server
 prettier
 EOF
 
-  NPM_LOG="$log" PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" npm
+  NPM_LOG="$log" PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" install npm
   local status=$?
   cp "$backup" "$real_npm"
   [ "$status" -eq 0 ]

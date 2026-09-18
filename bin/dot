@@ -38,26 +38,21 @@ set -- ${args[@]+"${args[@]}"}
 . "$DOTFILES_DIR/install/php.sh"
 
 sub_help() {
-  echo "Usage: $BIN_NAME <command> [options]"
-  echo "Options: --dry-run"
+  echo "Install (use \`dot install <name>\`):"
+  echo "   install [--dry-run]         Open the interactive installer"
+  echo "   install --all [--dry-run]   Install every standard phase headlessly"
+  echo "   install <topic> [--dry-run] Install a topic: $(topic_names)"
   echo
   echo "Commands:"
-  echo "   agents sync     Refresh agent instruction files from the repository"
-  echo "   doctor          Check that required tools and symlinks are in place"
-  echo "   help            This help message"
-  echo "   test            Run tests"
-  echo "   unlink          Remove symlinks that point into this repo"
-  echo "   update          Pull latest dotfiles and upgrade installed packages"
+  echo "   agents sync [--dry-run] Refresh agent instruction files from the repository"
+  echo "   doctor                  Check that required tools and symlinks are in place"
+  echo "   help                    This help message"
+  echo "   unlink [--dry-run]      Remove symlinks that point into this repo"
+  echo "   update [--dry-run]      Pull latest dotfiles and upgrade installed packages"
   echo
   echo "Config links:"
-  echo "   link             Symlink selected configs whose tools are available"
-  echo "   link <name>      Symlink one config or group: $(link_names)"
-  echo "   link --all       Symlink every config explicitly"
-  echo
-  echo "Install (each also works as \`dot <name>\`, no \`install\` needed):"
-  echo "   install              Open the interactive installer — requires a TTY"
-  echo "   install --all        Install every standard phase headlessly; AI stays opt-in"
-  echo "   install <topic>      Install a topic: $(topic_names)"
+  echo "   link [--dry-run]        Symlink selected configs whose tools are available"
+  echo "   link <name> [--dry-run] Symlink one config or group: $(link_names)"
   echo
   echo "AI extras (opt-in — no install phase runs these):"
   echo "   ai                   Open the AI picker (skills/plugins selector)"
@@ -504,9 +499,6 @@ sub_link() {
       log "Linking dotfiles"
       link_all
       ;;
-    all | --all)
-      LINK_FORCE=true link_all
-      ;;
     help)
       echo "Usage: $BIN_NAME link [target]"
       echo "   (no target)  Symlink every config into place"
@@ -636,10 +628,6 @@ sub_edit() {
   sh -c "${VISUAL:-code} $DOTFILES_DIR"
 }
 
-sub_test() {
-  bats "$DOTFILES_DIR"/test/*.bats
-}
-
 # dot agents sync — refresh agent instruction files from the repository source.
 sub_agents() {
   local cmd="${1:-}"
@@ -655,7 +643,7 @@ sub_agents() {
   esac
 }
 
-TOP_COMMANDS=" agents backup clean doctor edit help install link test unlink update "
+TOP_COMMANDS=" agents ai backup clean doctor edit help install link unlink update "
 
 COMMAND_NAME=${1:-}
 case "$COMMAND_NAME" in
@@ -674,8 +662,6 @@ case "$COMMAND_NAME" in
     shift
     if [[ "$TOP_COMMANDS" == *" $COMMAND_NAME "* ]]; then
       "sub_${COMMAND_NAME//-/_}" "$@"
-    elif resolve_install_target "$COMMAND_NAME" >/dev/null; then
-      sub_install "$COMMAND_NAME" "$@"
     else
       echo "'$COMMAND_NAME' is not a known command." >&2
       sub_help >&2

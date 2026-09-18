@@ -121,12 +121,20 @@ link_all() {
 
 # Link every target sharing a name (`ghostty` -> two rows). Unknown names fail
 # loudly instead of silently doing nothing.
+# Explicit `dot link <name>` fails if the required tool is not installed.
 link_named() {
   local name="$1" map found=0
   # A name could live in both maps, so walk every map that declares it rather
   # than stopping at the first — otherwise a shared name would skip rows.
   for map in all_links_raw optional_links; do
     if "$map" | cut -d'|' -f1 | grep -qx "$name"; then
+      # Check requirements upfront: explicit link <name> must fail if tool missing
+      local req
+      req=$("$map" | awk -F'|' -v n="$name" '$1 == n && $6 != "" {print $6; exit}')
+      if [[ -n "$req" ]] && ! is_executable "$(platform_binary "$req")"; then
+        echo "missing requirement: $name needs $req" >&2
+        return 1
+      fi
       log "Linking $name"
       _walk_links "$map" link_file "$name"
       found=1

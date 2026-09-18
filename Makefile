@@ -31,7 +31,7 @@ install:
 	$(DOT) install
 
 test:
-	$(DOT) test
+	bats test/*.bats
 
 check:
 	bash -n $(SCRIPTS)
