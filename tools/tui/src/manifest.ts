@@ -3,8 +3,7 @@
 // The Go-era embedded package/command tables are RETIRED (ADR-2): the Bash
 // emitter install/manifest.sh is the single package source of truth and the
 // TUI consumes context packages exclusively. This module keeps only pure
-// planning/metadata helpers: selector row shaping, the link filter rule, and
-// profile-area derivation.
+// planning/metadata helpers: selector row shaping and the link filter rule.
 import type { ContextLink, ContextPackage, InstallContext } from "./context";
 
 /** Locked informational row rendered at the top of the selector. Always runs
@@ -167,28 +166,6 @@ export function offeredLinks(
   });
   const agents = context.links.filter((link) => link.optional);
   return { main, agents };
-}
-
-/**
- * ADR-4: active area ids for the profile — areas of every confirmed row
- * (locked rows are always confirmed) union the locked areas. Locked rows'
- * areas (shell/git/terminal via fzf/git/gh/tmux) preserve today's
- * component_default_selected baseline in the written profile.
- */
-export function activeProfileAreas(
-  context: InstallContext,
-  selected: ReadonlySet<string>,
-): string[] {
-  const areas = new Set<string>(context.locked);
-  for (const step of LOCKED_PSEUDO_STEPS) {
-    areas.add(step.area);
-  }
-  for (const p of context.packages) {
-    if (selected.has(p.id)) {
-      areas.add(p.area);
-    }
-  }
-  return [...areas];
 }
 
 /**

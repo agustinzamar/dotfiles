@@ -1,4 +1,4 @@
-// Planner-metadata tests over the context contract (ADR-2/4).
+// Planner-metadata tests over the context contract (ADR-2).
 //
 // The Go-era embedded catalog (COMPONENTS, 31 entries) is RETIRED: the Bash
 // emitter install/manifest.sh is the single package source of truth, and this
@@ -10,7 +10,6 @@ import type { InstallContext } from "./context";
 import {
   LOCKED_PSEUDO_STEPS,
   OPTIONAL_PSEUDO_STEPS,
-  activeProfileAreas,
   selectedPackages,
   toolGroups,
   toolRows,
@@ -214,21 +213,3 @@ describe("selectedPackages", () => {
   });
 });
 
-describe("activeProfileAreas", () => {
-  test("locked areas union the areas of confirmed rows", () => {
-    const areas = activeProfileAreas(fixture, new Set(["ghostty", "opencode"]));
-    // base+shell from locked; shell again from zsh-setup; terminal from ghostty;
-    // ai from opencode. git-signing is opt-in (step 2) now, not a locked
-    // pseudo-step, so it never contributes an area here.
-    expect(new Set(areas)).toEqual(
-      new Set(["base", "shell", "terminal", "ai"]),
-    );
-  });
-
-  test("locked areas only when nothing is selected", () => {
-    const areas = activeProfileAreas(fixture, new Set());
-    // base from locked; shell from locked + zsh-setup step.
-    // Locked package rows (fzf, tmux) are not "selected", so terminal stays out.
-    expect(new Set(areas)).toEqual(new Set(["base", "shell"]));
-  });
-});

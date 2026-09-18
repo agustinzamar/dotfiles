@@ -1,5 +1,5 @@
 // Task 5.1 (RED first): pins the exact stdout/stderr string contract that
-// main.ts must emit in -profile/-apply/-dry-run flag mode and the interactive
+// main.ts must emit in --context/--dry-run flag mode and the interactive
 // loop. Every expected literal below is copied verbatim from
 // cmd/dot-tui/main.go and traces to dot-cli-bootstrap "Non-Interactive Flag
 // Mode" / "Interactive Loop Persists Then Applies" scenarios. main.ts stays
@@ -14,148 +14,16 @@ import {
   installedLine,
   LINK_FAILED,
   LINK_OK,
-  defaultProfilePath,
   parseFlags,
   progressLine,
   roundExitCode,
-  runFlagMode,
   skippedLine,
   taskLine,
   TUI_VERSION,
 } from "./main";
 import type { InstallContext } from "./context";
-import { afterAll, describe, expect, test } from "bun:test";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import * as path from "node:path";
+import { describe, expect, test } from "bun:test";
 import type { Runner } from "./plan";
-
-const tempDirs: string[] = [];
-
-afterAll(async () => {
-  for (const dir of tempDirs) {
-    await rm(dir, { recursive: true, force: true });
-  }
-});
-
-async function makeTempDir(): Promise<string> {
-  const dir = await mkdtemp(path.join(tmpdir(), "dot-tui-main-test-"));
-  tempDirs.push(dir);
-  return dir;
-}
-
-// Fixture context mirroring the real-tree shape (locked rows + defaults +
-// topic rows + requirement-gated and optional links).
-async function makeContextFile(): Promise<string> {
-  const dir = await makeTempDir();
-  const target = path.join(dir, "context.json");
-  const context: InstallContext = {
-    version: 1,
-    locked: ["base", "shell"],
-    packages: [
-      {
-        id: "fzf",
-        topic: "core",
-        kind: "brew",
-        area: "shell",
-        locked: true,
-        default: false,
-      },
-      {
-        id: "git",
-        topic: "core",
-        kind: "brew",
-        area: "git",
-        locked: true,
-        default: false,
-      },
-      {
-        id: "tmux",
-        topic: "core",
-        kind: "brew",
-        area: "terminal",
-        locked: true,
-        default: false,
-      },
-      {
-        id: "ghostty",
-        topic: "core",
-        kind: "cask",
-        area: "terminal",
-        locked: false,
-        default: true,
-      },
-      {
-        id: "lazygit",
-        topic: "git",
-        kind: "brew",
-        area: "git",
-        locked: false,
-        default: true,
-      },
-      {
-        id: "hunk",
-        topic: "git",
-        kind: "brew",
-        area: "git",
-        locked: false,
-        default: true,
-      },
-      {
-        id: "koekeishiya/formulae",
-        topic: "desktop",
-        kind: "tap",
-        area: "desktop",
-        locked: false,
-        default: false,
-      },
-      {
-        id: "code",
-        topic: "code",
-        kind: "topic",
-        area: "vscode",
-        locked: false,
-        default: false,
-      },
-      {
-        id: "duti-defaults",
-        topic: "duti",
-        kind: "topic",
-        area: "terminal",
-        locked: false,
-        default: false,
-      },
-    ],
-    links: [
-      {
-        name: "zsh",
-        optional: false,
-        component: "shell",
-        requirement: "",
-        rows: [{ source: "a", target: "b", mode: "" }],
-      },
-      {
-        name: "ghostty",
-        optional: false,
-        component: "terminal",
-        requirement: "",
-        rows: [
-          { source: "a", target: "b", mode: "" },
-          { source: "a", target: "c", mode: "" },
-        ],
-      },
-      {
-        name: "hunk",
-        optional: false,
-        component: "git",
-        requirement: "hunk",
-        rows: [{ source: "a", target: "b", mode: "" }],
-      },
-    ],
-  };
-  await writeFile(target, JSON.stringify(context));
-  return target;
-}
 
 function recordingRunner(
   calls: string[],
@@ -170,58 +38,21 @@ function recordingRunner(
 
 describe("TUI_VERSION binary contract", () => {
   test("matches the marker dot_runtime_path in bin/dot gates on", () => {
-    expect(TUI_VERSION).toBe("dot-tui-context-v12");
+    expect(TUI_VERSION).toBe("dot-tui-context-v13");
   });
 });
 
 describe("flag parsing accepts Go-style single-dash forms", () => {
-  test("no flags: empty profile, apply/dryRun false, no context", () => {
+  test("no flags: dryRun false, no context", () => {
     expect(parseFlags([])).toEqual({
-      profile: "",
-      apply: false,
       dryRun: false,
       context: "",
     });
-  });
-
-  test("-profile <path>", () => {
-    expect(parseFlags(["-profile", "/tmp/p.json"])).toEqual({
-      profile: "/tmp/p.json",
-      apply: false,
-      dryRun: false,
-      context: "",
-    });
-  });
-
-  test("--profile alias", () => {
-    expect(parseFlags(["--profile", "/tmp/p.json"])).toMatchObject({
-      profile: "/tmp/p.json",
-    });
-  });
-
-  test("-profile=<path> equals form", () => {
-    expect(parseFlags(["-profile=/tmp/p.json"])).toMatchObject({
-      profile: "/tmp/p.json",
-    });
-  });
-
-  test("-apply and --apply set apply", () => {
-    expect(parseFlags(["-apply"]).apply).toBe(true);
-    expect(parseFlags(["--apply"]).apply).toBe(true);
   });
 
   test("-dry-run and --dry-run set dryRun", () => {
     expect(parseFlags(["-dry-run"]).dryRun).toBe(true);
     expect(parseFlags(["--dry-run"]).dryRun).toBe(true);
-  });
-
-  test("combined flag mode argv", () => {
-    expect(parseFlags(["-profile", "p.json", "-apply"])).toEqual({
-      profile: "p.json",
-      apply: true,
-      dryRun: false,
-      context: "",
-    });
   });
 
   test("-context <path> and = form", () => {
@@ -232,8 +63,6 @@ describe("flag parsing accepts Go-style single-dash forms", () => {
       context: "/tmp/c.json",
     });
     expect(parseFlags(["--context", "c.json", "--dry-run"])).toEqual({
-      profile: "",
-      apply: false,
       dryRun: true,
       context: "c.json",
     });
@@ -277,24 +106,10 @@ describe("stdout string contract (verbatim from main.go Printf formats)", () => 
   });
 });
 
-describe("default profile path (interactive mode)", () => {
-  test("${XDG_CONFIG_HOME:-$HOME/.config}/dot/profile.json", () => {
-    expect(defaultProfilePath({ XDG_CONFIG_HOME: "/x", HOME: "/h" })).toBe(
-      "/x/dot/profile.json",
-    );
-    expect(defaultProfilePath({ HOME: "/h" })).toBe(
-      "/h/.config/dot/profile.json",
-    );
-  });
-});
-
 describe("boolean flag values (Go flag parity)", () => {
-  test("-apply=false and -dry-run=false parse false", () => {
-    expect(parseFlags(["-apply=false"]).apply).toBe(false);
+  test("-dry-run=false parses false", () => {
+    expect(parseFlags(["-dry-run=false"]).dryRun).toBe(false);
     expect(parseFlags(["-dry-run=true"]).dryRun).toBe(true);
-    expect(parseFlags(["-profile=p.json", "-apply=false"]).profile).toBe(
-      "p.json",
-    );
   });
 });
 
@@ -315,8 +130,6 @@ describe("exit-code contract", () => {
 
 describe("applyConfirmed — one code path for interactive and headless", () => {
   test("dry-run prints the plan and writes nothing (zero filesystem writes)", async () => {
-    const dir = await makeTempDir();
-    const profilePath = path.join(dir, "profile.json");
     const calls: string[] = [];
     const exit = await applyConfirmed(
       {
@@ -336,7 +149,6 @@ describe("applyConfirmed — one code path for interactive and headless", () => 
       },
       { selected: { ghostty: true }, checked: {} },
       {
-        profilePath,
         dryRun: true,
         run: recordingRunner(calls),
         linkRunner: async (name: string) => {
@@ -346,12 +158,9 @@ describe("applyConfirmed — one code path for interactive and headless", () => 
     );
     expect(exit).toBe(EXIT_OK);
     expect(calls).toEqual([]); // nothing executed
-    expect(await Bun.file(profilePath).exists()).toBe(false);
   });
 
-  test("confirmed apply writes the profile first, then brew, links, special topics, pseudo-steps", async () => {
-    const dir = await makeTempDir();
-    const profilePath = path.join(dir, "profile.json");
+  test("confirmed apply runs brew, links, special topics, pseudo-steps in order", async () => {
     const calls: string[] = [];
     const context: InstallContext = {
       version: 1,
@@ -468,7 +277,6 @@ describe("applyConfirmed — one code path for interactive and headless", () => 
         checked: { ghostty: true, agents: true },
       },
       {
-        profilePath,
         dryRun: false,
         run: recordingRunner(calls),
         linkRunner: async (name: string) => {
@@ -477,23 +285,6 @@ describe("applyConfirmed — one code path for interactive and headless", () => 
       },
     );
     expect(exit).toBe(EXIT_OK);
-
-    // Profile write is FIRST and contains area ids only (active ∪ locked).
-    const profile = JSON.parse(await readFile(profilePath, "utf8")) as {
-      components: Record<string, boolean>;
-    };
-    expect(profile.components["base"]).toBe(true); // locked area
-    expect(profile.components["shell"]).toBe(true); // locked area + fzf row
-    expect(profile.components["git"]).toBe(true); // locked git row + hunk
-    expect(profile.components["terminal"]).toBe(true); // locked tmux + ghostty
-    expect(profile.components["vscode"]).toBe(true); // code row selected
-    expect(profile.components["desktop"]).toBe(true); // tap row selected
-    expect(profile.components["ai"]).toBeUndefined(); // agents don't activate ai
-    // NO link names or links section ever appear in the profile.
-    expect(JSON.stringify(profile)).not.toContain("links");
-    expect(JSON.stringify(profile)).not.toContain("ghostty");
-    expect(JSON.stringify(profile)).not.toContain("agents");
-    expect(JSON.stringify(profile)).not.toContain("zsh");
 
     // Brew commands (taps first), then links, then special topics and
     // pseudo-steps — never the reverse order.
@@ -511,8 +302,6 @@ describe("applyConfirmed — one code path for interactive and headless", () => 
   });
 
   test("git signing (opt-in pseudo-step) only runs when checked; runs after links when it is", async () => {
-    const dir = await makeTempDir();
-    const profilePath = path.join(dir, "profile.json");
     const context: InstallContext = {
       version: 1,
       locked: [],
@@ -532,7 +321,6 @@ describe("applyConfirmed — one code path for interactive and headless", () => 
       context,
       { selected: {}, checked: {} },
       {
-        profilePath,
         dryRun: false,
         run: recordingRunner(unchecked),
         linkRunner: async (name: string) => {
@@ -547,7 +335,6 @@ describe("applyConfirmed — one code path for interactive and headless", () => 
       context,
       { selected: {}, checked: { zsh: true, "git-signing": true } },
       {
-        profilePath,
         dryRun: false,
         run: recordingRunner(checked),
         linkRunner: async (name: string) => {
@@ -562,8 +349,6 @@ describe("applyConfirmed — one code path for interactive and headless", () => 
   });
 
   test("a tap is installed automatically when a sibling formula is selected, even though the tap itself is never in `selected`", async () => {
-    const dir = await makeTempDir();
-    const profilePath = path.join(dir, "profile.json");
     const calls: string[] = [];
     const context: InstallContext = {
       version: 1,
@@ -602,7 +387,6 @@ describe("applyConfirmed — one code path for interactive and headless", () => 
       // entirely (it is never a step-1 row — see manifest.ts toolRows).
       { selected: { yabai: true }, checked: {} },
       {
-        profilePath,
         dryRun: false,
         run: recordingRunner(calls),
         linkRunner: async () => {},
@@ -620,8 +404,6 @@ describe("applyConfirmed — one code path for interactive and headless", () => 
   });
 
   test("mid-apply interruption exits non-zero and short-circuits the next steps", async () => {
-    const dir = await makeTempDir();
-    const profilePath = path.join(dir, "profile.json");
     const calls: string[] = [];
     let interrupted = false;
     const exit = await applyConfirmed(
@@ -650,7 +432,6 @@ describe("applyConfirmed — one code path for interactive and headless", () => 
       },
       { selected: { hunk: true }, checked: {} },
       {
-        profilePath,
         dryRun: false,
         run: recordingRunner(calls, (op) => {
           if (op === "brew install hunk") interrupted = true;
@@ -669,8 +450,6 @@ describe("applyConfirmed — one code path for interactive and headless", () => 
   });
 
   test("a failing brew step is reported loudly and exits non-zero", async () => {
-    const dir = await makeTempDir();
-    const profilePath = path.join(dir, "profile.json");
     const exit = await applyConfirmed(
       {
         version: 1,
@@ -689,7 +468,6 @@ describe("applyConfirmed — one code path for interactive and headless", () => 
       },
       { selected: { hunk: true }, checked: {} },
       {
-        profilePath,
         dryRun: false,
         run: recordingRunner([], () => ({
           output: "boom",
@@ -699,11 +477,6 @@ describe("applyConfirmed — one code path for interactive and headless", () => 
       },
     );
     expect(exit).toBe(EXIT_ERROR);
-    // Partial state is reported, never silently rolled back.
-    const profile = JSON.parse(await readFile(profilePath, "utf8")) as {
-      components: Record<string, boolean>;
-    };
-    expect(profile.components["git"]).toBe(true);
   });
 });
 
@@ -749,8 +522,6 @@ describe("applyConfirmed — component-driven ui seam (@inkjs/ui)", () => {
   }
 
   test("successful apply drives progress, results, then finished:true", async () => {
-    const dir = await makeTempDir();
-    const profilePath = path.join(dir, "profile.json");
     const calls: string[] = [];
     const { ui, events } = captureUi();
     const exit = await applyConfirmed(
@@ -771,7 +542,6 @@ describe("applyConfirmed — component-driven ui seam (@inkjs/ui)", () => {
       },
       { selected: { ghostty: true }, checked: {} },
       {
-        profilePath,
         dryRun: false,
         run: recordingRunner(calls),
         linkRunner: async () => {},
@@ -790,8 +560,6 @@ describe("applyConfirmed — component-driven ui seam (@inkjs/ui)", () => {
   });
 
   test("a failed brew step reports result:failed (with output) and finished:false", async () => {
-    const dir = await makeTempDir();
-    const profilePath = path.join(dir, "profile.json");
     const { ui, events } = captureUi();
     const exit = await applyConfirmed(
       {
@@ -811,7 +579,6 @@ describe("applyConfirmed — component-driven ui seam (@inkjs/ui)", () => {
       },
       { selected: { hunk: true }, checked: {} },
       {
-        profilePath,
         dryRun: false,
         run: recordingRunner([], () => ({
           output: "boom",
@@ -827,8 +594,6 @@ describe("applyConfirmed — component-driven ui seam (@inkjs/ui)", () => {
   });
 
   test("mid-apply interruption pushes the loud summary as an error event + finished:false", async () => {
-    const dir = await makeTempDir();
-    const profilePath = path.join(dir, "profile.json");
     const calls: string[] = [];
     let interrupted = false;
     const { ui, events } = captureUi();
@@ -858,7 +623,6 @@ describe("applyConfirmed — component-driven ui seam (@inkjs/ui)", () => {
       },
       { selected: { hunk: true }, checked: {} },
       {
-        profilePath,
         dryRun: false,
         run: recordingRunner(calls, (op) => {
           if (op === "brew install hunk") interrupted = true;
@@ -877,8 +641,6 @@ describe("applyConfirmed — component-driven ui seam (@inkjs/ui)", () => {
   });
 
   test("dry-run ignores the ui seam entirely (plan stays plain lines)", async () => {
-    const dir = await makeTempDir();
-    const profilePath = path.join(dir, "profile.json");
     const calls: string[] = [];
     const { ui, events } = captureUi();
     const exit = await applyConfirmed(
@@ -899,7 +661,6 @@ describe("applyConfirmed — component-driven ui seam (@inkjs/ui)", () => {
       },
       { selected: { ghostty: true }, checked: {} },
       {
-        profilePath,
         dryRun: true,
         run: recordingRunner(calls),
         linkRunner: async () => {},
@@ -912,64 +673,3 @@ describe("applyConfirmed — component-driven ui seam (@inkjs/ui)", () => {
   });
 });
 
-describe("runFlagMode — headless -apply -profile (no UI mounts)", () => {
-  test("missing --context fails loudly instead of guessing", async () => {
-    const dir = await makeTempDir();
-    const profilePath = path.join(dir, "profile.json");
-    await writeFile(profilePath, JSON.stringify({ components: { ai: true } }));
-    const exit = await runFlagMode(profilePath, "", false, false);
-    expect(exit).toBe(EXIT_ERROR);
-  });
-
-  test("dry-run prints the plan and leaves the profile untouched", async () => {
-    const dir = await makeTempDir();
-    const profilePath = path.join(dir, "profile.json");
-    await writeFile(
-      profilePath,
-      JSON.stringify({ components: { vscode: true } }),
-    );
-    const contextPath = await makeContextFile();
-    const calls: string[] = [];
-    const exit = await runFlagMode(profilePath, contextPath, false, true, {
-      run: recordingRunner(calls),
-      linkRunner: async (name: string) => {
-        calls.push(`dot link ${name}`);
-      },
-    });
-    expect(exit).toBe(EXIT_OK);
-    expect(calls).toEqual([]);
-    expect(await readFile(profilePath, "utf8")).toBe(
-      JSON.stringify({ components: { vscode: true } }),
-    );
-  });
-
-  test("apply mode installs every area in the profile at area granularity", async () => {
-    const dir = await makeTempDir();
-    const profilePath = path.join(dir, "profile.json");
-    const contextPath = await makeContextFile();
-    await writeFile(
-      profilePath,
-      JSON.stringify({ components: { vscode: true } }),
-    );
-    const calls: string[] = [];
-    const exit = await runFlagMode(profilePath, contextPath, true, false, {
-      run: recordingRunner(calls),
-      linkRunner: async (name: string) => {
-        calls.push(`dot link ${name}`);
-      },
-    });
-    expect(exit).toBe(EXIT_OK);
-    // vscode active: the code topic row (and only it) is applied via dot.
-    expect(calls).toContain("dot install code");
-    // Locked areas/rows are always part of the plan.
-    expect(calls.some((c) => c === "brew install fzf")).toBe(true);
-    // base/shell/git/terminal are default-active (component_default_selected
-    // fallback when absent), so ghostty (terminal, default:true) installs.
-    expect(calls.some((c) => c.startsWith("brew install --cask ghostty"))).toBe(
-      true,
-    );
-    // Every offered link is linked and agents never are.
-    expect(calls).toContain("dot link zsh");
-    expect(calls).not.toContain("dot link agents");
-  });
-});

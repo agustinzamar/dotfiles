@@ -64,9 +64,9 @@ if [[ -n "$tui_asset" && ! -x "$TARGET/bin/dot-tui" ]]; then
   if [[ -f "$TARGET/bin/dot-tui" ]]; then
     chmod +x "$TARGET/bin/dot-tui" || rm -f "$TARGET/bin/dot-tui"
     # Drop downloads that cannot run here (wrong arch, truncated transfer);
-    # the dry-run probe is side-effect free per the dot-cli-bootstrap flag
-    # contract, and bin/dot then falls through to its source-build resolver.
-    "$TARGET/bin/dot-tui" -profile "$TARGET/bin/.dot-tui-selfcheck" -dry-run \
+    # the --version probe is side-effect free, and bin/dot then falls through
+    # to its source-build resolver.
+    "$TARGET/bin/dot-tui" --version \
       </dev/null >/dev/null 2>&1 || rm -f "$TARGET/bin/dot-tui"
   fi
 fi

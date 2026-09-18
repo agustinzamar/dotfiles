@@ -24,7 +24,7 @@ export interface ApplyUi {
   progress(label: string, done: number, total: number): void;
   /** One step finished (installed / failed / skipped). */
   result(status: ApplyResultStatus, label: string, output: string): void;
-  /** Loud stderr-equivalent line (interruption summary, profile error). */
+  /** Loud stderr-equivalent line (interruption summary, load error). */
   error(line: string): void;
   /** Apply finished; ok mirrors the exit code. */
   finished(ok: boolean): void;

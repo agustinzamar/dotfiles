@@ -2,21 +2,18 @@
 // seams). `--context FILE` supplies the v1 context JSON emitted by
 // install/manifest.sh; exit codes are 0 success, 10 aborted-by-user (zero
 // writes), any other non-zero a loud error. Confirmed apply follows the design
-// sequence: atomic profile write -> planned brew installs -> the locked
+// sequence: planned brew installs -> the locked
 // pseudo-step (`dot zsh`, always applied) -> `dot link <name>` per checked
 // link -> `dot git` when the opt-in git-signing step-2 option is checked ->
-// `dot install code`/`dot install duti` when selected. Headless
-// `-apply -profile` consumes the SAME context JSON + area-level profile through
-// the identical applyConfirmed path — the two modes cannot diverge, and no UI
-// mounts. Mid-apply interruption prints a loud ❌ completed-vs-pending summary.
+// `dot install code`/`dot install duti` when selected. Nothing is persisted:
+// link choices apply once and are never stored. Mid-apply interruption prints
+// a loud ❌ completed-vs-pending summary.
 import { createElement } from "react";
 import { render } from "ink";
 import { ApplyScreen, ApplyUiBridge, type ApplyUi } from "./apply";
 import { loadContext, type InstallContext } from "./context";
 import {
-  activeProfileAreas,
   LOCKED_PSEUDO_STEPS,
-  offeredLinks,
   OPTIONAL_PSEUDO_STEPS,
   selectedPackages,
   withRequiredTaps,
@@ -28,7 +25,6 @@ import {
   type Runner,
   type Task,
 } from "./plan";
-import { loadProfile, saveProfile } from "./profile";
 import { App, type TuiState } from "./tui";
 
 export const EXIT_OK = 0;
@@ -56,27 +52,15 @@ export const LINK_FAILED = "❌ Config links failed";
 const errorMessage = (err: unknown): string =>
   err instanceof Error ? err.message : String(err);
 
-/** Ports the configPath/profilePath derivation for interactive mode. */
-export function defaultProfilePath(
-  env: NodeJS.ProcessEnv = process.env,
-): string {
-  const configHome = env.XDG_CONFIG_HOME || `${env.HOME}/.config`;
-  return `${configHome}/dot/profile.json`;
-}
-
 // --- Flags (Go's flag package accepts -flag, --flag, and -flag=value).
 
 export interface Flags {
-  profile: string;
-  apply: boolean;
   dryRun: boolean;
   context: string;
 }
 
 export function parseFlags(argv: string[]): Flags {
   const flags: Flags = {
-    profile: "",
-    apply: false,
     dryRun: false,
     context: "",
   };
@@ -86,17 +70,9 @@ export function parseFlags(argv: string[]): Flags {
     const [name, inlineValue] =
       eq === -1 ? [arg, undefined] : [arg.slice(0, eq), arg.slice(eq + 1)];
     switch (name) {
-      case "-profile":
-      case "--profile":
-        flags.profile = inlineValue ?? argv[++i] ?? "";
-        break;
       case "-context":
       case "--context":
         flags.context = inlineValue ?? argv[++i] ?? "";
-        break;
-      case "-apply":
-      case "--apply":
-        flags.apply = inlineValue === undefined || inlineValue !== "false";
         break;
       case "-dry-run":
       case "--dry-run":
@@ -117,7 +93,6 @@ export interface ApplyIO {
 }
 
 export interface ApplyConfirmedOptions extends ApplyIO {
-  profilePath: string;
   dryRun: boolean;
   /** Signal observed by the process owner (SIGINT mid-apply). */
   interrupt?: () => boolean;
@@ -125,7 +100,7 @@ export interface ApplyConfirmedOptions extends ApplyIO {
   /** Output seam; defaults to console.log (progress) / console.error. */
   report?: (line: string, stderr?: boolean) => void;
   /** Component-driven apply UI (interactive mode); when absent, output
-   *  stays on the plain `report` lines (headless -apply -profile, dry-run). */
+   *  stays on the plain `report` lines (dry-run). */
   ui?: ApplyUi;
 }
 
@@ -154,7 +129,7 @@ export function roundExitCode(finalState: TuiState | null): number {
 
 /**
  * Applies the confirmed selection. Phase order is fixed (design ADR-5):
- * profile write -> brew installs (taps first) -> locked pseudo-steps ->
+ * brew installs (taps first) -> locked pseudo-steps ->
  * checked links -> special topic installers. A mid-apply interruption prints
  * the ❌ completed-vs-pending summary and returns EXIT_ERROR; brew failures
  * also surface loudly. Dry-run simulates: prints the plan, touches nothing.
@@ -181,7 +156,6 @@ export async function applyConfirmed(
   // never contains one directly; withRequiredTaps adds a topic's tap
   // whenever any sibling formula/cask from that same topic was confirmed.
   const selectedIds = withRequiredTaps(context, confirmedIds);
-  const areas = activeProfileAreas(context, confirmedIds);
   const packages = selectedPackages(context, selectedIds);
 
   const brewSteps: ApplyStep[] = [];
@@ -260,7 +234,6 @@ export async function applyConfirmed(
 
   // Dry-run: plan only, zero filesystem writes, exit 0.
   if (opts.dryRun) {
-    report(taskLine("profile", opts.profilePath));
     for (const step of runSteps) {
       report(taskLine(step.label, step.operation));
     }
@@ -272,31 +245,7 @@ export async function applyConfirmed(
   let failed = false;
   const interrupted = (): boolean => opts.interrupt?.() ?? false;
 
-  // 1. Atomic profile write (areas only; link choices are never persisted).
-  if (interrupted()) {
-    const summary = interruptionSummary([], plannedLabels);
-    if (opts.ui) opts.ui.error(summary);
-    else report(summary, true);
-    opts.ui?.finished(false);
-    return EXIT_ERROR;
-  }
-  const profile = {
-    components: Object.fromEntries(areas.map((a) => [a, true])),
-  };
-  try {
-    await saveProfile(opts.profilePath, profile);
-    done.push("profile");
-  } catch (err) {
-    if (opts.ui) {
-      opts.ui.error(errorMessage(err));
-      opts.ui.finished(false);
-    } else {
-      report(errorMessage(err), true);
-    }
-    return EXIT_ERROR;
-  }
-
-  // 2-5. Steps in fixed order. Tap/fail results and interruption are reported.
+  // 1-4. Steps in fixed order. Tap/fail results and interruption are reported.
   // Short-circuit: isCancelled checks the interrupt flag before each step,
   // so a mid-apply interrupt stops at the next step boundary instead of
   // running everything to completion.
@@ -409,68 +358,6 @@ async function runDotLink(name: string): Promise<void> {
   }
 }
 
-// --- Headless flag mode (-apply -profile).
-
-/**
- * Headless apply: consumes the same context JSON plus the area-level profile.
- * Rows selected = locked rows (always installed) ∪ rows whose area is enabled
- * in the profile; every offered (non-optional) link is linked; agents never.
- * Prints the plan and exits 0 unless applying.
- */
-export async function runFlagMode(
-  profilePath: string,
-  contextPath: string,
-  apply: boolean,
-  dryRun: boolean,
-  io: ApplyIO = { run: shellRunner, linkRunner: runDotLink },
-): Promise<number> {
-  if (contextPath === "") {
-    console.error(
-      "headless -apply -profile needs --context FILE (install/manifest.sh context JSON)",
-    );
-    return EXIT_ERROR;
-  }
-  let profile;
-  try {
-    profile = await loadProfile(profilePath);
-  } catch (err) {
-    console.error(errorMessage(err));
-    return EXIT_ERROR;
-  }
-  let context: InstallContext;
-  try {
-    context = await loadContext(contextPath);
-  } catch (err) {
-    console.error(errorMessage(err));
-    return EXIT_ERROR;
-  }
-
-  const activeAreas = new Set(
-    Object.keys(profile.components).filter((id) => profile.components[id]),
-  );
-  const selected: Record<string, boolean> = {};
-  for (const p of context.packages) {
-    selected[p.id] = p.locked || activeAreas.has(p.area);
-  }
-  const selectedIds = new Set(
-    Object.keys(selected).filter((id) => selected[id]),
-  );
-  const checked: Record<string, boolean> = {};
-  for (const link of offeredLinks(context, selectedIds).main) {
-    checked[link.name] = true;
-  }
-
-  return applyConfirmedLive(
-    context,
-    { selected, checked },
-    {
-      profilePath,
-      dryRun: !apply || dryRun,
-      ...io,
-    },
-  );
-}
-
 // --- Interactive loop.
 
 function runTuiRound(context: InstallContext): Promise<TuiState | null> {
@@ -511,7 +398,6 @@ export async function runInteractive(
   if (dryRun) {
     // Dry-run shows the plain plan (console lines) — no apply UI mounts.
     return applyConfirmedLive(context, finalState, {
-      profilePath: defaultProfilePath(),
       dryRun,
       ...io,
     });
@@ -540,7 +426,6 @@ async function runApplyRound(
   let code: number;
   try {
     code = await applyConfirmedLive(context, selection, {
-      profilePath: defaultProfilePath(),
       dryRun: false,
       ...io,
       ui,
@@ -567,7 +452,7 @@ async function runApplyRound(
 // as a stale binary and rebuilds from source instead of trusting stale disk
 // state; a version bump is a NO-OP without ALSO bumping bin/dot's own check
 // and the test/tui-resolver.bats fixtures that assert against it.
-export const TUI_VERSION = "dot-tui-context-v12";
+export const TUI_VERSION = "dot-tui-context-v13";
 
 if (import.meta.main) {
   const raw = process.argv.slice(2);
@@ -577,21 +462,14 @@ if (import.meta.main) {
   }
   const flags = parseFlags(raw);
   const exitCode =
-    flags.profile === ""
-      ? flags.context === ""
-        ? await (() => {
-            console.error(
-              "missing --context FILE for the interactive installer",
-            );
-            return EXIT_ERROR;
-          })()
-        : await runInteractive(flags.context, flags.dryRun)
-      : await runFlagMode(
-          flags.profile,
-          flags.context,
-          flags.apply,
-          flags.dryRun,
-        );
+    flags.context === ""
+      ? await (() => {
+          console.error(
+            "missing --context FILE for the interactive installer",
+          );
+          return EXIT_ERROR;
+        })()
+      : await runInteractive(flags.context, flags.dryRun);
   if (exitCode !== 0) {
     process.exit(exitCode);
   }

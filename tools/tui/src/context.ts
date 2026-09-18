@@ -1,6 +1,6 @@
 // Context-file loader for the `--context <path>` contract (ADR-2). The JSON v1
 // file is emitted by install/manifest.sh; this is the single TS-side validator.
-// Hand-rolled like profile.ts — no zod. There is no default context: a missing
+// Hand-rolled validator — no zod. There is no default context: a missing
 // or malformed file is a fatal, loud error.
 import { readFile } from "node:fs/promises";
 

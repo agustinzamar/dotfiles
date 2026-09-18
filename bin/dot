@@ -201,7 +201,7 @@ dot_runtime_path() {
   # current TUI contract. A stale/foreign binary (old pre-delta build) prints
   # nothing or an old marker, so it falls through to a rebuild — a checked-out
   # repo can never silently run an outdated installer UI.
-  if [[ -x "$bin" ]] && [[ "$("$bin" --version 2>/dev/null)" == "dot-tui-context-v12" ]]; then
+  if [[ -x "$bin" ]] && [[ "$("$bin" --version 2>/dev/null)" == "dot-tui-context-v13" ]]; then
     printf '%s\n' "$bin"
     return 0
   fi
@@ -258,30 +258,6 @@ sub_baseline() {
 # `--skills`/`--plugins` still install for every detected agent, just like
 # before. `--dry-run` composes with all of the above (printed by bin/dot before dispatch).
 sub_ai() {
-  # `dot ai profile-sync` projects ai/gentle-ai/sdd-profile.json into every
-  # live agent config directly, skipping the skills/plugins flow below.
-  # Checked before the agent-name parsing loop so it can never be mistaken
-  # for an agent.
-  if [[ "${1:-}" == profile-sync ]]; then
-    shift
-    local bun_bin=""
-    for candidate in "$HOME/.bun/bin/bun" /opt/homebrew/bin/bun /usr/local/bin/bun; do
-      [[ -x "$candidate" ]] && bun_bin=$candidate
-    done
-    [[ -z "$bun_bin" ]] && bun_bin=$(command -v bun 2>/dev/null || true)
-    [[ -n "$bun_bin" ]] || {
-      echo "bun not found — cannot run the profile sync" >&2
-      return 1
-    }
-    # bin/dot's top-level dispatcher already pulled --dry-run out of "$@" into
-    # $DRY_RUN before sub_ai ever runs, so it must be re-added here rather than
-    # trusted to still be in "$@".
-    local sync_args=("$@")
-    "$DRY_RUN" && sync_args+=(--dry-run)
-    "$bun_bin" "$DOTFILES_DIR/tools/scripts/sync-sdd-profile.ts" ${sync_args[@]+"${sync_args[@]}"}
-    return $?
-  fi
-
   local do_skills=false do_plugins=false agents=() arg failures=()
   local do_all=false explicit_kind=false
   for arg in "$@"; do
@@ -324,12 +300,8 @@ sub_ai() {
     read -ra agents <<<"$(ai_agent_names)"
   fi
 
-  AI_PROFILE_ROWS=()
   if $do_skills; then ai_install skills "${agents[@]}" || failures+=("skills"); fi
   if $do_plugins; then ai_install plugins "${agents[@]}" || failures+=("plugins"); fi
-  if ((${#failures[@]} == 0)); then
-    ai_apply_model_assignments || failures+=("model assignments")
-  fi
 
   if ((${#failures[@]})); then
     echo "❌ Finished with failures: ${failures[*]}" >&2

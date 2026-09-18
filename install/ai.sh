@@ -29,7 +29,7 @@
 # The one place an agent is declared: `<manifest name>:<executable>`, where the
 # executable is what proves the agent is on this machine. Adding an agent is
 # adding one entry here. bash 3.2 ships no associative arrays, hence the pairs.
-AI_AGENTS=(claude-code:claude codex:codex opencode:opencode pi:pi)
+AI_AGENTS=(claude-code:claude opencode:opencode pi:pi)
 
 ai_agent_cli() {
   local pair
@@ -163,7 +163,6 @@ ai_ensure_pnpm() {
 # Run one resolved manifest command. Honors DRY_RUN (print, do not run) and
 # `interactive`: interactive entries keep stdin (the CLI opens its own TUI),
 # non-interactive entries get `</dev/null` so a missing TTY can't wedge them.
-# Records the id→agents pairing so the post-run snapshot can be written.
 ai_run_line() {
   local id="$1" item="$2" cmd="$3" interactive="$4" agents="$5"
   [[ -n "$cmd" ]] || return 0
@@ -177,7 +176,6 @@ ai_run_line() {
       eval "$cmd" </dev/null || return 1
     fi
   fi
-  AI_PROFILE_ROWS+=("$id|$agents")
   return 0
 }
 
@@ -238,56 +236,6 @@ ai_install() {
     return 1
   fi
   return 0
-}
-
-# Apply the tracked Gentle AI model assignments without replacing its runtime
-# state, which also contains machine-specific install and telemetry metadata.
-# Assignments are projected from ai/gentle-ai/sdd-profile.json (single source
-# of truth) — no derived file needed.
-ai_apply_model_assignments() {
-  local profile="$DOTFILES_DIR/ai/gentle-ai/sdd-profile.json"
-  local target="$HOME/.gentle-ai/state.json"
-  local temporary assignments
-
-  [[ -f "$profile" ]] || return 0
-  [[ -f "$target" ]] || {
-    echo "Gentle AI state not found; skipping model assignments" >&2
-    return 0
-  }
-
-  if "$DRY_RUN"; then
-    echo "+ apply Gentle AI model assignments from $profile"
-    return 0
-  fi
-
-  assignments=$(jq --arg provider "$(jq -r '.providers.opencode' "$profile")" '
-    [.agents | to_entries[] | select(.value.opencode != false) |
-      {key, value: {provider_id: $provider, model_id: .value.model, effort: .value.effort}}] |
-    from_entries
-  ' "$profile") || {
-    echo "invalid Gentle AI profile: $profile" >&2
-    return 1
-  }
-
-  jq -e '
-    type == "object" and
-    all(.[]; type == "object" and
-      (.provider_id | type == "string") and
-      (.model_id | type == "string"))
-  ' <<<"$assignments" >/dev/null || {
-    echo "invalid Gentle AI model assignments from: $profile" >&2
-    return 1
-  }
-
-  temporary=$(mktemp "$target.tmp.XXXXXX") || return 1
-  if ! jq --argjson assignments "$assignments" \
-    '.model_assignments = $assignments' "$target" >"$temporary"; then
-    rm -f "$temporary"
-    return 1
-  fi
-
-  chmod --reference="$target" "$temporary" 2>/dev/null || true
-  mv "$temporary" "$target"
 }
 
 # Open the AI picker TUI (tools/tui/src/ai.tsx). The picker is built by a

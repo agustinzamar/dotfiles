@@ -1,7 +1,7 @@
 // Task 2.1 (RED first): pins the context-file contract for --context <path>.
 // The context JSON v1 is emitted by install/manifest.sh (ADR-2) and consumed
-// exclusively through loadContext — one hand-rolled loader, matching the
-// profile.ts style (explicit require* guards, no zod).
+// exclusively through loadContext — one hand-rolled loader with explicit
+// require* guards (no zod).
 import { afterAll, describe, expect, test } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";

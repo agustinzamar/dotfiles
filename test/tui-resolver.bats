@@ -43,7 +43,7 @@ setup() {
         cat >"$TUI_BIN" <<'EOF'
 #!/bin/sh
 case "$1" in
-  --version) printf '%s\n' 'dot-tui-context-v12'; exit 0 ;;
+  --version) printf '%s\n' 'dot-tui-context-v13'; exit 0 ;;
 esac
 printf 'TUI-STUB %s\n' "$*"
 EOF
@@ -77,7 +77,7 @@ if [ "\$1" = "build" ]; then
     prev="\$a"
   done
   [ -n "\$out" ] || exit 1
-  printf '#!/bin/sh\ncase "$1" in\n--version) printf '"'"'%s\\n'"'"' "dot-tui-context-v12"; exit 0 ;;\nesac\nprintf '"'"'TUI-STUB %%s\\n'"'"' "\$*"\n' >"\$out"
+  printf '#!/bin/sh\ncase "$1" in\n--version) printf '"'"'%s\\n'"'"' "dot-tui-context-v13"; exit 0 ;;\nesac\nprintf '"'"'TUI-STUB %%s\\n'"'"' "\$*"\n' >"\$out"
   chmod +x "\$out"
   exit 0
 fi
@@ -99,7 +99,7 @@ teardown() {
 # provisioning, so a piped `curl | bash` dies in milliseconds instead of
 # installing Homebrew or hanging. --dry-run keeps this test safe on the day the
 # guard is missing (the old bare path would dry-run cleanly and exit 0).
-@test "bare install under non-TTY stdin fails naming --all and --profile" {
+@test "bare install under non-TTY stdin fails naming --all" {
   run env PATH="$BASE_PATH" "$DOT" install --dry-run </dev/null
   [ "$status" -ne 0 ]
   [[ "$output" == *"stdin is not a TTY"* ]]

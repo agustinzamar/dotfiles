@@ -492,18 +492,16 @@ EOF
   [ -z "$(find "$home" -mindepth 1)" ]
 }
 
-# Both components here are portable, so the assertion is about the profile
-# filter and never about which OS family the suite happens to run on.
-@test "profile-aware link selects individual components" {
-  local home profile
+# No profile file exists anymore: `dot link` uses the static baseline
+# (base/shell/git/terminal on, everything else opt-in).
+@test "baseline link selects default components, skips opt-in ones" {
+  local home
   home="$(mktemp -d)"
-  profile="$home/profile.json"
-  printf '{"components":{"ai-herdr":true}}\n' >"$profile"
-  HOME="$home" DOT_PROFILE="$profile" run "$DOT" link --dry-run
+  HOME="$home" run "$DOT" link --dry-run
   [ "$status" -eq 0 ]
-  [[ "$output" == *"seed $home/.config/herdr/config.toml (expand \$HOME)"* ]]
-  [[ "$output" != *"ln -s"* ]]
-  [[ "$output" != *"config/starship"* ]]
+  [[ "$output" == *"config/starship"* ]]
+  [[ "$output" != *"AGENTS.md"* ]]
+  [[ "$output" != *"herdr/config.toml"* ]]
 }
 
 # A name can cover several targets (yazi -> yazi + keymap + theme), and must not
@@ -544,11 +542,9 @@ EOF
   # a bare `dot link` must not place AGENTS.md. With `ai` selected it now does
   # (through all_links — the self-healing re-assert this plan adds); the install
   # phase loop still never touches it.
-  local home profile
+  local home
   home="$(mktemp -d)"
-  profile="$home/profile.json"
-  printf '{"components":{"base":true,"shell":true,"git":true,"terminal":true}}\n' >"$profile"
-  HOME="$home" DOT_PROFILE="$profile" run "$DOT" --dry-run link
+  HOME="$home" run "$DOT" --dry-run link
   [ "$status" -eq 0 ]
   [[ "$output" != *"AGENTS.md"* ]]
 }
@@ -679,51 +675,6 @@ EOF
   PATH="$stub:/usr/bin:/bin" run /bin/bash "$DOT" ai claude-code --plugins
   [ "$status" -eq 0 ]
   [[ "$output" == *"claude-code: claude is not installed"* ]]
-}
-
-@test "AI applies tracked Gentle AI model assignments without replacing state" {
-  local home stub
-  home="$(mktemp -d)"
-  stub="$(mktemp -d)"
-  for command in opencode pnpm ocx; do
-    printf '#!/bin/sh\nexit 0\n' >"$stub/$command"
-    chmod +x "$stub/$command"
-  done
-  mkdir -p "$home/.gentle-ai"
-  printf '%s\n' '{"sentinel":"keep","model_assignments":{"old":{"provider_id":"old","model_id":"old"}}}' >"$home/.gentle-ai/state.json"
-
-  HOME="$home" PATH="$stub:$PATH" run "$DOT" ai opencode --plugins
-  [ "$status" -eq 0 ]
-  jq -e '.sentinel == "keep"' "$home/.gentle-ai/state.json" >/dev/null
-  jq -e --slurpfile profile "$DOTFILES_DIR/ai/gentle-ai/sdd-profile.json" '
-    .model_assignments == (
-      $profile[0] | .providers.opencode as $provider
-      | .agents | with_entries(select(.value.opencode != false)
-        | {key, value: {provider_id: $provider, model_id: .value.model, effort: .value.effort}})
-    )' "$home/.gentle-ai/state.json" >/dev/null
-}
-
-@test "AI model assignment application is dry-run safe and skips missing state" {
-  local home stub before
-  home="$(mktemp -d)"
-  stub="$(mktemp -d)"
-  for command in opencode pnpm ocx; do
-    printf '#!/bin/sh\nexit 0\n' >"$stub/$command"
-    chmod +x "$stub/$command"
-  done
-  mkdir -p "$home/.gentle-ai"
-  printf '%s\n' '{"sentinel":"keep"}' >"$home/.gentle-ai/state.json"
-  before=$(<"$home/.gentle-ai/state.json")
-
-  HOME="$home" PATH="$stub:$PATH" run "$DOT" ai opencode --plugins --dry-run
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"apply Gentle AI model assignments"* ]]
-  [ "$(<"$home/.gentle-ai/state.json")" = "$before" ]
-
-  rm "$home/.gentle-ai/state.json"
-  HOME="$home" PATH="$stub:$PATH" run "$DOT" ai opencode --plugins
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"Gentle AI state not found"* ]]
 }
 
 @test "AI rejects an unknown flag and an unknown agent" {

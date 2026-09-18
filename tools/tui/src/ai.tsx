@@ -26,7 +26,7 @@ import path from "node:path";
 import { useEffect, useMemo, useState } from "react";
 import { ConfirmInput, MultiSelect, Spinner, StatusMessage } from "@inkjs/ui";
 
-/** Declared agents, keyed by the profile's agent KEY (plan D3 / item 6). The
+/** Declared agents, keyed by agent key (plan D3 / item 6). The
  *  executable probed for each (absent → shown unselectable). */
 export const AGENT_EXECUTABLES: Record<string, string> = {
   "claude-code": "claude",
