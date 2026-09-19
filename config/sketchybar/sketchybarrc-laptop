@@ -120,6 +120,9 @@ sketchybar --add item volume right \
 # open -a Rectangle
 
 # Provider logos keep session/weekly quotas readable beside the notch.
+# icon.width must stay >= the composited image width x its scale, or the right
+# edge of the widget (the trailing "%") is clipped: the plugin composes a 152px
+# wide image, so 152 x 0.45 needs 68.4px.
 for provider in codex claude opencode; do
     case "$provider" in
         codex) usage_image="$IMAGES_DIR/$provider.png"; usage_color=0xffb7bdf8 ;;
@@ -131,7 +134,7 @@ for provider in codex claude opencode; do
             background.padding_left=9 \
             background.padding_right=9 \
             icon="" \
-            icon.width=60 \
+            icon.width=72 \
             icon.background.drawing=on \
             icon.background.image="$usage_image" \
             icon.background.image.drawing=on \

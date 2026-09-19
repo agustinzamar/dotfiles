@@ -100,6 +100,9 @@ sketchybar --add item spotifast right \
     --subscribe spotifast mouse.clicked
 
 # Provider logos with session/weekly quotas, plus a fixed third monthly slot.
+# icon.width must stay >= the composited image width x its scale, or the right
+# edge of the widget (the trailing "%") is clipped: the plugin composes a 152px
+# wide image, so 152 x 0.5 needs 76px.
 for provider in codex claude opencode; do
     case "$provider" in
         codex) usage_image="$IMAGES_DIR/$provider.png"; usage_color=0xffb7bdf8 ;;
@@ -111,7 +114,7 @@ for provider in codex claude opencode; do
         background.padding_left=9 \
         background.padding_right=9 \
         icon="" \
-        icon.width=66 \
+        icon.width=78 \
         icon.padding_left=8 \
         icon.padding_right=24 \
         icon.background.drawing=on \
