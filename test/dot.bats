@@ -431,10 +431,8 @@ EOF
   local handled="config/git/config"
   # Installed via `herdr plugin link` (see herder.toml), not the dot map.
   # Run by hand (Mission Control "new desktop" helper), so there is no config to
-  # link either. The Space walker is a program, not a config: sketchybar's
-  # focus-native-space.sh invokes it, nothing links it into $HOME.
-  local known_gaps="config/herdr/workspace-layout config/yabai/new-desktop.applescript \
-    config/tinycast/lib/go-to-native-space.sh"
+  # link either.
+  local known_gaps="config/herdr/workspace-layout config/yabai/new-desktop.applescript"
 
   local sources
   # Unfiltered: an orphan guard that only sees the rows applicable to the

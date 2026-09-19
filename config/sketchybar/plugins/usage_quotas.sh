@@ -13,7 +13,7 @@ if [[ "${USAGE_TRACKER_TOKEN:-}" != *$'\n'* && "${USAGE_TRACKER_TOKEN:-}" != *$'
             --header @- "${url%/}/v1/summary" 2>/dev/null) || payload='{}'
 fi
 
-FONT_FILE="$HOME/Library/Fonts/JetBrainsMonoNerdFont-Bold.ttf"
+FONT_FILE="$HOME/Library/Fonts/JetBrainsMonoNerdFont-Medium.ttf"
 IMAGES_SRC="$HOME/.config/sketchybar/images"
 CACHE_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/usage-quotas"
 have_magick=0
@@ -27,9 +27,9 @@ for provider in codex claude opencode; do
     line2='?'
     marker='!'
     case "$provider" in
-    codex) color=0xffa6da95 ;;
-    claude) color=0xfff5a97f ;;
-    opencode) color=0xff8aadf4 ;;
+    codex) color=0xffb7bdf8 ;;
+    claude) color=0xffb7bdf8 ;;
+    opencode) color=0xffb7bdf8 ;;
     esac
     # Never pass API text to SketchyBar: composite image normally,
     # two-line text fallback without magick.
@@ -53,17 +53,17 @@ for provider in codex claude opencode; do
     fi
     case "$marker" in
     '!')
-        color=0xffed8796
-        fill='#ED8796'
+        color=0xffb7bdf8
+        fill='#B7BDF8'
         ;;
     '~')
-        color=0xffeed49f
-        fill='#EED49F'
+        color=0xffb7bdf8
+        fill='#B7BDF8'
         ;;
-    *) fill='#CAD3F5' ;;
+    *) fill='#B7BDF8' ;;
     esac
     case "$line1$line2" in
-    *'?'*) [[ "$marker" != '!' ]] && color=0xffed8796 ;;
+    *'?'*) [[ "$marker" != '!' ]] && color=0xffb7bdf8 ;;
     esac
     img_tmp="$CACHE_DIR/.$provider.tmp.png"
     img_out="$CACHE_DIR/$provider.png"
@@ -90,10 +90,15 @@ for provider in codex claude opencode; do
     fi
     if ((have_magick)) && [[ -f "$logo" ]] &&
         magick -background none -fill "$fill" -font "$FONT_FILE" -pointsize 30 label:"$line1\n$line2" "$txt_tmp" 2>/dev/null &&
-        magick -background none \( "$logo" -resize x40 \) \
-            \( -size 16x72 xc:none \) \
+        # The transparent spacer below is the only thing separating the provider
+        # logo from the percentage text: both live in this one composited image,
+        # so label.padding_left in the config has no effect here. Keep the total
+        # (logo 52 + spacer 24 + text) at or under the 152px extent, otherwise
+        # the text gets cropped; the widest text is "100%" on both lines (~73px).
+        magick -background none \( "$logo" -resize x52 \) \
+            \( -size 24x72 xc:none \) \
             "$txt_tmp" \
-            -gravity center +append -extent 140x72 "$img_tmp" 2>/dev/null &&
+            -gravity center +append -extent 152x72 "$img_tmp" 2>/dev/null &&
         mv -f "$img_tmp" "$img_out" 2>/dev/null; then
         # Clear the text fallback: image and text are exclusive modes, and a
         # previous failed run would otherwise leave its label behind.

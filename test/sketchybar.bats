@@ -1,25 +1,13 @@
 #!/usr/bin/env bats
-# Contract tests for SketchyBar's native macOS Spaces integration.
+# Contract tests for SketchyBar's item plugins and both bar variants.
 
 setup() {
   DOTFILES_DIR="$(cd "$BATS_TEST_DIRNAME/.." && pwd)"
-  PLUGIN="$DOTFILES_DIR/config/sketchybar/plugins/native_spaces.sh"
   PLAYER_PLUGIN="$DOTFILES_DIR/config/sketchybar/plugins/spotifast.sh"
   LOG="$BATS_TEST_TMPDIR/sketchybar.log"
   CLICK_LOG="$BATS_TEST_TMPDIR/media-control.log"
   : >"$LOG"
   : >"$CLICK_LOG"
-}
-
-run_native_spaces() {
-  local state="$1"
-  run env PANERU_OUTPUT="$state" SKETCHYBAR_LOG="$LOG" PLUGIN="$PLUGIN" \
-    /opt/homebrew/bin/zsh -c '
-      paneru() { printf "%s" "$PANERU_OUTPUT"; }
-      sketchybar() { printf "%s\n" "$*" >>"$SKETCHYBAR_LOG"; }
-      NAME=native_space.1
-      source "$PLUGIN"
-    '
 }
 
 # The player item reads macOS' MediaRemote feed through media-control and draws
@@ -41,89 +29,38 @@ run_player() {
     '
 }
 
-@test "native spaces groups virtual rows by native id and highlights the active native" {
-  run_native_spaces '{"active":{"native_workspace_id":162},"virtual_workspaces":[{"number":1,"native_workspace_id":5},{"number":2,"native_workspace_id":5},{"number":1,"native_workspace_id":162,"active":true}]}'
-  [ "$status" -eq 0 ]
-
-  grep -q -- '--set native_space.1' "$LOG"
-  grep -q -- 'native_space.1.*icon.drawing=on.*icon=.*label.drawing=off.*background.color=0x66494d64' "$LOG"
-  grep -q -- 'native_space.1.*click_script=.*focus-native-space.sh 1' "$LOG"
-  grep -q -- 'native_space.2.*icon.drawing=on.*icon=.*label.drawing=off.*background.color=0xfff5a97f' "$LOG"
-  grep -q -- 'native_space.2.*click_script=.*focus-native-space.sh 2' "$LOG"
-  grep -q -- 'native_space.3.*drawing=off' "$LOG"
-}
-
-@test "native spaces highlights the first native when it is active" {
-  run_native_spaces '{"active":{"native_workspace_id":5},"virtual_workspaces":[{"number":1,"native_workspace_id":5},{"number":2,"native_workspace_id":5},{"number":1,"native_workspace_id":162}]}'
-  [ "$status" -eq 0 ]
-
-  grep -q -- 'native_space.1.*icon=.*background.color=0xfff5a97f' "$LOG"
-  grep -q -- 'native_space.2.*icon=.*background.color=0x66494d64' "$LOG"
-}
-
-@test "native spaces shows numbers with no icon from the third slot on" {
-  run_native_spaces '{"active":{"native_workspace_id":30},"virtual_workspaces":[{"number":1,"native_workspace_id":10},{"number":1,"native_workspace_id":20},{"number":1,"native_workspace_id":30},{"number":1,"native_workspace_id":40}]}'
-  [ "$status" -eq 0 ]
-
-  grep -q -- 'native_space.1.*icon.drawing=on.*icon=' "$LOG"
-  grep -q -- 'native_space.2.*icon.drawing=on.*icon=' "$LOG"
-  grep -q -- 'native_space.3.*drawing=on.*icon.drawing=off.*label.drawing=on.*label=3' "$LOG"
-  grep -q -- 'native_space.4.*drawing=on.*icon.drawing=off.*label.drawing=on.*label=4' "$LOG"
-}
-
-@test "native spaces caps the visible pool at ten slots" {
-  local state
-  state="$(/opt/homebrew/bin/jq -cn '{active: {native_workspace_id: 1}, virtual_workspaces: [range(1;12) | {number: 1, native_workspace_id: .}]}')"
-  run_native_spaces "$state"
-  [ "$status" -eq 0 ]
-
-  [ "$(grep -c -- '--set native_space.' "$LOG")" -eq 10 ]
-  grep -q -- 'native_space.1.*drawing=on.*icon.drawing=on.*icon=' "$LOG"
-  grep -q -- 'native_space.2.*drawing=on.*icon.drawing=on.*icon=' "$LOG"
-  grep -q -- 'native_space.10.*drawing=on.*icon.drawing=off.*label=10' "$LOG"
-  ! grep -q -- 'native_space.11' "$LOG"
-}
-
-@test "native spaces hides the whole pool when paneru returns invalid data" {
-  run_native_spaces 'not-json'
-  [ "$status" -eq 0 ]
-
-  [ "$(grep -c -- 'drawing=off' "$LOG")" -eq 10 ]
-}
-
-@test "both bar variants define the native spaces item pool and updater" {
+@test "both bar variants carry the battery item on the shared plugin" {
   local config
   for config in \
     "$DOTFILES_DIR/config/sketchybar/sketchybarrc-laptop" \
     "$DOTFILES_DIR/config/sketchybar/sketchybarrc-desktop"; do
     /opt/homebrew/bin/zsh -n "$config"
-    grep -q 'native_spaces.sh' "$config"
-    grep -q 'native_space.1' "$config"
+    grep -q -- '--add item battery' "$config"
+    grep -q 'PLUGIN_SHARED_DIR/battery.sh' "$config"
+    # The desktop default label colour is dark, which suits the accent pills but
+    # renders a transparent item invisible, so the battery must declare its own.
+    awk '/--add item battery/,/^$/' "$config" | grep -q 'label.color='
   done
 }
 
 # sketchybar lays left-side items out left-to-right in creation order and
 # right-side items from the display edge inward (src/bar.c,
 # bar_calculate_bounds_top_bottom). The paneru indicator therefore has to be a
-# left-side item created after the native_space pool and before front_app;
-# adding it last among the right-side items could never put it there.
-@test "the paneru indicator sits between the native space pool and front_app" {
-  local config current_line native_line front_line
+# left-side item created before front_app; adding it last among the right-side
+# items could never put it there.
+@test "the paneru indicator is a left-side item created before front_app" {
+  local config current_line front_line
   for config in \
     "$DOTFILES_DIR/config/sketchybar/sketchybarrc-laptop" \
     "$DOTFILES_DIR/config/sketchybar/sketchybarrc-desktop"; do
     /opt/homebrew/bin/zsh -n "$config"
-    grep -q -- '--add item "native_space.\$slot" left' "$config"
     grep -q -- '--add item current_space left' "$config"
     ! grep -q -- '--add item current_space right' "$config"
 
-    native_line="$(grep -n -- '--add item "native_space.\$slot" left' "$config" | cut -d: -f1)"
     current_line="$(grep -n -- '--add item current_space left' "$config" | cut -d: -f1)"
     front_line="$(grep -n -- '--add item front_app left' "$config" | cut -d: -f1)"
-    [ -n "$native_line" ]
     [ -n "$current_line" ]
     [ -n "$front_line" ]
-    (( native_line < current_line ))
     (( current_line < front_line ))
   done
 }
@@ -144,33 +81,39 @@ run_player() {
 # channel exists for Spotifast, so the item is polled from media-control and must
 # never claim a track it does not own.
 
-@test "player item shows the track in green while Spotifast is playing" {
+@test "player item uses the bar accent while Spotifast is playing" {
   run_player '{"title":"La Despedida","artist":"Carafea","bundleIdentifier":"me.paolino.fastpotify","playing":true}'
   [ "$status" -eq 0 ]
 
   grep -q -- '--set spotifast drawing=on' "$LOG"
-  grep -q -- 'La Despedida.*Carafea.*label.drawing=yes.*background.color=0xffa6da95' "$LOG"
+  grep -q -- 'La Despedida.*Carafea.*label.drawing=yes.*background.color=0xffb7bdf8' "$LOG"
 }
 
-@test "player item turns amber while Spotifast is paused" {
+@test "player item drops to the neutral surface while Spotifast is paused" {
   run_player '{"title":"La Despedida","artist":"Carafea","bundleIdentifier":"me.paolino.fastpotify","playing":false}'
   [ "$status" -eq 0 ]
 
-  grep -q -- 'La Despedida.*Carafea.*background.color=0xffeed49f' "$LOG"
-  ! grep -q -- 'background.color=0xffa6da95' "$LOG"
+  # The bar carries a single accent, so play state reads as accent vs neutral
+  # instead of as two different hues.
+  grep -q -- 'La Despedida.*Carafea.*background.color=0x66494d64' "$LOG"
+  ! grep -q -- 'background.color=0xffb7bdf8' "$LOG"
 }
 
-@test "player item truncates a long track and artist to fit the bar" {
+@test "player item hands over the full text and lets the bar marquee it" {
   run_player '{"title":"Un Titulo Absurdamente Largo Que No Entra","artist":"Un Artista Igualmente Largo","bundleIdentifier":"me.paolino.fastpotify","playing":true}'
   [ "$status" -eq 0 ]
 
+  # SketchyBar only scrolls text that it truncated itself, so the plugin passes
+  # the whole string through and leaves label.max_chars + scroll_texts to size
+  # and animate it. Truncating here would leave the marquee nothing to move.
   # The stub logs sketchybar's arguments joined, so pull the label back out
   # between its own flag and the next one instead of expecting shell quoting.
   local label
   label="$(sed -n 's/^.* label=\(.*\) label\.drawing=.*$/\1/p' "$LOG" | tail -1)"
   [ -n "$label" ]
-  [[ "$label" == *"…"* ]]
-  [[ "$label" != *"Absurdamente Largo Que No Entra"* ]]
+  [[ "$label" != *"…"* ]]
+  [[ "$label" == *"Absurdamente Largo Que No Entra"* ]]
+  [[ "$label" == *"Igualmente Largo"* ]]
 }
 
 @test "player item stays hidden when another app owns the MediaRemote feed" {
@@ -185,7 +128,7 @@ run_player() {
   run_player '{"bundleIdentifier":"me.paolino.fastpotify","playing":false}'
   [ "$status" -eq 0 ]
 
-  grep -q -- 'background.color=0xffeed49f label.drawing=no' "$LOG"
+  grep -q -- 'label= label.drawing=no background.color=0x66494d64' "$LOG"
 }
 
 @test "player item hides itself when no MediaRemote reader is installed" {
@@ -218,6 +161,10 @@ run_player() {
     grep -q 'PLUGIN_SHARED_DIR/spotifast.sh' "$config"
     grep -q -- '--add item spotifast' "$config"
     grep -q -- '--subscribe spotifast mouse.clicked' "$config"
+    # The marquee lives in the config: scroll_texts and label.max_chars must be
+    # on the item for SketchyBar to scroll the text the plugin no longer cuts.
+    grep -q -- 'scroll_texts=on' "$config"
+    grep -q -- 'label.max_chars=35' "$config"
     # Spotifast posts no playback notification, so nothing may subscribe to one.
     ! grep -q 'spotify_change\|zapfast_change' "$config"
   done
@@ -239,8 +186,8 @@ setup_usage_home() {
   rm -rf "$USAGE_HOME"
   mkdir -p "$USAGE_HOME/Library/Fonts" "$USAGE_HOME/.config/sketchybar/images" "$USAGE_HOME/.cache"
   cp "$DOTFILES_DIR/config/sketchybar/images/"*.svg "$USAGE_HOME/.config/sketchybar/images/"
-  ln -s "$HOME/Library/Fonts/JetBrainsMonoNerdFont-Bold.ttf" \
-    "$USAGE_HOME/Library/Fonts/JetBrainsMonoNerdFont-Bold.ttf"
+  ln -s "$HOME/Library/Fonts/JetBrainsMonoNerdFont-Medium.ttf" \
+    "$USAGE_HOME/Library/Fonts/JetBrainsMonoNerdFont-Medium.ttf"
 }
 
 run_usage_plugin() {

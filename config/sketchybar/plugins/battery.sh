@@ -1,44 +1,43 @@
 #!/usr/bin/env sh
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
-# Battery is here bcause the ICON_COLOR doesn't play well with all background colors
+# The bar runs one accent colour; the charge level is already
+# carried by the numeric label, so the icon keeps no gradient.
+ICON_COLOR=0xffb7bdf8
 
 PERCENTAGE=$(pmset -g batt | grep -Eo "\d+%" | cut -d% -f1)
 CHARGING=$(pmset -g batt | grep 'AC Power')
 
 if [ "$PERCENTAGE" = "" ]; then
+    # No battery on this machine: hide rather than leave an empty slot.
+    sketchybar --set "$NAME" drawing=off
     exit 0
 fi
 
 case ${PERCENTAGE} in
 [8-9][0-9] | 100)
     ICON=""
-    ICON_COLOR=0xffa6da95
     ;;
 7[0-9])
     ICON=""
-    ICON_COLOR=0xffeed49f
     ;;
 [4-6][0-9])
     ICON=""
-    ICON_COLOR=0xfff5a97f
     ;;
 [1-3][0-9])
     ICON=""
-    ICON_COLOR=0xffee99a0
     ;;
 [0-9])
     ICON=""
-    ICON_COLOR=0xffed8796
     ;;
 esac
 
 if [[ $CHARGING != "" ]]; then
     ICON=""
-    ICON_COLOR=0xffeed49f
 fi
 
 sketchybar --set "$NAME" \
+    drawing=on \
     icon="$ICON" \
     label="${PERCENTAGE}%" \
     icon.color="${ICON_COLOR}"

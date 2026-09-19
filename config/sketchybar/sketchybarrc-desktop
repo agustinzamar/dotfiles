@@ -22,42 +22,25 @@ sketchybar --default \
     icon.padding_left=7 \
     icon.padding_right=7 \
     label.color=0xff24273a \
-    label.font="$FONT_FACE:Bold:17.0" \
+    label.font="$FONT_FACE:Medium:17.0" \
     label.y_offset=1 \
     label.padding_left=0 \
     label.padding_right=7
 
-# Native macOS Spaces and the Paneru indicator stay on the left, ahead of
-# front_app.
-for slot in {1..10}; do
-    sketchybar --add item "native_space.$slot" left \
-        --set "native_space.$slot" \
-        drawing=off \
-        icon.drawing=off \
-        icon.color=0xff24273a \
-        label.drawing=on \
-        label.padding_left=7 \
-        label.color=0xff24273a \
-        background.color=0x66494d64
-done
-sketchybar --set native_space.1 update_freq=1 updates=on \
-    script="zsh \"$PLUGIN_SHARED_DIR/native_spaces.sh\""
-
-# The Paneru virtual-space indicator sits between the native Space pool and the
-# front-app cluster. sketchybar lays left-side items out left-to-right in
-# creation order, so this item must be added after the native_space pool and
-# before front_app; a right-side item is instead laid out from the display edge
-# inward and can never reach this position.
+# The Paneru virtual-space indicator sits on the left, ahead of the front-app
+# cluster. sketchybar lays left-side items out left-to-right in creation order,
+# so this item must be added before front_app; a right-side item is instead laid
+# out from the display edge inward and can never reach this position.
 sketchybar --add item current_space left \
     --set current_space \
-    background.color=0xfff5a97f \
+    background.color=0xffb7bdf8 \
     label.drawing=off \
     update_freq=1 \
     script="$PLUGIN_SHARED_DIR/current_space.sh"
 
 sketchybar --add item front_app left \
     --set front_app \
-    background.color=0xffa6da95 \
+    background.color=0xffb7bdf8 \
     background.padding_left=0 \
     background.padding_right=0 \
     icon.y_offset=1 \
@@ -67,8 +50,8 @@ sketchybar --add item front_app left \
     --set front_app.separator \
     background.color=0x00000000 \
     icon= \
-    icon.color=0xffa6da95 \
-    icon.font="$FONT_FACE:Bold:23.0" \
+    icon.color=0xffb7bdf8 \
+    icon.font="$FONT_FACE:Medium:23.0" \
     icon.padding_left=0 \
     icon.padding_right=0 \
     icon.y_offset=1 \
@@ -77,7 +60,7 @@ sketchybar --add item front_app left \
     --set front_app.name \
     background.color=0x00000000 \
     icon.drawing=off \
-    label.font="$FONT_FACE:Bold:16.0" \
+    label.font="$FONT_FACE:Medium:16.0" \
     label.color=0xffcad3f5 \
     label.padding_left=5
 
@@ -90,9 +73,17 @@ sketchybar --add bracket front_app_bracket \
 sketchybar --add item clock right \
     --set clock \
     icon=󰃰 \
-    background.color=0xffed8796 \
+    background.color=0xffb7bdf8 \
     update_freq=10 \
     script="$PLUGIN_SHARED_DIR/clock.sh"
+
+sketchybar --add item battery right \
+    --set battery \
+    drawing=off \
+    background.padding_right=18 \
+    label.color=0xffb7bdf8 \
+    update_freq=20 \
+    script="$PLUGIN_SHARED_DIR/battery.sh"
 
 # Spotifast publishes no playback event, so this item polls media-control
 # instead of subscribing to a notification the app never posts.
@@ -102,6 +93,8 @@ sketchybar --add item spotifast right \
     icon.y_offset=1 \
     label.drawing=off \
     label.padding_left=3 \
+    label.max_chars=35 \
+    scroll_texts=on \
     update_freq=5 \
     script="$PLUGIN_SHARED_DIR/spotifast.sh" \
     --subscribe spotifast mouse.clicked
@@ -109,30 +102,33 @@ sketchybar --add item spotifast right \
 # Provider logos with session/weekly quotas, plus a fixed third monthly slot.
 for provider in codex claude opencode; do
     case "$provider" in
-        codex) usage_image="$IMAGES_DIR/$provider.png"; usage_color=0xffa6da95 ;;
-        claude) usage_image="$IMAGES_DIR/$provider.png"; usage_color=0xfff5a97f ;;
-        opencode) usage_image="$IMAGES_DIR/$provider.png"; usage_color=0xff8aadf4 ;;
+        codex) usage_image="$IMAGES_DIR/$provider.png"; usage_color=0xffb7bdf8 ;;
+        claude) usage_image="$IMAGES_DIR/$provider.png"; usage_color=0xffb7bdf8 ;;
+        opencode) usage_image="$IMAGES_DIR/$provider.png"; usage_color=0xffb7bdf8 ;;
     esac
     sketchybar --add item "usage.$provider" right \
         --set "usage.$provider" \
-        background.color=0x66494d64 \
-        background.padding_left=2 \
-        background.padding_right=2 \
+        background.padding_left=9 \
+        background.padding_right=9 \
         icon="" \
         icon.width=66 \
-        icon.padding_left=2 \
-        icon.padding_right=2 \
+        icon.padding_left=8 \
+        icon.padding_right=24 \
         icon.background.drawing=on \
         icon.background.image="$usage_image" \
         icon.background.image.drawing=on \
         icon.background.image.scale=0.5 \
         label="" \
-        label.padding_left=0 \
-        label.padding_right=0 \
+        label.padding_left=16 \
+        label.padding_right=16 \
         label.color="$usage_color" \
         label.font="$FONT_FACE:Medium:13.0" \
         update_freq=0
 done
+# OpenCode lands on the left edge of the group and Codex on the right edge, so
+# the extra separation from the neighbouring widgets goes on those two sides.
+sketchybar --set usage.opencode background.padding_left=18
+sketchybar --set usage.codex background.padding_right=18
 # Only Codex schedules the shared request; the plugin updates all three items.
 sketchybar --set 'usage.codex' update_freq=60 \
     script="$PLUGIN_SHARED_DIR/usage_quotas.sh" \
