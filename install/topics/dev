@@ -10,13 +10,9 @@ brew "shfmt"
 brew "bats-core"
 
 # --- PHP and Composer ---
-# php 8.5 is the CLI default; the older versions serve the projects that pin
-# them through `valet isolate`. Homebrew's php ships a base extension set, so
-# the `php` install phase builds redis and imagick for every version present.
+# php is the CLI default. Homebrew's php ships a base extension set, so the
+# `php` install phase builds redis and imagick for every version present.
 brew "php"
-brew "php@8.2"
-brew "php@8.3"
-brew "php@8.4"
 # Valet (`.test` sites with TLS) is not a brew package. It is declared as a
 # global Composer dependency in config/composer/composer.json, so
 # `dot link composer && composer global install` is what installs it.
@@ -42,15 +38,5 @@ cask "claude-code@latest"
 cask "codex"
 cask "t3-code"
 
-# --- Database and services ---
-brew "mysql"
-brew "mysql-client"
-brew "postgresql"
-brew "redis"
-brew "sqlite"
-
 # --- Services ---
 cask "orbstack"
-
-# --- Fancy tools ---
-cask "openusage"

@@ -432,7 +432,7 @@ EOF
   # Installed via `herdr plugin link` (see herder.toml), not the dot map.
   # Run by hand (Mission Control "new desktop" helper), so there is no config to
   # link either.
-  local known_gaps="config/herdr/workspace-layout config/yabai/new-desktop.applescript"
+  local known_gaps="config/herdr/workspace-layout"
 
   local sources
   # Unfiltered: an orphan guard that only sees the rows applicable to the
@@ -498,7 +498,9 @@ EOF
   home="$(mktemp -d)"
   HOME="$home" run "$DOT" link --dry-run
   [ "$status" -eq 0 ]
-  [[ "$output" == *"config/starship"* ]]
+  # Baseline links: zshrc, oh-my-posh, ghostty, yazi, hunk, lazygit, git.
+  # starship is NOT a link row — it was a dormant alternative, never wired in.
+  [[ "$output" == *"config/oh-my-posh"* ]]
   [[ "$output" != *"AGENTS.md"* ]]
   [[ "$output" != *"herdr/config.toml"* ]]
 }

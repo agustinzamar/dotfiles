@@ -150,9 +150,9 @@ EOF
   install_context_json "$ctx"
   json="$(cat "$ctx")"
   # fzf: sub_zsh's post-install step only wires up an already-installed fzf.
-  # zoxide/eza: the .zshrc z/ls aliases assume they exist. poppler: yazi's
-  # PDF-preview dependency. All four: always installed, never a TUI row.
-  for id in fzf zoxide eza poppler; do
+  # zoxide/eza: the .zshrc aliases (z, ls) assume they exist. All three:
+  # always installed, never a TUI row.
+  for id in fzf zoxide eza; do
     [ "$(jq -r --arg id "$id" '[.packages[] | select(.id == $id)][0].locked' <<<"$json")" == "true" ]
   done
   # git/gh moved here from the locked block: pre-checked, toggleable, grouped
@@ -244,7 +244,6 @@ EOF
   [ "$(jq -r '[.packages[] | select(.id == "media-control")][0].category' <<<"$json")" == "Media tools" ]
   [ "$(jq -r '[.packages[] | select(.id == "crmne/tap/spotifast")][0].category' <<<"$json")" == "Entertainment" ]
   [ "$(jq -r '[.packages[] | select(.id == "crmne/tap/zapfast")][0].category' <<<"$json")" == "Communication" ]
-  [ "$(jq -r '[.packages[] | select(.id == "mysql")][0].category' <<<"$json")" == "Databases" ]
   # Taps keep their full name as the label.
   [ "$(jq -r '[.packages[] | select(.id == "timescam/tap")][0].label' <<<"$json")" == "timescam/tap" ]
   # Installed detection via brew list: the stub reports t3-code and nothing
@@ -268,12 +267,8 @@ EOF
   [ "$(jq -r '[.packages[] | select(.id == "shfmt")][0].category' <<<"$json")" == "Linters" ]
   [ "$(jq -r '[.packages[] | select(.id == "actionlint")][0].category' <<<"$json")" == "Linters" ]
   [ "$(jq -r '[.packages[] | select(.id == "swiftformat")][0].category' <<<"$json")" == "Linters" ]
-  # Prompt merged into Terminals (oh-my-posh active; starship/powerlevel10k
-  # dormant alternatives, both now real installable packages).
+  # Prompt merged into Terminals (oh-my-posh is the active and only prompt).
   [ "$(jq -r '[.packages[] | select(.id == "oh-my-posh")][0].category' <<<"$json")" == "Terminals" ]
-  [ "$(jq -r '[.packages[] | select(.id == "starship")][0].category' <<<"$json")" == "Terminals" ]
-  [ "$(jq -r '[.packages[] | select(.id == "powerlevel10k")][0].category' <<<"$json")" == "Terminals" ]
-  [ "$(jq -r '[.packages[] | select(.id == "poppler")][0].category' <<<"$json")" == "Filesystem" ]
   [ "$(jq -r '[.packages[] | select(.id == "dockutil")][0].category' <<<"$json")" == "Utilities" ]
   # pay-respects/timescam-tap/fzf/zoxide joined Terminals
   # — the standalone Shell category is gone.

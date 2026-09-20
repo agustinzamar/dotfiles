@@ -69,24 +69,24 @@ area_for_package() {
     base | shell | git | terminal | vscode | ai | ai-herdr | claude | dev | media | desktop | system | desktop-*) echo "$1" ;;
     # --- System settings (dot dock / dot macos apply_defaults scripts) ---
     dock | macos) echo "system" ;;
-    # --- Shell (locked block; also p10k/starship link component) ---
-    fzf | zoxide | oh-my-posh | pay-respects | timescam/tap | powerlevel10k | starship) echo "shell" ;;
+    # --- Shell (locked block; oh-my-posh is the active prompt) ---
+    fzf | zoxide | oh-my-posh | pay-respects | timescam/tap) echo "shell" ;;
     # --- Git ---
     gh | lazygit | hunk) echo "git" ;;
     # --- Terminal / core CLI ---
-    eza | fd | yazi | poppler | ripgrep | grip | watch | btop | procs | topgrade | dust | dockutil | mole | 7zip | bat | jq | jless | yq | unar | duti | ghostty | neovim | font-jetbrains-mono-nerd-font | duti-defaults | 'we"ird\name') echo "terminal" ;;
+    eza | fd | yazi | ripgrep | grip | watch | btop | procs | topgrade | dust | dockutil | mole | 7zip | bat | jq | jless | yq | unar | duti | ghostty | neovim | font-jetbrains-mono-nerd-font | duti-defaults | 'we"ird\name') echo "terminal" ;;
     # --- VS Code ---
     visual-studio-code | code) echo "vscode" ;;
     # --- AI ---
     opencode | anomalyco/tap/opencode | pi-coding-agent | claude-code@latest | codex | t3-code) echo "ai" ;;
     herdr) echo "ai-herdr" ;;
     # --- Dev ---
-    make | go | mise | python@3.14 | pipx | rust | shellcheck | shfmt | bats-core | act | sshpass | phpstorm | actionlint | swiftformat | mysql | mysql-client | postgresql | redis | sqlite | composer | php | php@8.2 | php@8.3 | php@8.4 | orbstack | openusage) echo "dev" ;;
+    make | go | mise | python@3.14 | pipx | rust | shellcheck | shfmt | bats-core | act | sshpass | phpstorm | actionlint | swiftformat | composer | php | orbstack) echo "dev" ;;
     # --- Desktop (subareas match links.sh component tokens) ---
     linearmouse) echo "desktop-linearmouse" ;;
     sketchybar) echo "desktop-sketchybar" ;;
     paneru) echo "desktop-paneru" ;;
-    pearcleaner | google-chrome | firefox | brave-browser | discord | telegram | crmne/tap/zapfast | slack | abue-ammar/tinycast/tinycast | finetune | typewhisper | rectangle | localsend | hyperkey | alt-tab | chatgpt | FelixKratz/formulae) echo "desktop" ;;
+    pearcleaner | google-chrome | firefox | brave-browser | discord | telegram | crmne/tap/zapfast | slack | abue-ammar/tinycast/tinycast | finetune | rectangle | localsend | hyperkey | alt-tab | chatgpt | FelixKratz/formulae) echo "desktop" ;;
     # --- Media ---
     ffmpeg | ffmpegthumbnailer | imagemagick | webp | media-control | crmne/tap/spotifast | stremio | vlc | stupside/tap/castor | castor) echo "media" ;;
     *) return 1 ;;
@@ -98,10 +98,10 @@ area_for_package() {
 # every id here is silent plumbing another visible tool depends on, never a
 # real user decision). fzf: sub_zsh's post-install step only WIRES UP an
 # already-installed fzf. zoxide/eza: the .zshrc aliases (z, ls) assume they
-# exist. poppler: yazi's PDF-preview dependency.
+# exist.
 manifest_is_locked() {
   case "$1" in
-    fzf | zoxide | eza | poppler) return 0 ;;
+    fzf | zoxide | eza) return 0 ;;
     *) return 1 ;;
   esac
 }
@@ -187,7 +187,7 @@ manifest_category() {
     # --- VS Code extensions (`code` delegates to dot install code) ---
     code) echo "Editors" ;;
     # --- AI agents and AI apps ---
-    claude-code@latest | codex | t3-code | anomalyco/tap/opencode | pi-coding-agent | claude | chatgpt | herdr | openusage) echo "AI" ;;
+    claude-code@latest | codex | t3-code | anomalyco/tap/opencode | pi-coding-agent | claude | chatgpt | herdr) echo "AI" ;;
     # --- Browsers ---
     google-chrome | firefox | brave-browser) echo "Browsers" ;;
     # --- Communication ---
@@ -195,22 +195,21 @@ manifest_category() {
     # --- Desktop / window managers (the tiling stack) ---
     sketchybar | paneru | FelixKratz/formulae) echo "Desktop" ;;
     # --- Tweakers (input, window and bar tweaks) ---
-    linearmouse | finetune | rectangle | hyperkey | alt-tab | typewhisper) echo "Tweakers" ;;
+    linearmouse | finetune | rectangle | hyperkey | alt-tab) echo "Tweakers" ;;
     # --- Utilities ---
     abue-ammar/tinycast/tinycast | localsend | mole | pearcleaner | topgrade | dockutil | duti) echo "Utilities" ;;
     # --- Archives ---
     7zip | unar) echo "Archives" ;;
     # --- Monitoring ---
     btop | procs | watch) echo "Monitoring" ;;
-    # --- Filesystem navigation (poppler previews yazi's PDFs; both eza and
-    # poppler stay listed here for data consistency even though they're locked
-    # and never rendered — see manifest_is_locked) ---
-    eza | fd | dust | yazi | poppler) echo "Filesystem" ;;
-    # --- Terminals: emulator/multiplexer/font, prompts (oh-my-posh is active;
-    # starship/powerlevel10k are dormant alternatives — config exists but
-    # .zshrc doesn't source them yet), command correction, and the locked
-    # fzf/zoxide (never rendered, kept here for data consistency) ---
-    ghostty | font-jetbrains-mono-nerd-font | oh-my-posh | starship | powerlevel10k | pay-respects | timescam/tap | fzf | zoxide) echo "Terminals" ;;
+    # --- Filesystem navigation ---
+    eza | fd | dust | yazi) echo "Filesystem" ;;
+    # --- Terminals: emulator/multiplexer/font, prompts (oh-my-posh is the
+    # active prompt; starship/powerlevel10k are dormant alternatives — config
+    # lives in config/starship, config/p10k but .zshrc doesn't source them),
+    # command correction, and the locked fzf/zoxide (never rendered, kept
+    # here for data consistency) ---
+    ghostty | font-jetbrains-mono-nerd-font | oh-my-posh | pay-respects | timescam/tap | fzf | zoxide) echo "Terminals" ;;
     # --- Text and search ---
     ripgrep | bat | jq | jless | yq | grip) echo "Text" ;;
     # --- Git and GitHub ---
@@ -218,13 +217,12 @@ manifest_category() {
     # --- Editors and IDEs ---
     neovim | visual-studio-code | phpstorm) echo "Editors" ;;
     # --- Dev languages, runtimes and CLI tools ---
-    make | go | python@3.14 | pipx | rust | bats-core | act | sshpass | mise | composer | php | php@8.2 | php@8.3 | php@8.4) echo "Dev" ;;
+    make | go | python@3.14 | pipx | rust | bats-core | act | sshpass | mise | composer | php) echo "Dev" ;;
     # --- Linters and formatters ---
     shellcheck | shfmt | actionlint | swiftformat) echo "Linters" ;;
     # --- Local dev environments and service runtimes ---
     orbstack) echo "Services" ;;
     # --- Databases ---
-    mysql | mysql-client | postgresql | redis | sqlite) echo "Databases" ;;
     # --- Media processing ---
     ffmpeg | ffmpegthumbnailer | imagemagick | webp | media-control) echo "Media tools" ;;
     # --- Entertainment ---

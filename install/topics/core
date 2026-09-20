@@ -5,7 +5,6 @@ brew "eza"
 brew "fd"
 brew "yazi"
 brew "ripgrep"
-brew "poppler"
 
 # --- System monitoring and utilities ---
 brew "btop"
@@ -21,8 +20,6 @@ brew "pay-respects"
 
 # --- Prompt ---
 brew "oh-my-posh"
-brew "starship"
-brew "powerlevel10k"
 
 # --- Multiplexers and terminals ---
 brew "herdr"
