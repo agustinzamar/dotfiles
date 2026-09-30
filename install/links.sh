@@ -26,7 +26,7 @@ _links_table() {
 		zsh|config/zsh/.zshrc|$HOME/.zshrc||shell
 		ohmyposh|config/oh-my-posh/theme.omp.json|$HOME/.config/oh-my-posh/theme.omp.json||shell
 		ghostty|config/ghostty/config|$HOME/.config/ghostty/config||terminal
-		herdr|config/herdr/herder.toml|$HOME/.config/herdr/config.toml|app-writable|ai-herdr
+		herdr|config/herdr/herdr.toml|$HOME/.config/herdr/config.toml|app-writable|ai-herdr
 		yazi|config/yazi/yazi.toml|$HOME/.config/yazi/yazi.toml||terminal
 		yazi|config/yazi/keymap.toml|$HOME/.config/yazi/keymap.toml||terminal
 		yazi|config/yazi/theme.toml|$HOME/.config/yazi/theme.toml||terminal

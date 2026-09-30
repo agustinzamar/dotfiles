@@ -428,7 +428,7 @@ EOF
 @test "every tracked config file is wired into an install path" {
   # Consumed directly by their own install/*.sh, not through links.sh.
   local handled="config/git/config"
-  # Installed via `herdr plugin link` (see herder.toml), not the dot map.
+  # Installed via `herdr plugin link` (see herdr.toml), not the dot map.
   # Run by hand (Mission Control "new desktop" helper), so there is no config to
   # link either. The Space walker is a program, not a config: sketchybar's
   # focus-native-space.sh invokes it, nothing links it into $HOME.
