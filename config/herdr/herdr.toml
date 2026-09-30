@@ -3,8 +3,6 @@
 onboarding = false
 
 [theme]
-# Match Ghostty's Catppuccin Macchiato palette. Herdr's built-in "catppuccin"
-# theme is Mocha, so override the tokens with Macchiato values to match.
 name = "catppuccin"
 
 # Don't switch light/dark modes
@@ -29,7 +27,6 @@ teal = "#8bd5ca"
 peach = "#f5a97f"
 
 [keys]
-# Match tmux/Zellij-style prefix muscle memory.
 prefix = "ctrl+a"
 
 # Jump straight to agent N (1..9) as listed in the sidebar.
@@ -41,14 +38,6 @@ focus_pane_down = ["prefix+j", "cmd+alt+ctrl+shift+j"]
 focus_pane_up = ["prefix+k", "cmd+alt+ctrl+shift+k"]
 
 new_tab = "prefix+t"
-
-# Hyper chord so this does not steal ctrl+t from shells, editors, or Ghostty.
-# Toggle-popup plugin keeps the shell alive in a tmux session so the same key opens and closes it.
-[[keys.command]]
-key = "ctrl+shift+alt+cmd+t"
-type = "plugin_action"
-command = "maro114510.toggle-popup.toggle-shell"
-description = "toggle scratch terminal"
 
 [ui]
 show_agent_labels_on_pane_borders = true
@@ -76,8 +65,8 @@ enabled = true
 [ui.sidebar.spaces]
 row_gap = 0
 rows = [
-  ["state_icon", "workspace"],
-  ["state_text", "git_status"],
+  ["state_icon", "workspace", "$ports"],
+  ["branch", "git_status"],
 ]
 
 [ui.sidebar.agents]
@@ -102,3 +91,23 @@ resume_agents_on_restore = true
 [advanced]
 # Two more zeros than default
 scrollback_limit_bytes=1000000000
+
+#################################################
+#                                               #
+#                Extensions                     #
+#                                               #
+#################################################
+
+# --------------- Ports -----------------------
+# Open the popup with prefix+a
+[[keys.command]]
+key = "prefix+a"
+type = "plugin_action"
+command = "numbered.ports.open"
+
+# --------------- Scratch Terminal ------------
+[[keys.command]]
+key = "ctrl+shift+alt+cmd+t"
+type = "plugin_action"
+command = "maro114510.toggle-popup.toggle-shell"
+description = "toggle scratch terminal"
