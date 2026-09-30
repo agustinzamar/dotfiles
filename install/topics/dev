@@ -13,9 +13,8 @@ brew "bats-core"
 # php is the CLI default. Homebrew's php ships a base extension set, so the
 # `php` install phase builds redis and imagick for every version present.
 brew "php"
-# Valet (`.test` sites with TLS) is not a brew package. It is declared as a
-# global Composer dependency in config/composer/composer.json, so
-# `dot link composer && composer global install` is what installs it.
+# Valet (`.test` sites with TLS) is not a brew package. Install it with
+# `composer global require` after install.
 brew "composer"
 
 # --- CLI tools ---

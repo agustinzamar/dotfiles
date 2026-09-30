@@ -40,7 +40,6 @@ _links_table() {
 git|config/git/ignore|$HOME/.config/git/ignore||git|git
 	git|config/git/config|$HOME/.config/git/config||git|git
 	mise|config/mise/config.toml|$HOME/.config/mise/config.toml||dev
-	composer|config/composer/composer.json|$HOME/.composer/composer.json||dev
 	ai|config/ai/AGENTS.md|$HOME/.agents/AGENTS.md||ai
 	ai|config/ai/skills.json|$HOME/.agents/skills.json||ai
 	pi|config/pi/settings.json|$HOME/.pi/agent/settings.json||ai
