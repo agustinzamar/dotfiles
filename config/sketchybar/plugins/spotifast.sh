@@ -13,10 +13,14 @@ export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 # is still `fastpotify` and its bundle id is still me.paolino.fastpotify.
 SPOTIFAST_BUNDLE_ID="me.paolino.fastpotify"
 
-# Max number of characters so it fits nicely to the right of the notch
-# MAY NOT WORK WITH NON-ENGLISH CHARACTERS
-MAX_LENGTH=35
-HALF_LENGTH=$(((MAX_LENGTH + 1) / 2))
+# The label is deliberately NOT truncated here. The marquee is drawn by
+# SketchyBar's own scroll_texts + label.max_chars pair, both set on the item in
+# the config, and it only scrolls text that SketchyBar itself truncated. Cutting
+# the string in this script would leave the bar nothing to move.
+#
+# Colour carries exactly one bit: the bar's single accent means "playing", the
+# neutral surface means "paused". No second hue is introduced; only the ink flips
+# with the surface, because the accent is light and the neutral one is dark.
 
 hide_item() {
     sketchybar --set $NAME drawing=off
@@ -50,38 +54,54 @@ update_track() {
     # media-control reports a boolean; older adapter builds exposed playbackRate.
     playing="$(jq -r 'if has("playing") then .playing else ((.playbackRate // 0) > 0) end' <<<"$NOW_PLAYING" 2>/dev/null)"
 
-    # Spotifast is loaded but holds no track: keep the icon, drop the label.
-    if [[ -z "$track" ]]; then
-        sketchybar --set $NAME background.color=0xffeed49f label.drawing=no
-        return
-    fi
-
-    local track_length=${#track} artist_length=${#artist}
-
-    # Calculations so it fits nicely
-    if [[ $((track_length + artist_length)) -gt $MAX_LENGTH ]]; then
-        # If the total length exceeds the max
-        if [[ $track_length -gt $HALF_LENGTH && $artist_length -gt $HALF_LENGTH ]]; then
-            # If both the track and artist are too long, cut both at half length - 1
-
-            # If MAX_LENGTH is odd, HALF_LENGTH is calculated with an extra space, so give it an extra char
-            track="${track:0:$((MAX_LENGTH % 2 == 0 ? HALF_LENGTH - 2 : HALF_LENGTH - 1))}…"
-            artist="${artist:0:$((HALF_LENGTH - 2))}…"
-        elif [[ $track_length -gt $HALF_LENGTH ]]; then
-            # Else if only the track is too long, cut it by the difference of the max length and artist length
-            track="${track:0:$((MAX_LENGTH - artist_length - 1))}…"
-        elif [[ $artist_length -gt $HALF_LENGTH ]]; then
-            artist="${artist:0:$((MAX_LENGTH - track_length - 1))}…"
+    # Ink travels with the surface. The accent is a light lilac, so the bar's
+    # light label default lands at 1.21:1 on it, while the dark ink the other
+    # accent pills already use (the active workspace pill, front_app) measures 8.17:1. A
+    # single fixed ink cannot serve both surfaces: the dark one on the neutral
+    # surface would invert the problem at 1.77:1.
+    local label_text="" background=0x66494d64 ink=0xffcad3f5 scroll=off
+    if [[ -n "$track" ]]; then
+        label_text="${track} | ${artist}"
+        # The old widget switched on Spotify's "Player State" string; this flag
+        # is the whole equivalent. Spotifast loaded but holding no track keeps
+        # the icon and the neutral surface, with the label dropped below.
+        if [[ "$playing" == "true" ]]; then
+            background=0xffb7bdf8
+            ink=0xff24273a
+            # Only a playing track is worth moving: the marquee reads as a
+            # play-state affordance, so the paused pill holds its text still.
+            # Writing the label resets the scroll offset, and the pause always
+            # writes one (the surface and the ink change with it), so the text
+            # parks at its start instead of wherever the pause caught it.
+            scroll=on
         fi
     fi
 
-    # The old widget switched on Spotify's "Player State" string; this flag is the
-    # whole equivalent.
-    if [[ "$playing" == "true" ]]; then
-        sketchybar --set $NAME label="${track}  ${artist}" label.drawing=yes background.color=0xffa6da95
-    else
-        sketchybar --set $NAME label="${track}  ${artist}" label.drawing=yes background.color=0xffeed49f
+    local label_drawing=no
+    [[ -n "$label_text" ]] && label_drawing=yes
+
+    # Writing an unchanged label restarts the marquee, and this item is polled
+    # every 5s, so only push when something actually changed. Every derived field
+    # belongs in this comparison — the surface, both ink colours and the scroll —
+    # because a run that ignored one would leave the previous state's value on
+    # the current state.
+    local current
+    current="$(sketchybar --query "$NAME" 2>/dev/null)"
+    if [[ "$(jq -r '.label.value // empty' <<<"$current" 2>/dev/null)" == "$label_text" ]] &&
+        [[ "$(jq -r '.geometry.background.color // empty' <<<"$current" 2>/dev/null)" == "$background" ]] &&
+        [[ "$(jq -r '.label.color // empty' <<<"$current" 2>/dev/null)" == "$ink" ]] &&
+        [[ "$(jq -r '.icon.color // empty' <<<"$current" 2>/dev/null)" == "$ink" ]] &&
+        [[ "$(jq -r '.geometry.scroll_texts // empty' <<<"$current" 2>/dev/null)" == "$scroll" ]]; then
+        return
     fi
+
+    sketchybar --set "$NAME" \
+        label="$label_text" \
+        label.drawing="$label_drawing" \
+        background.color="$background" \
+        label.color="$ink" \
+        icon.color="$ink" \
+        scroll_texts="$scroll"
 }
 
 case "$SENDER" in

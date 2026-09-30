@@ -3,19 +3,13 @@ brew "zoxide"
 brew "fzf"
 brew "eza"
 brew "fd"
-# Catppuccin Macchiato flavor: ya pkg add yazi-rs/flavors:catppuccin-macchiato
 brew "yazi"
-brew "poppler"
 brew "ripgrep"
-brew "grip"
-brew "watch"
 
 # --- System monitoring and utilities ---
 brew "btop"
-brew "procs"
 brew "topgrade"
 brew "duti"
-brew "dust"
 brew "dockutil"
 brew "mole"
 cask "pearcleaner"
@@ -24,15 +18,12 @@ cask "pearcleaner"
 tap "timescam/tap"
 brew "pay-respects"
 
-# --- Prompt (oh-my-posh is the active theme; starship/powerlevel10k are
-# dormant alternatives — config lives in config/starship, config/p10k but
-# .zshrc doesn't source either yet) ---
+# --- Prompt ---
 brew "oh-my-posh"
-brew "starship"
-brew "powerlevel10k"
 
 # --- Multiplexers and terminals ---
 brew "herdr"
+brew "neovim"
 cask "ghostty"
 
 # --- File extensions and MIME types ---
@@ -42,9 +33,6 @@ brew "jq"
 brew "jless"
 brew "yq"
 brew "unar"
-
-# --- Editors --- 
-brew "neovim"
 
 # --- Git and GitHub ---
 brew "git"

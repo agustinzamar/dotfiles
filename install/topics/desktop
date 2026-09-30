@@ -18,7 +18,6 @@ brew "sketchybar"
 # Quality of life
 cask "abue-ammar/tinycast/tinycast"
 cask "finetune"
-cask "typewhisper"
 cask "rectangle"
 cask "linearmouse"
 cask "localsend"

@@ -11,7 +11,7 @@
       "label": "shadcn/ui",
       "description": "shadcn/ui",
       "source": "shadcn/ui",
-      "skills": ["shadcn"]
+      "skills": ["shadcn", "migrate-radix-to-base"]
     },
     {
       "id": "vercel-labs-skills",
@@ -25,7 +25,15 @@
       "label": "Vercel Open Agents",
       "description": "vercel-labs/open-agents",
       "source": "vercel-labs/open-agents",
-      "skills": ["agent-browser", "vercel-react-best-practices"]
+      "skills": [
+        "agent-browser",
+        "vercel-react-best-practices",
+        "baseline-ui",
+        "code-review",
+        "emil-design-eng",
+        "frontend-design",
+        "web-animation-design"
+      ]
     },
     {
       "id": "vercel-labs-agent-skills",
@@ -39,25 +47,23 @@
       ]
     },
     {
-      "id": "supabase-agent-skills",
-      "label": "Supabase Agent Skills",
-      "description": "supabase/agent-skills",
-      "source": "supabase/agent-skills",
-      "skills": ["supabase-postgres-best-practices"]
-    },
-    {
       "id": "antfu-skills",
       "label": "Anthony Fu Skills",
       "description": "antfu/skills",
       "source": "antfu/skills",
-      "skills": ["vite", "pnpm"]
+      "skills": ["vite", "pnpm", "vitest"]
     },
     {
       "id": "wshobson-agents",
       "label": "wshobson Agents",
       "description": "wshobson/agents",
       "source": "wshobson/agents",
-      "skills": ["tailwind-design-system", "typescript-advanced-types"]
+      "skills": [
+        "tailwind-design-system",
+        "typescript-advanced-types",
+        "responsive-design",
+        "avoid-ai-writing"
+      ]
     }
   ]
 }

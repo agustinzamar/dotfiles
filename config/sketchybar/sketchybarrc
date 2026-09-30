@@ -1,18 +1,204 @@
 #!/usr/bin/env zsh
 
+# This is the only bar config: it is written for the laptop's notch, and the
+# bar follows whichever display macOS designates as the main one.
+
 # Plugin scripts are spawned by sketchybar with a minimal environment; make
 # sure sketchybar / jq / yabai are resolvable from Homebrew.
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
-SKETCHYBAR_CONFIG="$HOME/.config/sketchybar"
+FONT_FACE="JetBrainsMono Nerd Font"
 
-# This is used to determine if a monitor is used
-# Since the notch is -only- on the laptop, if a monitor isn't used,
-# then that means the internal display is used ¯\_(ツ)_/¯
-MAIN_DISPLAY=$(system_profiler SPDisplaysDataType | grep -B 3 'Main Display:' | awk '/Display Type/ {print $3}')
+PLUGIN_SHARED_DIR="$HOME/.config/sketchybar/plugins"
+IMAGES_DIR="$HOME/.config/sketchybar/images"
 
-if [[ $MAIN_DISPLAY = "Built-in" ]]; then
-    source "$SKETCHYBAR_CONFIG/sketchybarrc-laptop"
-else
-    source "$SKETCHYBAR_CONFIG/sketchybarrc-desktop"
-fi
+sketchybar --bar \
+    height=44 \
+    color=0x00000000 \
+    margin=0 \
+    sticky=on \
+    padding_left=23 \
+    padding_right=23 \
+    notch_width=188 \
+    display=main
+
+# Alternatiive background colors
+# label.color=0xffffffff
+# background.color=0x9924273a
+sketchybar --default \
+    background.color=0x66494d64 \
+    background.corner_radius=5 \
+    background.padding_right=7 \
+    background.height=34 \
+    icon.font="$FONT_FACE:Medium:19.0" \
+    icon.padding_left=7 \
+    icon.padding_right=7 \
+    label.font="$FONT_FACE:Medium:15.0" \
+    label.color=0xffcad3f5 \
+    label.y_offset=0 \
+    label.padding_left=0 \
+    label.padding_right=7
+
+# Spotifast publishes no playback event, so this item polls media-control
+# instead of subscribing to a notification the app never posts.
+#
+# The pill's width is what most easily collides with the right cluster: it shares
+# the notch band with the usage group, and the label advances 9px per character
+# at 15pt. max_chars is therefore a budget rather than a taste: 51px of icon and
+# padding plus 9px per character has to fit the gap left beside the notch, so 16
+# characters is 195px. scroll_texts marquees whatever the cap truncates.
+sketchybar --add item spotifast e \
+    --set spotifast \
+    icon= \
+    icon.y_offset=1 \
+    icon.font="$FONT_FACE:Medium:20.0" \
+    label.drawing=off \
+    label.padding_left=3 \
+    label.max_chars=16 \
+    scroll_texts=on \
+    update_freq=5 \
+    script="$PLUGIN_SHARED_DIR/spotifast.sh" \
+    --subscribe spotifast mouse.clicked
+
+# The paneru workspace row sits on the left, ahead of the front-app cluster, in
+# the place the single space indicator used to hold. sketchybar lays left-side
+# items out left-to-right in creation order, so the row must be added before
+# front_app; a right-side item is instead laid out from the display edge inward
+# and can never reach this position.
+#
+# The row is a fixed nine pills and workspace_row.sh only toggles them, because a
+# pill added at runtime is created after front_app and lands on the wrong side of
+# the cluster. Only space.1 schedules the refresh: the plugin updates all nine in
+# one pass, and the click subscription goes on every pill.
+for index in {1..9}; do
+    sketchybar --add item "space.$index" left \
+        --set "space.$index" \
+        drawing=off \
+        background.color=0x66494d64 \
+        background.padding_left=3 \
+        background.padding_right=3 \
+        icon="$index" \
+        icon.color=0xffcad3f5 \
+        icon.padding_left=8 \
+        icon.padding_right=9 \
+        label.drawing=off \
+        update_freq=0 \
+        script="$PLUGIN_SHARED_DIR/workspace_row.sh" \
+        --subscribe "space.$index" mouse.clicked
+done
+sketchybar --set space.1 update_freq=1
+
+sketchybar --add item front_app left \
+    --set front_app \
+    background.color=0xffb7bdf8 \
+    background.padding_left=0 \
+    background.padding_right=0 \
+    icon.y_offset=1 \
+    icon.color=0xff24273a \
+    label.drawing=no \
+    script="$PLUGIN_SHARED_DIR/front_app.sh" \
+    --add item front_app.separator left \
+    --set front_app.separator \
+    background.color=0x00000000 \
+    background.padding_left=-3 \
+    icon= \
+    icon.color=0xffb7bdf8 \
+    icon.font="$FONT_FACE:Medium:20.0" \
+    icon.padding_left=0 \
+    icon.padding_right=0 \
+    icon.y_offset=1 \
+    label.drawing=no \
+    --add item front_app.name left \
+    --set front_app.name \
+    background.color=0x00000000 \
+    background.padding_right=0 \
+    icon.drawing=off \
+    label.font="$FONT_FACE:Medium:12.0" \
+    label.drawing=yes
+
+sketchybar --add bracket front_app_bracket \
+    front_app \
+    front_app.separator \
+    front_app.name \
+    --subscribe front_app front_app_switched
+
+sketchybar --add item clock right \
+    --set clock \
+    icon=󰃰 \
+    icon.color=0xffb7bdf8 \
+    update_freq=10 \
+    script="$PLUGIN_SHARED_DIR/clock.sh"
+
+# The battery carried 18px of trailing padding where every other item in this
+# cluster uses 7, which left a 25px battery-to-clock gap beside 14px gaps. That
+# width buys more kept where the player pill needs it.
+sketchybar --add item battery right \
+    --set battery \
+    drawing=off \
+    background.padding_right=7 \
+    label.color=0xffb7bdf8 \
+    update_freq=20 \
+    script="$PLUGIN_SHARED_DIR/battery.sh"
+
+sketchybar --add item volume right \
+    --set volume \
+    icon.color=0xffb7bdf8 \
+    label.drawing=true \
+    script="$PLUGIN_SHARED_DIR/volume.sh" \
+    --subscribe volume volume_change
+
+# osascript -e 'quit app "Rectangle"'
+# open -a Rectangle
+
+# Provider logos keep session/weekly quotas readable beside the notch.
+# icon.width must stay >= the composited image width x its scale, or the right
+# edge of the widget (the trailing "%") is clipped: the plugin composes a 152px
+# wide image, so at scale 0.36 it needs 54.7px and icon.width keeps 56.
+# The scale is also what makes this group affordable: it shares the notch band
+# with the player pill, so every pixel taken here is one the pill does not get.
+#
+# These items draw no background of their own: the plugin already separates the
+# logo from the percentages inside that one composite, so a surface here only
+# framed dead space and widened the group into the player pill. The spacing is
+# carried by the icon and label paddings, which are sized for the text fallback
+# the plugin uses when magick or a logo is unavailable.
+for provider in codex claude opencode; do
+    case "$provider" in
+        codex) usage_image="$IMAGES_DIR/$provider.png"; usage_color=0xffb7bdf8 ;;
+        claude) usage_image="$IMAGES_DIR/$provider.png"; usage_color=0xffb7bdf8 ;;
+        opencode) usage_image="$IMAGES_DIR/$provider.png"; usage_color=0xffb7bdf8 ;;
+    esac
+        sketchybar --add item "usage.$provider" right \
+            --set "usage.$provider" \
+            background.drawing=off \
+            background.padding_left=9 \
+            background.padding_right=9 \
+            icon="" \
+            icon.width=56 \
+            icon.background.drawing=on \
+            icon.background.image="$usage_image" \
+            icon.background.image.drawing=on \
+            icon.background.image.scale=0.36 \
+            icon.padding_left=8 \
+            icon.padding_right=8 \
+            label="" \
+            label.color="$usage_color" \
+            label.font="$FONT_FACE:Medium:11.0" \
+            label.padding_left=8 \
+            label.padding_right=8 \
+            update_freq=0
+done
+# OpenCode lands on the left edge of the group and Codex on the right edge, so
+# the separation from the neighbouring widgets goes on those two sides, at the
+# same 9px the loop uses. Every point here is width taken from the player pill,
+# which shares the notch band with this group.
+sketchybar --set usage.opencode background.padding_left=9
+sketchybar --set usage.codex background.padding_right=9
+# Only Codex schedules the shared request; the plugin updates all three items.
+sketchybar --set 'usage.codex' update_freq=60 \
+script="$PLUGIN_SHARED_DIR/usage_quotas.sh" \
+--subscribe 'usage.codex' system_woke
+
+##### Finalizing Setup #####
+sketchybar --update
+sketchybar --trigger space_change

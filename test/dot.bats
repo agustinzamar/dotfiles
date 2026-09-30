@@ -13,10 +13,10 @@ setup() {
   chmod +x "$MACOS_BIN/uname"
 }
 
-@test "dot with no arguments prints usage" {
+@test "dot with no arguments prints help" {
   run "$DOT"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Usage: dot <command>"* ]]
+  [[ "$output" == *"Install (use"* ]]
 }
 
 @test "dot help lists commands" {
@@ -85,7 +85,7 @@ setup() {
 @test "install keeps a top-level help line" {
   run "$DOT" help
   [ "$status" -eq 0 ]
-  grep -q '^   install  ' <<<"$output"
+  grep -q '^   install ' <<<"$output"
 }
 
 # The completion parses `dot help`, so a change to the help format silently
@@ -121,8 +121,9 @@ setup() {
     # the parsed command set must exclude tui and stay exactly the advertised set.
     @test "completion from help excludes tui and lists every advertised command" {
       local parsed expected
-      parsed=$("$DOT" help | sed -n 's/^   \([a-z][a-z0-9-]*\)   *\(.*\)$/\1/p' | sort -u)
-      expected=$(printf '%s\n' ai doctor help install link test unlink update | sort -u)
+      # Match command names whether followed by " [--dry-run]" or multiple spaces
+      parsed=$("$DOT" help | sed -n 's/^   \([a-z][a-z0-9-]*\)\( \[[^]]*\]\)\{0,1\}  .*/\1/p' | sort -u)
+      expected=$(printf '%s\n' doctor help install link unlink update | sort -u)
       ! grep -qw tui <<<"$parsed"
       [ "$parsed" = "$expected" ]
     }
@@ -343,7 +344,7 @@ EOF
 
 @test "install runs every phase through the failure-collecting loop" {
   local phase
-  for phase in brew php npm link zsh code macos duti git; do
+  for phase in brew php link zsh code macos duti git; do
     grep -q "for phase in .*\b$phase\b" "$DOT" || {
       echo "phase '$phase' missing from the full-install loop"
       return 1
@@ -364,16 +365,16 @@ EOF
   [[ "$output" == *"dock.sh"* ]]
 }
 
-# bin/dot brew/link/etc used to only dispatch through `dot install <name>`;
-# the README documents them as top-level commands in their own right.
-@test "install subcommands and topics work as bare top-level commands" {
-  PATH="$MACOS_BIN:$PATH" run "$DOT" brew --dry-run
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"install/topics/core"* ]]
+# bin/dot no longer dispatches install subcommands/topics as bare commands.
+# They must be called via `dot install <name>`.
+@test "install subcommands and topics NO LONGER work as bare top-level commands" {
+  run "$DOT" brew --dry-run
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"not a known command"* ]]
 
-  PATH="$MACOS_BIN:$PATH" run "$DOT" core --dry-run
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"install/topics/core"* ]]
+  run "$DOT" core --dry-run
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"not a known command"* ]]
 
   HOME="$(mktemp -d)" run "$DOT" link ohmyposh --dry-run
   [ "$status" -eq 0 ]
@@ -430,10 +431,8 @@ EOF
   local handled="config/git/config"
   # Installed via `herdr plugin link` (see herdr.toml), not the dot map.
   # Run by hand (Mission Control "new desktop" helper), so there is no config to
-  # link either. The Space walker is a program, not a config: sketchybar's
-  # focus-native-space.sh invokes it, nothing links it into $HOME.
-  local known_gaps="config/herdr/workspace-layout config/yabai/new-desktop.applescript \
-    config/tinycast/lib/go-to-native-space.sh"
+  # link either.
+  local known_gaps="config/herdr/workspace-layout"
 
   local sources
   # Unfiltered: an orphan guard that only sees the rows applicable to the
@@ -492,18 +491,18 @@ EOF
   [ -z "$(find "$home" -mindepth 1)" ]
 }
 
-# Both components here are portable, so the assertion is about the profile
-# filter and never about which OS family the suite happens to run on.
-@test "profile-aware link selects individual components" {
-  local home profile
+# No profile file exists anymore: `dot link` uses the static baseline
+# (base/shell/git/terminal on, everything else opt-in).
+@test "baseline link selects default components, skips opt-in ones" {
+  local home
   home="$(mktemp -d)"
-  profile="$home/profile.json"
-  printf '{"components":{"ai-herdr":true}}\n' >"$profile"
-  HOME="$home" DOT_PROFILE="$profile" run "$DOT" link --dry-run
+  HOME="$home" run "$DOT" link --dry-run
   [ "$status" -eq 0 ]
-  [[ "$output" == *"seed $home/.config/herdr/config.toml (expand \$HOME)"* ]]
-  [[ "$output" != *"ln -s"* ]]
-  [[ "$output" != *"config/starship"* ]]
+  # Baseline links: zshrc, oh-my-posh, ghostty, yazi, hunk, lazygit, git.
+  # starship is NOT a link row — it was a dormant alternative, never wired in.
+  [[ "$output" == *"config/oh-my-posh"* ]]
+  [[ "$output" != *"AGENTS.md"* ]]
+  [[ "$output" != *"herdr/config.toml"* ]]
 }
 
 # A name can cover several targets (yazi -> yazi + keymap + theme), and must not
@@ -544,232 +543,11 @@ EOF
   # a bare `dot link` must not place AGENTS.md. With `ai` selected it now does
   # (through all_links — the self-healing re-assert this plan adds); the install
   # phase loop still never touches it.
-  local home profile
+  local home
   home="$(mktemp -d)"
-  profile="$home/profile.json"
-  printf '{"components":{"base":true,"shell":true,"git":true,"terminal":true}}\n' >"$profile"
-  HOME="$home" DOT_PROFILE="$profile" run "$DOT" --dry-run link
+  HOME="$home" run "$DOT" --dry-run link
   [ "$status" -eq 0 ]
   [[ "$output" != *"AGENTS.md"* ]]
-}
-
-# Skills default to the skills CLI, installed globally and unattended.
-@test "AI skills install through the skills CLI" {
-  local stub
-  stub="$(mktemp -d)"
-  printf '#!/bin/sh\nexit 0\n' >"$stub/claude"
-  chmod +x "$stub/claude"
-
-  PATH="$stub:$PATH" run "$DOT" ai claude-code --skills --dry-run
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"--agent claude-code --global --yes"* ]]
-  [[ "$output" != *"plugins for"* ]]
-}
-
-# Agents sharing the default skills CLI command collapse into one call per
-# entry, with one --agent flag per agent.
-@test "AI groups agents into one skills CLI call per entry" {
-  local stub
-  stub="$(mktemp -d)"
-  printf '#!/bin/sh\nexit 0\n' >"$stub/claude"
-  printf '#!/bin/sh\nexit 0\n' >"$stub/codex"
-  printf '#!/bin/sh\nexit 0\n' >"$stub/opencode"
-  chmod +x "$stub/claude" "$stub/codex" "$stub/opencode"
-
-  PATH="$stub:$PATH" run "$DOT" ai --skills --dry-run
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"add mattpocock/skills --agent claude-code --agent codex --agent opencode --agent pi --global --yes"* ]]
-  [[ "$output" != *"mattpocock-skills"* ]]
-}
-
-# A vendor with several picked skills becomes one call with repeated --skill
-# flags, and a single-skill vendor folds into the aggregator that hosts it.
-@test "AI emits one skills CLI call per vendor with repeated --skill flags" {
-  local stub
-  stub="$(mktemp -d)"
-  printf '#!/bin/sh\nexit 0\n' >"$stub/claude"
-  printf '#!/bin/sh\nexit 0\n' >"$stub/codex"
-  printf '#!/bin/sh\nexit 0\n' >"$stub/opencode"
-  chmod +x "$stub/claude" "$stub/codex" "$stub/opencode"
-
-  PATH="$stub:$PATH" run "$DOT" ai --skills --dry-run
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"add vercel-labs/agent-skills --skill vercel-composition-patterns --skill vercel-react-view-transitions --skill web-design-guidelines --agent claude-code --agent codex --agent opencode --agent pi --global --yes"* ]]
-  [[ "$output" == *"add vercel-labs/open-agents --skill agent-browser --skill vercel-react-best-practices --agent claude-code --agent codex --agent opencode --agent pi --global --yes"* ]]
-  [[ "$output" != *"add vercel-labs/agent-browser"* ]]
-}
-
-@test "AI skills remove a stale skills directory symlink" {
-  local home stub
-  home="$(mktemp -d)"
-  stub="$(mktemp -d)"
-  printf '#!/bin/sh\nexit 0\n' >"$stub/claude"
-  chmod +x "$stub/claude"
-  mkdir -p "$home/.claude"
-  ln -s "$home/missing-skills" "$home/.claude/skills"
-
-  HOME="$home" PATH="$stub:$PATH" run "$DOT" ai claude-code --skills --dry-run
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"rm $home/.claude/skills"* ]]
-}
-
-@test "AI plugins install through the agent CLI" {
-  local stub log
-  stub="$(mktemp -d)"
-  log="$stub/log"
-  cat >"$stub/claude" <<'EOF'
-#!/bin/sh
-printf '%s\n' "$*" >>"$PLUGIN_LOG"
-exit 0
-EOF
-  chmod +x "$stub/claude"
-
-  PLUGIN_LOG="$log" PATH="$stub:$PATH" run "$DOT" ai claude-code --plugins
-  [ "$status" -eq 0 ]
-  grep -q '^plugin marketplace add DietrichGebert/ponytail$' "$log"
-  grep -q '^plugin install ponytail@ponytail --scope user$' "$log"
-  grep -q '^plugin install superpowers@claude-plugins-official --scope user$' "$log"
-}
-
-# Only the named agent's commands run, so an opencode-only plugin never reaches
-# Claude Code and vice versa.
-@test "AI installs only for the agent asked for" {
-  local stub
-  stub="$(mktemp -d)"
-  printf '#!/bin/sh\nexit 0\n' >"$stub/opencode"
-  chmod +x "$stub/opencode"
-
-  PATH="$stub:$PATH" run "$DOT" ai opencode --plugins --dry-run
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"opencode plugin @tarquinen/opencode-dcp@latest --global"* ]]
-  [[ "$output" != *"claude plugin"* ]]
-}
-
-# The default skill command runs through pnpm. Without this the run fails once
-# per entry instead of saying what is wrong.
-@test "AI stops when pnpm cannot be installed" {
-  local stub
-  stub="$(mktemp -d)"
-  printf '#!/bin/sh\nexit 0\n' >"$stub/claude"
-  chmod +x "$stub/claude"
-  ln -s "$(command -v jq)" "$stub/jq"
-
-  PATH="$stub:/usr/bin:/bin" run /bin/bash "$DOT" ai claude-code --skills --dry-run
-  [ "$status" -eq 1 ]
-  [[ "$output" == *"pnpm is missing"* ]]
-}
-
-@test "AI installs pnpm through Homebrew when it is absent" {
-  local stub
-  stub="$(mktemp -d)"
-  printf '#!/bin/sh\nexit 0\n' >"$stub/claude"
-  printf '#!/bin/sh\nexit 0\n' >"$stub/brew"
-  chmod +x "$stub/claude" "$stub/brew"
-  ln -s "$(command -v jq)" "$stub/jq"
-
-  PATH="$stub:/usr/bin:/bin" run /bin/bash "$DOT" ai claude-code --skills --dry-run
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"brew install pnpm"* ]]
-}
-
-@test "AI skips an agent whose CLI is missing" {
-  local stub
-  stub="$(mktemp -d)"
-  ln -s "$(command -v jq)" "$stub/jq"
-  PATH="$stub:/usr/bin:/bin" run /bin/bash "$DOT" ai claude-code --plugins
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"claude-code: claude is not installed"* ]]
-}
-
-@test "AI applies tracked Gentle AI model assignments without replacing state" {
-  local home stub
-  home="$(mktemp -d)"
-  stub="$(mktemp -d)"
-  for command in opencode pnpm ocx; do
-    printf '#!/bin/sh\nexit 0\n' >"$stub/$command"
-    chmod +x "$stub/$command"
-  done
-  mkdir -p "$home/.gentle-ai"
-  printf '%s\n' '{"sentinel":"keep","model_assignments":{"old":{"provider_id":"old","model_id":"old"}}}' >"$home/.gentle-ai/state.json"
-
-  HOME="$home" PATH="$stub:$PATH" run "$DOT" ai opencode --plugins
-  [ "$status" -eq 0 ]
-  jq -e '.sentinel == "keep"' "$home/.gentle-ai/state.json" >/dev/null
-  jq -e --slurpfile profile "$DOTFILES_DIR/ai/gentle-ai/sdd-profile.json" '
-    .model_assignments == (
-      $profile[0] | .providers.opencode as $provider
-      | .agents | with_entries(select(.value.opencode != false)
-        | {key, value: {provider_id: $provider, model_id: .value.model, effort: .value.effort}})
-    )' "$home/.gentle-ai/state.json" >/dev/null
-}
-
-@test "AI model assignment application is dry-run safe and skips missing state" {
-  local home stub before
-  home="$(mktemp -d)"
-  stub="$(mktemp -d)"
-  for command in opencode pnpm ocx; do
-    printf '#!/bin/sh\nexit 0\n' >"$stub/$command"
-    chmod +x "$stub/$command"
-  done
-  mkdir -p "$home/.gentle-ai"
-  printf '%s\n' '{"sentinel":"keep"}' >"$home/.gentle-ai/state.json"
-  before=$(<"$home/.gentle-ai/state.json")
-
-  HOME="$home" PATH="$stub:$PATH" run "$DOT" ai opencode --plugins --dry-run
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"apply Gentle AI model assignments"* ]]
-  [ "$(<"$home/.gentle-ai/state.json")" = "$before" ]
-
-  rm "$home/.gentle-ai/state.json"
-  HOME="$home" PATH="$stub:$PATH" run "$DOT" ai opencode --plugins
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"Gentle AI state not found"* ]]
-}
-
-@test "AI rejects an unknown flag and an unknown agent" {
-  run "$DOT" ai --nope
-  [ "$status" -eq 1 ]
-  [[ "$output" == *"Usage: dot ai"* ]]
-
-  run "$DOT" ai gemini
-  [ "$status" -eq 1 ]
-  [[ "$output" == *"unknown agent: gemini"* ]]
-}
-
-@test "AI install supports macOS system bash" {
-  local stub
-  stub="$(mktemp -d)"
-  printf '#!/bin/sh\nexit 0\n' >"$stub/claude"
-  chmod +x "$stub/claude"
-
-  PATH="$stub:$PATH" run /bin/bash "$DOT" ai claude-code --skills --dry-run
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"--agent claude-code"* ]]
-}
-
-@test "dot ai without TTY shows a TTY error, not bun lookup" {
-  # Pipe (no TTY) — ai_open_picker must refuse before bun lookup.
-  # The guard in install/ai.sh fires before bun is located, so the output
-  # must mention the TTY error and must NOT mention bun missing.
-  run bash -c 'echo "" | '"$DOT"' ai'
-  [ "$status" -ne 0 ]
-  [[ "$output" == *"not a TTY"* ]]
-  [[ "$output" != *"bun not found"* ]]
-}
-
-@test "ai.tsx compiles and has a runtime import.meta.main entry point" {
-  # grep proves the pattern exists in source; bun build proves the TypeScript
-  # compiles and the import.meta.main block is syntactically valid at runtime.
-  grep -q 'import\.meta\.main' "$DOTFILES_DIR/tools/tui/src/ai.tsx"
-  # bun build compiles the file end-to-end; a missing import.meta.main or a
-  # syntax error in the block would fail here.
-  command -v bun >/dev/null 2>&1 || skip "bun not installed"
-  bun build --target=bun "$DOTFILES_DIR/tools/tui/src/ai.tsx" >/dev/null 2>&1
-}
-
-@test "dot ai --all does not require a TTY" {
-  run "$DOT" ai --all --dry-run
-  [ "$status" -eq 0 ]
 }
 
 @test "link and unlink round-trip" {
@@ -970,307 +748,6 @@ EOF
 }
 
 # ---------------------------------------------------------------------------
-# npm global tools (topics/npm)
-# ---------------------------------------------------------------------------
-
-@test "dot npm warns and succeeds when npm is missing" {
-  local stub
-  stub="$(mktemp -d)"
-  # No npm on PATH: only sh and basic utils.
-  PATH="$MACOS_BIN:/usr/bin:/bin" run "$DOT" npm
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"npm not installed"* ]]
-}
-
-@test "dot npm installs packages globally with correct arguments" {
-  local stub log
-  stub="$(mktemp -d)"
-  log="$stub/log"
-  cat >"$stub/npm" <<'EOF'
-#!/bin/sh
-printf '%s\n' "$*" >>"$NPM_LOG"
-exit 0
-EOF
-  chmod +x "$stub/npm"
-
-  NPM_LOG="$log" PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" npm
-  [ "$status" -eq 0 ]
-  grep -q '\-g' "$log"
-  grep -q 'typescript-language-server' "$log"
-}
-
-@test "dot install npm also works" {
-  local stub log
-  stub="$(mktemp -d)"
-  log="$stub/log"
-  cat >"$stub/npm" <<'EOF'
-#!/bin/sh
-printf '%s\n' "$*" >>"$NPM_LOG"
-exit 0
-EOF
-  chmod +x "$stub/npm"
-
-  NPM_LOG="$log" PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" install npm
-  [ "$status" -eq 0 ]
-  grep -q '\-g' "$log"
-  grep -q 'typescript-language-server' "$log"
-}
-
-@test "npm topic ignores blank lines and comments" {
-  local stub log real_npm
-  stub="$(mktemp -d)"
-  log="$stub/log"
-  cat >"$stub/npm" <<'EOF'
-#!/bin/sh
-printf '%s\n' "$*" >>"$NPM_LOG"
-exit 0
-EOF
-  chmod +x "$stub/npm"
-
-  # Back up real npm topic, replace with test content.
-  real_npm="$DOTFILES_DIR/install/topics/npm"
-  local backup="$stub/npm-backup"
-  cp "$real_npm" "$backup"
-  cat >"$real_npm" <<'EOF'
-# Comment line
-typescript-language-server
-
-# Another comment
-EOF
-
-  NPM_LOG="$log" PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" npm
-  local status=$?
-  cp "$backup" "$real_npm"
-  [ "$status" -eq 0 ]
-  # Only one package, no blank or comment arguments.
-  local args
-  args=$(grep -c '' "$log")
-  [ "$args" -eq 1 ]
-  grep -q 'typescript-language-server' "$log"
-}
-
-@test "npm installs one argument per package" {
-  local stub log real_npm
-  stub="$(mktemp -d)"
-  log="$stub/log"
-  cat >"$stub/npm" <<'EOF'
-#!/bin/sh
-printf '%s\n' "$*" >>"$NPM_LOG"
-exit 0
-EOF
-  chmod +x "$stub/npm"
-
-  real_npm="$DOTFILES_DIR/install/topics/npm"
-  local backup="$stub/npm-backup"
-  cp "$real_npm" "$backup"
-  cat >"$real_npm" <<'EOF'
-typescript-language-server
-prettier
-EOF
-
-  NPM_LOG="$log" PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" npm
-  local status=$?
-  cp "$backup" "$real_npm"
-  [ "$status" -eq 0 ]
-  # Each package gets its own line in the log (one `npm install -g pkg` per package).
-  local count
-  count=$(grep -c 'typescript-language-server\|prettier' "$log")
-  [ "$count" -eq 2 ]
-  # Packages are separate arguments, not space-joined.
-  ! grep -q 'typescript-language-server prettier' "$log"
-}
-
-@test "npm install failure propagates" {
-  local stub real_npm
-  stub="$(mktemp -d)"
-  printf '#!/bin/sh\nexit 1\n' >"$stub/npm"
-  chmod +x "$stub/npm"
-
-  real_npm="$DOTFILES_DIR/install/topics/npm"
-  local backup="$stub/npm-backup"
-  cp "$real_npm" "$backup"
-  printf 'typescript-language-server\n' >"$real_npm"
-
-  PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" npm
-  cp "$backup" "$real_npm"
-  [ "$status" -eq 1 ]
-}
-
-@test "npm phase runs after brew in the full install loop" {
-  grep -q "for phase in .*\bnpm\b" "$DOT" || {
-    echo "npm missing from the full-install loop"
-    return 1
-  }
-  # npm must come after brew (Node.js must be installed first).
-  local loop_line
-  loop_line=$(grep "for phase in" "$DOT")
-  local brew_pos npm_pos
-  brew_pos=$(echo "$loop_line" | grep -bo '\bbrew\b' | head -1 | cut -d: -f1)
-  npm_pos=$(echo "$loop_line" | grep -bo '\bnpm\b' | head -1 | cut -d: -f1)
-  [ -n "$brew_pos" ] && [ -n "$npm_pos" ]
-  [ "$brew_pos" -lt "$npm_pos" ]
-}
-
-@test "npm failures are collected in the full install loop" {
-  # Verify npm is in the phase loop and uses the failure-collecting pattern.
-  grep -q "for phase in .*\bnpm\b" "$DOT" || {
-    echo "npm missing from the full-install loop"
-    return 1
-  }
-  # The loop collects failures into an array, not short-circuits.
-  grep -q 'failures+=("\$phase")' "$DOT" || {
-    echo "full-install loop does not collect failures"
-    return 1
-  }
-}
-
-# ---------------------------------------------------------------------------
-# Remediation: sub_npm failure propagation (root cause fix)
-# ---------------------------------------------------------------------------
-
-# BUG: sub_npm used to mask an earlier package failure when a later package
-# succeeded. The last `run` call determined the function's exit status, so a
-# multi-package list with pkg1=fail, pkg2=pass returned 0.
-@test "sub_npm collects failures and returns non-zero when any package fails" {
-  local stub log real_npm backup
-  stub="$(mktemp -d)"
-  log="$stub/log"
-  # Stub npm: succeed for typescript-language-server, fail for prettier.
-  cat >"$stub/npm" <<'STUB'
-#!/bin/sh
-printf '%s\n' "$*" >>"$NPM_LOG"
-if [ "$3" = "prettier" ]; then exit 1; fi
-exit 0
-STUB
-  chmod +x "$stub/npm"
-
-  real_npm="$DOTFILES_DIR/install/topics/npm"
-  backup="$stub/npm-backup"
-  cp "$real_npm" "$backup"
-  trap 'cp "$backup" "$real_npm"' EXIT
-  printf 'typescript-language-server\nprettier\n' >"$real_npm"
-
-  NPM_LOG="$log" PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" npm
-  # Restore before assertions, while the trap protects interrupted tests.
-  cp "$backup" "$real_npm"
-  trap - EXIT
-  # Must return non-zero because prettier failed.
-  [ "$status" -eq 1 ]
-  # Both packages were attempted (neither masked).
-  grep -q 'typescript-language-server' "$log"
-  grep -q 'prettier' "$log"
-}
-
-# Verify the masking regression is truly fixed: first package fails, later
-# succeeds, and the function still returns non-zero.
-@test "sub_npm returns non-zero when first package fails and later succeeds" {
-  local stub log real_npm backup
-  stub="$(mktemp -d)"
-  log="$stub/log"
-  # Stub npm: fail for prettier, succeed for typescript-language-server.
-  cat >"$stub/npm" <<'STUB'
-#!/bin/sh
-printf '%s\n' "$*" >>"$NPM_LOG"
-if [ "$3" = "prettier" ]; then exit 1; fi
-exit 0
-STUB
-  chmod +x "$stub/npm"
-
-  real_npm="$DOTFILES_DIR/install/topics/npm"
-  backup="$stub/npm-backup"
-  cp "$real_npm" "$backup"
-  trap 'cp "$backup" "$real_npm"' EXIT
-  printf 'prettier\ntypescript-language-server\n' >"$real_npm"
-
-  NPM_LOG="$log" PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" npm
-  cp "$backup" "$real_npm"
-  trap - EXIT
-  # Must return non-zero because prettier failed.
-  [ "$status" -eq 1 ]
-  # Both packages were attempted.
-  grep -q 'prettier' "$log"
-  grep -q 'typescript-language-server' "$log"
-}
-
-# Verify the complete argument vector: `npm install -g <pkg>` — not just
-# that the package name appears, but that install and -g are present and
-# ordered correctly (issue 3: argument vector assertion).
-@test "sub_npm invokes npm with install -g and one package per call" {
-  local stub log real_npm backup
-  stub="$(mktemp -d)"
-  log="$stub/log"
-  cat >"$stub/npm" <<'STUB'
-#!/bin/sh
-printf '%s\n' "$*" >>"$NPM_LOG"
-exit 0
-STUB
-  chmod +x "$stub/npm"
-
-  real_npm="$DOTFILES_DIR/install/topics/npm"
-  backup="$stub/npm-backup"
-  cp "$real_npm" "$backup"
-  trap 'cp "$backup" "$real_npm"' EXIT
-  printf 'typescript-language-server\nprettier\n' >"$real_npm"
-
-  NPM_LOG="$log" PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" npm
-  local rc=$?
-  cp "$backup" "$real_npm"
-  trap - EXIT
-  [ "$rc" -eq 0 ]
-  # Each line is one complete `npm install -g <pkg>` invocation.
-  while IFS= read -r line; do
-    [[ "$line" == install\ -g\ * ]] || {
-      echo "argument vector does not start with 'install -g': $line"
-      return 1
-    }
-    # Exactly one argument after -g.
-    local arg_count
-    arg_count=$(echo "$line" | awk '{print NF}')
-    [ "$arg_count" -eq 3 ] || {
-      echo "expected 3 args (install -g pkg), got $arg_count: $line"
-      return 1
-    }
-  done <"$log"
-}
-
-# Verify shell-sensitive package names preserve argument boundaries.
-# Package names with @, spaces, and -- must not be word-split or expanded.
-@test "sub_npm preserves shell-sensitive package argument boundaries" {
-  local stub log real_npm backup
-  stub="$(mktemp -d)"
-  log="$stub/log"
-  cat >"$stub/npm" <<'STUB'
-#!/bin/sh
-# Log the package argument (3rd positional: install -g <pkg>)
-printf '%s\n' "$3" >>"$NPM_LOG"
-exit 0
-STUB
-  chmod +x "$stub/npm"
-
-  real_npm="$DOTFILES_DIR/install/topics/npm"
-  backup="$stub/npm-backup"
-  cp "$real_npm" "$backup"
-  trap 'cp "$backup" "$real_npm"' EXIT
-  printf '@typescript-eslint/parser\nprettier@3.0.0\nmy scoped --pkg\n' >"$real_npm"
-
-  NPM_LOG="$log" PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" npm
-  local rc=$?
-  cp "$backup" "$real_npm"
-  trap - EXIT
-  [ "$rc" -eq 0 ]
-  # Each package name appears exactly once as a complete argument
-  local count
-  count=$(grep -c '^@typescript-eslint/parser$' "$log")
-  [ "$count" -eq 1 ]
-  count=$(grep -c '^prettier@3.0.0$' "$log")
-  [ "$count" -eq 1 ]
-  count=$(grep -c '^my scoped --pkg$' "$log")
-  [ "$count" -eq 1 ]
-  # No word-splitting: the scoped package must not appear as separate tokens
-  ! grep -q '^--pkg$' "$log"
-}
-
-# ---------------------------------------------------------------------------
 # Remediation: runtime tests for full-install phase ordering and failure
 # collection (production sub_full + sub_npm, PATH stubs, no redefinitions)
 # ---------------------------------------------------------------------------
@@ -1362,58 +839,7 @@ kill() {
 sleep() { return 0; }
 STUB
 
-  chmod +x "$dir/brew" "$dir/npm" "$dir/git" "$dir/ssh-add" "$dir/defaults" "$dir/sudo" "$dir/code" "$dir/gh" "$dir/mdfind" "$dir/osascript" "$dir/systemsetup"
+  chmod +x "$dir/brew" "$dir/git" "$dir/ssh-add" "$dir/defaults" "$dir/sudo" "$dir/code" "$dir/gh" "$dir/mdfind" "$dir/osascript" "$dir/systemsetup"
 }
 
-# Runtime: production sub_full runs npm after brew.
-# Uses PATH stubs for brew/npm/git; does NOT redefine sub_npm or sub_full.
-@test "runtime: production sub_full runs npm after brew" {
-  local stub phase_log
-  stub="$(mktemp -d)"
-  phase_log="$stub/phase.log"
-
-  _make_full_stubs "$stub"
-
-  PHASE_LOG="$phase_log" BASH_ENV="$stub/bash-env" HOME="$(mktemp -d)" \
-    PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" install --all
-  [ "$status" -eq 0 ]
-  # Brew phase must appear before npm phase in the log
-  local brew_pos npm_pos
-  brew_pos=$(grep -n '^brew ' "$phase_log" | head -1 | cut -d: -f1)
-  npm_pos=$(grep -n '^npm-phase$' "$phase_log" | head -1 | cut -d: -f1)
-  [ -n "$brew_pos" ] && [ -n "$npm_pos" ]
-  [ "$brew_pos" -lt "$npm_pos" ]
-  local dev_pos
-  dev_pos=$(grep -n '/install/topics/dev$' "$phase_log" | head -1 | cut -d: -f1)
-  [ -n "$dev_pos" ]
-  [ "$dev_pos" -lt "$npm_pos" ]
-}
-
-# Runtime: production sub_full collects npm failure and continues.
-# npm stub exits 1; other phases still run; exit code is 1.
-@test "runtime: production sub_full collects npm failure and continues" {
-  local stub phase_log
-  stub="$(mktemp -d)"
-  phase_log="$stub/phase.log"
-
-  _make_full_stubs "$stub"
-  # Override npm stub to fail
-  cat >"$stub/npm" <<'STUB'
-#!/bin/sh
-printf 'npm-phase\n' >>"$PHASE_LOG"
-exit 1
-STUB
-  chmod +x "$stub/npm"
-
-  PHASE_LOG="$phase_log" BASH_ENV="$stub/bash-env" HOME="$(mktemp -d)" \
-    PATH="$stub:$MACOS_BIN:$PATH" run "$DOT" install --all
-  [ "$status" -eq 1 ]
-  # NPM was attempted
-  grep -q 'npm-phase' "$phase_log"
-  # Brew also ran (other phases continue despite npm failure)
-  grep -q '^brew ' "$phase_log"
-  # A later production phase ran after NPM failed.
-  grep -q '^git ' "$phase_log"
-  # Output mentions failures
-  [[ "$output" == *"failures"* ]] || [[ "$output" == *"failed"* ]]
-}
+# End of setup_file

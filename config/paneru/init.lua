@@ -5,7 +5,7 @@ paneru.setup {
     mouse_follows_focus = true,
   },
   padding = {
-    top = 16,
+    top = 8,
   },
   bindings = {
     ["window focus west"] = "alt - h",

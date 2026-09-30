@@ -37,11 +37,15 @@ _links_table() {
 		vscode|config/vscode/keybindings.json|$HOME/Library/Application Support/Code/User/keybindings.json||vscode|code|macos
 		hunk|config/hunk/config.toml|$HOME/.config/hunk/config.toml||git|hunk
 		lazygit|config/lazygit/config.yml|$HOME/.config/lazygit/config.yml||git|lazygit
-		git|config/git/ignore|$HOME/.config/git/ignore||git|git
-		npm|config/npm/.npmrc|$HOME/.npmrc||dev
-		mise|config/mise/config.toml|$HOME/.config/mise/config.toml||dev
-		composer|config/composer/composer.json|$HOME/.composer/composer.json||dev
-		pi|config/pi/settings.json|$HOME/.pi/agent/settings.json||ai
+git|config/git/ignore|$HOME/.config/git/ignore||git|git
+	git|config/git/config|$HOME/.config/git/config||git|git
+	mise|config/mise/config.toml|$HOME/.config/mise/config.toml||dev
+	ai|config/ai/AGENTS.md|$HOME/.agents/AGENTS.md||ai
+	ai|config/ai/skills.json|$HOME/.agents/skills.json||ai
+	pi|config/pi/settings.json|$HOME/.pi/agent/settings.json||ai
+		claude|config/claude/settings.json|$HOME/.claude/settings.json||ai
+		claude|config/claude/statusline-command.sh|$HOME/.claude/statusline-command.sh||ai
+		opencode|config/opencode/opencode.json|$HOME/.config/opencode/opencode.json||ai
 	EOF
 }
 
@@ -121,12 +125,20 @@ link_all() {
 
 # Link every target sharing a name (`ghostty` -> two rows). Unknown names fail
 # loudly instead of silently doing nothing.
+# Explicit `dot link <name>` fails if the required tool is not installed.
 link_named() {
   local name="$1" map found=0
   # A name could live in both maps, so walk every map that declares it rather
   # than stopping at the first — otherwise a shared name would skip rows.
   for map in all_links_raw optional_links; do
     if "$map" | cut -d'|' -f1 | grep -qx "$name"; then
+      # Check requirements upfront: explicit link <name> must fail if tool missing
+      local req
+      req=$("$map" | awk -F'|' -v n="$name" '$1 == n && $6 != "" {print $6; exit}')
+      if [[ -n "$req" ]] && ! is_executable "$(platform_binary "$req")"; then
+        echo "missing requirement: $name needs $req" >&2
+        return 1
+      fi
       log "Linking $name"
       _walk_links "$map" link_file "$name"
       found=1

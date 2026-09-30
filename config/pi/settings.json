@@ -1,5 +1,6 @@
 {
   "autocompleteMaxVisible": 5,
+  "collapseChangelog": true,
   "defaultModel": "gpt-5.6-luna",
   "defaultProjectTrust": "always",
   "defaultProvider": "openai-codex",
@@ -10,52 +11,54 @@
   "enabledModels": [
     "openai-codex/gpt-5.6-sol",
     "openai-codex/gpt-5.6-luna",
-    "opencode/muse-spark-1.3-contributor-free",
     "anthropic/claude-opus-5",
     "anthropic/claude-sonnet-5",
     "nvidia/moonshotai/kimi-k3",
-    "opencode-go/deepseek-v4.1-flash",
-    "nvidia/deepseek-ai/deepseek-v4-flash-0731"
+    "nvidia/deepseek-ai/deepseek-v4-flash-0731",
+    "kilo/kilo-auto/free",
+    "opencode-go/deepseek-v4.1-flash"
   ],
   "followUpMode": "all",
+  "fullscreenCopyOnSelect": true,
   "fullscreenExitOutput": "resume-hint",
   "fullscreenScrollbar": "always",
   "hideThinkingBlock": true,
+  "httpIdleTimeoutMs": 0,
   "images": {
     "blockImages": false
   },
   "lastChangelogVersion": "0.85.1",
+  "markdown": {
+    "mermaid": "streaming"
+  },
   "modelThinkingLevels": {
     "anthropic/claude-opus-5": "medium",
     "anthropic/claude-sonnet-5": "high",
     "openai-codex/gpt-5.6-luna": "xhigh",
     "openai-codex/gpt-5.6-sol": "high",
+    "openai-codex/gpt-6-astra": "high",
     "opencode-go/hy3": "high",
-    "opencode/muse-spark-1.3-contributor-free": "xhigh",
-    "openai-codex/gpt-6-astra": "high"
+    "opencode/muse-spark-1.3-contributor-free": "xhigh"
   },
   "outputPad": 1,
   "packages": [
-    "npm:gentle-pi@2.5.0",
-    "npm:gentle-engram",
+    "npm:gentle-pi@3.2.0",
     "npm:pi-intercom",
     "npm:pi-web-access",
-    "npm:pi-lens",
     "npm:@juicesharp/rpiv-ask-user-question",
-    "npm:@zerosnow/pi-shimmer",
-    "npm:gentle-engram@0.1.8",
     "npm:pi-btw",
     "npm:@gotgenes/pi-anthropic-auth",
     "npm:pi-workspace-history",
-    "npm:pi-mcp-adapter",
-    "git:github.com/Kilo-Org/kilo-pi-provider@v2026.08.0"
+    "git:github.com/Kilo-Org/kilo-pi-provider@v2026.08.0",
+    "npm:pi-mcp-adapter"
   ],
   "quietStartup": true,
+  "showCacheMissNotices": true,
   "showHardwareCursor": true,
   "steeringMode": "all",
   "terminal": {
-    "showTerminalProgress": false,
-    "imageWidthCells": 120
+    "imageWidthCells": 120,
+    "showTerminalProgress": false
   },
   "theme": "Gentleman-Cute",
   "transport": "auto",
@@ -63,12 +66,5 @@
   "tuiMode": "fullscreen",
   "warnings": {
     "anthropicExtraUsage": false
-  },
-  "showCacheMissNotices": true,
-  "httpIdleTimeoutMs": 0,
-  "markdown": {
-    "mermaid": "streaming"
-  },
-  "collapseChangelog": true,
-  "fullscreenCopyOnSelect": true
+  }
 }

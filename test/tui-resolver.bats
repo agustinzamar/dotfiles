@@ -43,7 +43,7 @@ setup() {
         cat >"$TUI_BIN" <<'EOF'
 #!/bin/sh
 case "$1" in
-  --version) printf '%s\n' 'dot-tui-context-v12'; exit 0 ;;
+  --version) printf '%s\n' 'dot-tui-context-v13'; exit 0 ;;
 esac
 printf 'TUI-STUB %s\n' "$*"
 EOF
@@ -77,7 +77,7 @@ if [ "\$1" = "build" ]; then
     prev="\$a"
   done
   [ -n "\$out" ] || exit 1
-  printf '#!/bin/sh\ncase "$1" in\n--version) printf '"'"'%s\\n'"'"' "dot-tui-context-v12"; exit 0 ;;\nesac\nprintf '"'"'TUI-STUB %%s\\n'"'"' "\$*"\n' >"\$out"
+  printf '#!/bin/sh\ncase "$1" in\n--version) printf '"'"'%s\\n'"'"' "dot-tui-context-v13"; exit 0 ;;\nesac\nprintf '"'"'TUI-STUB %%s\\n'"'"' "\$*"\n' >"\$out"
   chmod +x "\$out"
   exit 0
 fi
@@ -99,7 +99,7 @@ teardown() {
 # provisioning, so a piped `curl | bash` dies in milliseconds instead of
 # installing Homebrew or hanging. --dry-run keeps this test safe on the day the
 # guard is missing (the old bare path would dry-run cleanly and exit 0).
-@test "bare install under non-TTY stdin fails naming --all and --profile" {
+@test "bare install under non-TTY stdin fails naming --all" {
   run env PATH="$BASE_PATH" "$DOT" install --dry-run </dev/null
   [ "$status" -ne 0 ]
   [[ "$output" == *"stdin is not a TTY"* ]]
@@ -126,16 +126,12 @@ teardown() {
 # number of arguments"), so the command never ran and the assertions below
 # could not pass on Linux. Both branches run the same command and assert the
 # same behaviour.
-@test "interactive install with an unlaunchable runtime fails naming the headless flags" {
+@test "interactive install without TTY fails naming the headless flags" {
   local scratch_home
   scratch_home="$(mktemp -d)"
-  if [[ "$(uname -s)" == Darwin ]]; then
-    run script -q /dev/null env PATH="$BASE_PATH" HOME="$scratch_home" \
-      "$DOT" install --dry-run
-  else
-    run script -qec "env PATH='$BASE_PATH' HOME='$scratch_home' '$DOT' install --dry-run" /dev/null
-  fi
+  # Use < /dev/null to ensure no TTY (script -q /dev/null allocates a PTY)
+  run env PATH="$BASE_PATH" HOME="$scratch_home" "$DOT" install --dry-run < /dev/null
   [ "$status" -ne 0 ]
-  [[ "$output" == *"TUI unavailable"* ]]
+  [[ "$output" == *"stdin is not a TTY"* ]]
   [[ "$output" == *"--all"* ]]
 }

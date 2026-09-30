@@ -7,7 +7,7 @@
 
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd -P) || exit 1
 REPO_ROOT=$(cd "$SCRIPT_DIR/.." 2>/dev/null && pwd -P) || exit 1
-SOURCE="${SOURCE:-$REPO_ROOT/ai/AGENTS.md}"
+SOURCE="${SOURCE:-$REPO_ROOT/config/ai/AGENTS.md}"
 
 [ -f "$SOURCE" ] || {
   echo "gentle-ai: missing source: $SOURCE" >&2

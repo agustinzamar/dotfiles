@@ -104,7 +104,7 @@ change to a script, not like a change to a config value.
 | --- | --- |
 | `install` | Opens the interactive installer (tools, then config links) — requires a TTY |
 | `install --all` | Install every standard phase headlessly (AI stays opt-in) |
-| `link` | Repair links selected in `~/.config/dot/profile.json` |
+| `link` | Repair links for the baseline components (base/shell/git/terminal) |
 | `link --all` | Force-link every valid config explicitly |
 | `link <name>` | Force-link one config (`ghostty`, `paneru`, `yazi`, …) |
 | `ai [agent]` | Install AI skills and plugins (opt-in, never part of `install`) |
@@ -133,8 +133,8 @@ plus a final opt-in `agents` group. Press Enter to install the selected tools,
 link the checked configs, and finish. Press `q` anywhere before confirming to
 abort — nothing is installed and nothing is linked.
 
-The profile at `~/.config/dot/profile.json` stores the selected *areas*
-(what `dot link` / `dot update` gate on); link choices are applied once and are
+`dot link` / `dot update` gate on the static baseline (base/shell/git/terminal
+on, everything else opt-in); link choices are applied once and are
 not persisted. Successful work is not repeated during the same session, and
 deselecting an installed app never uninstalls it or removes its config link.
 
