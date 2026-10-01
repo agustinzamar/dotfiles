@@ -2,10 +2,11 @@
 # Basic env (LANG, Homebrew, dotfiles bin, pipx) lives inline in .zshrc.
 # Each block applies only when the tool is installed, so PATH and env stay
 # clean on machines without it.
-
-# MySQL client
-[[ -d "/opt/homebrew/opt/mysql-client/bin" ]] &&
-  export PATH="/opt/homebrew/opt/mysql-client/bin:$PATH"
+#
+# This file is for environment that depends on machine state — a directory, an
+# app bundle. When the only condition is "this binary is installed", use a
+# snippet under config/zsh/exports/ instead: `dot link` gates it through the
+# requirement column in install/links.sh, and .zshrc sources the linked dir.
 
 # Ghostty CLI (use `ghostty +list-fonts`, `+show-config`, etc.)
 [[ -d "/Applications/Ghostty.app/Contents/MacOS" ]] &&

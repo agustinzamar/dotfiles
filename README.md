@@ -24,7 +24,7 @@ cd ~/dotfiles
 bin/dot install
 ```
 
-`system/.exports` puts `~/dotfiles/bin` on your `PATH`, so `dot` is available
+`config/zsh/.zshrc` puts `~/dotfiles/bin` on your `PATH`, so `dot` is available
 once the shell configs are linked and the shell has been restarted. A bare
 `make` shows available targets; `make install` runs the full interactive
 installer.
