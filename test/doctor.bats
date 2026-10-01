@@ -107,8 +107,23 @@ linked_box() {
 @test "doctor on macOS still reports a broken Library target" {
   linked_box macos
   stub brew 'exit 0'
+  # The row is gated on `code`, so the fixture has to declare the tool before
+  # its absence is a fault rather than the gate doing its job.
+  stub code 'exit 0'
   rm "$SCRATCH_HOME/Library/Application Support/Code/User/settings.json"
   run dot_cli doctor
   [ "$status" -ne 0 ]
   [[ "$output" == *"broken: $SCRATCH_HOME/Library/Application Support/Code/User/settings.json"* ]]
+}
+
+@test "doctor ignores a requirement-gated row whose tool is absent" {
+  # --all force-links the gated rows too, so the missing target below cannot be
+  # mistaken for "never linked because its tool is missing".
+  linked_box macos
+  stub brew 'exit 0'
+  rm "$SCRATCH_HOME/.config/zsh/exports/yazi.zsh"
+  run dot_cli doctor
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"zsh/exports/yazi.zsh"* ]]
+  [[ "$output" == *"dotfiles: healthy"* ]]
 }

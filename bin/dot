@@ -525,13 +525,18 @@ sub_doctor() {
       failed=1
     }
   }
-  # Takes the same (source, target, mode) a link map row carries, so the whole
-  # map can be walked instead of a hand-kept subset that goes stale.
+  # Takes the same (source, target, mode, requirement) a link map row carries,
+  # so the whole map can be walked instead of a hand-kept subset that goes stale.
   # shellcheck disable=SC2329  # called by name from _walk_links
   check_link() {
-    local source=$1 target=$2 mode=${3:-}
+    local source=$1 target=$2 mode=${3:-} requirement=${4:-}
     # An app-writable target is a live file on purpose, never a symlink.
     [[ "$mode" == app-writable ]] && return 0
+    # A requirement-gated row is absent by design when its tool is not
+    # installed: `dot link` skipped it, so it is not a fault.
+    if [[ -n "$requirement" ]] && ! is_executable "$(platform_binary "$requirement")"; then
+      return 0
+    fi
     [[ -L "$target" && "$(readlink "$target")" == "$DOTFILES_DIR/$source" ]] || {
       echo "broken: $target"
       failed=1

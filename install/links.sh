@@ -99,6 +99,10 @@ optional_link_names() {
 }
 
 # _walk_links <map-function> <action-function> [name-filter]
+#
+# The row's requirement travels with the (source, target, mode) triple so a
+# walker can honor the gate itself: `link_file` gates on it, and `dot doctor`
+# treats it as "absent by design" when the binary is missing.
 _walk_links() {
   local map="$1" action="$2" filter="${3:-}" name source target mode component requirement
   while IFS='|' read -r name source target mode component requirement; do
@@ -113,7 +117,7 @@ _walk_links() {
       [[ "${LINK_VERBOSE:-false}" == true ]] && echo "skipping $name: missing requirement $requirement" >&2
       continue
     fi
-    "$action" "$source" "$target" "$mode"
+    "$action" "$source" "$target" "$mode" "$requirement"
   done < <("$map")
 }
 
