@@ -405,8 +405,11 @@ sub_skills() {
   while [[ -z "$scope" ]]; do
     read -r -p "Install scope [local/global]: " scope
     case "$scope" in
-      local|global) ;;
-      *) echo "Please enter 'local' or 'global'"; scope="" ;;
+      local | global) ;;
+      *)
+        echo "Please enter 'local' or 'global'"
+        scope=""
+        ;;
     esac
   done
 
@@ -436,7 +439,7 @@ sub_skills() {
   echo ""
   echo "Available skills:"
   for i in "${!skills[@]}"; do
-    printf "  %2d) %s (%s from %s)\n" $((i+1)) "${labels[i]}" "${skills[i]}" "${sources[i]}"
+    printf "  %2d) %s (%s from %s)\n" $((i + 1)) "${labels[i]}" "${skills[i]}" "${sources[i]}"
   done
   echo ""
 
