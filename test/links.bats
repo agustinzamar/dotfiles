@@ -224,6 +224,18 @@ portable=$(links_sh '_links_table' | awk -F'|' '$7 == "" { print $3 }')
   [[ "$output" == *"$DOTFILES_DIR/config/zsh/exports/reeve.zsh"* ]]
 }
 
+@test "link <name> survives the requirement lookup for a gated name" {
+  # A gated name exits through link_named's requirement lookup, which read the
+  # map through a pipe into an early-exiting awk: the SIGPIPE that gave turned
+  # into a failed assignment and killed the CLI (exit 141) before it linked
+  # anything — vscode, hunk and lazygit alike, and the gated export rows.
+  box_family macos
+  stub code 'exit 0'
+  run dot_cli link vscode --dry-run
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"/config/vscode/settings.json"* ]]
+}
+
 @test "the debian rename does not leak onto macOS" {
   box_family macos
   stub batcat 'exit 0'

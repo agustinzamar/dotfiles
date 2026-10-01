@@ -131,14 +131,22 @@ link_all() {
 # loudly instead of silently doing nothing.
 # Explicit `dot link <name>` fails if the required tool is not installed.
 link_named() {
-  local name="$1" map found=0
+  local name="$1" map found=0 rows
   # A name could live in both maps, so walk every map that declares it rather
   # than stopping at the first — otherwise a shared name would skip rows.
   for map in all_links_raw optional_links; do
-    if "$map" | cut -d'|' -f1 | grep -qx "$name"; then
+    # The map is read once and filtered through here-strings, never a pipe into
+    # an early-exiting reader: `grep -q` and `awk ... exit` stop at the first
+    # match, and under bin/dot's `set -o pipefail` the SIGPIPE that gives the
+    # writer becomes a failed assignment, which `set -e` turns into a dead CLI
+    # (exit 141) — for every gated name, vscode/hunk/lazygit included. Same
+    # guard as the module check in install/php.sh.
+    rows=$("$map")
+    if grep -qxF "$name" <<<"$(cut -d'|' -f1 <<<"$rows")"; then
       # Check requirements upfront: explicit link <name> must fail if tool missing
       local req
-      req=$("$map" | awk -F'|' -v n="$name" '$1 == n && $6 != "" {print $6; exit}')
+      req=$(awk -F'|' -v n="$name" '$1 == n && $6 != "" { print $6 }' <<<"$rows")
+      req=${req%%$'\n'*}
       if [[ -n "$req" ]] && ! is_executable "$(platform_binary "$req")"; then
         echo "missing requirement: $name needs $req" >&2
         return 1
