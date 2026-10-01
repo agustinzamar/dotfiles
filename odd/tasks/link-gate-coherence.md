@@ -40,6 +40,14 @@ different root cause than the dangling rows.
   - Why: it gates on `/opt/homebrew/opt/mysql-client/bin`; the installed formula
     is `mysql` (26.7.0_3, linked into `/opt/homebrew/bin`), so the block never
     fired and the PATH entry it would add is redundant.
+- [x] 6. Fix `dot link <name>` for any requirement-gated name.
+  - Why: `link_named` read the requirement through a pipe into an
+    early-exiting `awk`, so the map writer took SIGPIPE and,
+    under `set -o pipefail` + `set -e`, the CLI died with exit 141 before
+    linking anything. `vscode`, `hunk` and `lazygit` were all dead that way;
+    the gated export rows are what made it visible.
+  - Fix: read the map once and filter it through here-strings, the precedent
+    documented in `install/php.sh`.
 
 ## Commits
 
@@ -48,13 +56,16 @@ different root cause than the dangling rows.
 - `bcae6c3` test(dot): exempt config/.gitignore from the orphan guard (task 3)
 - `71248b4` chore(exports): retire the dead mysql-client block and fix the PATH
   doc (task 5)
+- `b088e98` fix(link): stop the requirement lookup from killing
+  `dot link <name>` (task 6)
 
 ## Evidence
 
-- Whole suite: 202 tests, 180 pass, 22 fail — `agents.bats` (8) and `git.bats`
-  (14), byte-identical to the baseline measured with this change stashed. Zero
+- Whole suite: 203 tests, 180 pass, 22 fail — `agents.bats` (8) and `git.bats`
+  (14), identical to the baseline measured with this change stashed. Zero
   regressions, and the 16 failures in the touched files are gone: links 4 → 0,
-  doctor 10 → 0, dot 2 → 0.
+  doctor 10 → 0, dot 2 → 0. The four touched suites are 97/97, one test more
+  than before only because task 6 added its regression case.
 - `make check` clean; `shellcheck` clean on `bin/dot`, `install/links.sh`,
   `install/manifest.sh`; `shfmt -d` still flags the pre-existing `$((i+1))`
   spacing at `bin/dot:439`, untouched by this work.
