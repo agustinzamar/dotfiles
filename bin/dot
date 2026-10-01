@@ -481,9 +481,14 @@ sub_link() {
       log "Linking dotfiles"
       link_all
       ;;
+    --all | all)
+      log "Force-linking every config"
+      LINK_FORCE=true link_all
+      ;;
     help)
       echo "Usage: $BIN_NAME link [target]"
       echo "   (no target)  Symlink every config into place"
+      echo "   --all        Force-link every config explicitly"
       echo "   <name>       Symlink one config: $(link_names)"
       echo "   opt-in only  $(optional_link_names) — skipped by a bare \`link\`"
       ;;
