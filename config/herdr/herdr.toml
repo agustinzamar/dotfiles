@@ -32,17 +32,23 @@ prefix = "ctrl+a"
 # Jump straight to agent N (1..9) as listed in the sidebar.
 focus_agent = "prefix+ctrl+1..9"
 
-focus_pane_left = ["prefix+h", "cmd+alt+ctrl+shift+h"]
-focus_pane_right = ["prefix+l", "cmd+alt+ctrl+shift+l"]
-focus_pane_down = ["prefix+j", "cmd+alt+ctrl+shift+j"]
-focus_pane_up = ["prefix+k", "cmd+alt+ctrl+shift+k"]
+focus_pane_left = ["prefix+h"]
+focus_pane_right = ["prefix+l"]
+focus_pane_down = ["prefix+j"]
+focus_pane_up = ["prefix+k"]
 
 new_tab = "prefix+t"
+
+new_worktree = "prefix+shift+n"
+remove_worktree = "prefix+shift+d"
+
+new_workspace = "prefix+n"
+close_workspace = "prefix+d"
 
 [ui]
 show_agent_labels_on_pane_borders = true
 prompt_new_tab_name = false
-hide_tab_bar_when_single_tab = true
+pane_gaps = false
 
 mouse_capture = true
 copy_on_select = true
@@ -50,8 +56,10 @@ host_cursor = "native"
 right_click_passthrough_modifier = "ctrl"
 mouse_scroll_lines = 1
 
+status_indicators = "symbols"
+
 [ui.toast]
-delivery = "herdr"
+delivery = "terminal"
 
 [ui.toast.herdr]
 position = "top-right"
@@ -65,15 +73,14 @@ enabled = true
 [ui.sidebar.spaces]
 row_gap = 0
 rows = [
-  ["state_icon", "workspace", "$ports"],
-  ["branch", "git_status"],
+  ["workspace", "branch", "git_status", "$ports"],
 ]
 
 [ui.sidebar.agents]
-row_gap = 1
+row_gap = 0
 rows = [
-  ["state_icon", "workspace"],
-  ["state_text", "agent"]
+  ["state_icon", "workspace", "agent"],
+  ["terminal_title_stripped"]
 ]
 
 [terminal]
@@ -88,9 +95,6 @@ kitty_graphics = true
 [session]
 resume_agents_on_restore = true
 
-[advanced]
-# Two more zeros than default
-scrollback_limit_bytes=1000000000
 
 #################################################
 #                                               #
@@ -111,3 +115,16 @@ key = "ctrl+shift+alt+cmd+t"
 type = "plugin_action"
 command = "maro114510.toggle-popup.toggle-shell"
 description = "toggle scratch terminal"
+
+# ---------------- NVim ----------------------
+[[keys.command]]
+key = "prefix+e"
+type = "plugin_action"
+command = "chmarax.herdr-nvim.toggle"
+description = "nvim sidebar"
+
+[[keys.command]]
+key = "prefix+o"
+type = "plugin_action"
+command = "chmarax.herdr-nvim.pick-file"
+description = "open file from agent output"
