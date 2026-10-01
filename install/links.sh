@@ -45,7 +45,7 @@ git|config/git/ignore|$HOME/.config/git/ignore||git|git
 	pi|config/pi/settings.json|$HOME/.pi/agent/settings.json||ai
 		claude|config/claude/settings.json|$HOME/.claude/settings.json||ai
 		claude|config/claude/statusline-command.sh|$HOME/.claude/statusline-command.sh||ai
-		opencode|config/opencode/opencode.json|$HOME/.config/opencode/opencode.json||ai
+		opencode|config/opencode/opencode.jsonc|$HOME/.config/opencode/opencode.jsonc||ai
 	EOF
 }
 
