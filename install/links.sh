@@ -24,6 +24,8 @@ declare -F os_family >/dev/null 2>&1 || . "$LINKS_DIR/platform.sh"
 _links_table() {
   cat <<-EOF
 		zsh|config/zsh/.zshrc|$HOME/.zshrc||shell
+		reeve-exports|config/zsh/exports/reeve.zsh|$HOME/.config/zsh/exports/reeve.zsh||shell|reeve
+		yazi-exports|config/zsh/exports/yazi.zsh|$HOME/.config/zsh/exports/yazi.zsh||shell|yazi
 		ohmyposh|config/oh-my-posh/theme.omp.json|$HOME/.config/oh-my-posh/theme.omp.json||shell
 		ghostty|config/ghostty/config|$HOME/.config/ghostty/config||terminal
 		herdr|config/herdr/herdr.toml|$HOME/.config/herdr/config.toml|app-writable|ai-herdr

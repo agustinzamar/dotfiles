@@ -202,6 +202,28 @@ portable=$(links_sh '_links_table' | awk -F'|' '$7 == "" { print $3 }')
   [[ "$output" == *"ln -s"* ]]
 }
 
+# The two exports that used to sit inline in .zshrc are now snippets gated at
+# link time by the requirement column in links.sh.
+@test "export snippets are gated on their tool being installed" {
+  box_family macos
+  # The box PATH carries neither reeve nor yazi, so the walk links neither row.
+  run links_sh '_walk_links all_links link_file'
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"zsh/exports/"* ]]
+
+  # One stub links one row: the gate is per row, not per name.
+  stub yazi 'exit 0'
+  run links_sh '_walk_links all_links link_file'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"$DOTFILES_DIR/config/zsh/exports/yazi.zsh"* ]]
+  [[ "$output" != *"$DOTFILES_DIR/config/zsh/exports/reeve.zsh"* ]]
+
+  stub reeve 'exit 0'
+  run links_sh '_walk_links all_links link_file'
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"$DOTFILES_DIR/config/zsh/exports/reeve.zsh"* ]]
+}
+
 @test "the debian rename does not leak onto macOS" {
   box_family macos
   stub batcat 'exit 0'

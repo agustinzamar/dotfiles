@@ -186,6 +186,8 @@ same-named files do not collide.
 Git identity is committed in `config/git/config`; nothing is generated or
 prompted for.
 
-Shell configuration is loaded directly from `~/dotfiles/system/`.
-`~/.dotfiles-custom/` is sourced if present, for anything that should not be
-committed.
+Shell configuration is loaded directly from `~/dotfiles/system/`. Tool-gated
+snippets live in `config/zsh/exports/` and reach the shell only once `dot link`
+symlinks them into `~/.config/zsh/exports/` — the requirement column in
+`install/links.sh` decides whether the tool is installed. `~/.dotfiles-custom/`
+is sourced if present, for anything that should not be committed.

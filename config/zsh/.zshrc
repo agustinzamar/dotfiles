@@ -158,8 +158,8 @@ for f in "${HOME}"/.dotfiles-custom/aliases/*.zsh(N) "${HOME}"/.dotfiles-custom/
 # Theme is symlinked by `dot link ohmyposh`.
 eval "$(oh-my-posh init zsh --config "$HOME/.config/oh-my-posh/theme.omp.json")"
 
-# Yazi: force Kitty Graphics Protocol for image previews in Ghostty
-export YAZI_IMAGE_PROTOCOL=kitty
-
-# reeve: CLI php shim (reeve php cli <ver>)
-export PATH="/Users/agustin/.reeve/bin:$PATH"
+# Tool-gated exports. `dot link` symlinks a snippet into ~/.config/zsh/exports/
+# only while its tool is installed — the requirement column in install/links.sh
+# owns that gate — so the glob is empty on a machine without them. Sources live
+# in config/zsh/exports/.
+for f in "${HOME}"/.config/zsh/exports/*.zsh(N); do source "$f"; done

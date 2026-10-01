@@ -290,9 +290,10 @@ setup() {
   [ "$output" = "$DOTFILES_DIR" ]
 }
 
-# .exports is the one tracked file for app-specific environment. Its paths must
-# use $HOME so the file stays portable, and it must wire the tools the shell
-# depends on: Composer's global bin (which holds `valet`) and mise.
+# .exports holds the always-sourced app environment (per-tool snippets gated at
+# link time live in config/zsh/exports/). Its paths must use $HOME so the file
+# stays portable, and it must wire the tools the shell depends on: Composer's
+# global bin (which holds `valet`) and mise.
 @test ".exports is portable and wires Composer's global bin and mise" {
   local exports="$DOTFILES_DIR/system/.exports"
   [ -f "$exports" ]
@@ -308,6 +309,20 @@ setup() {
   zsh -n "$DOTFILES_DIR/config/zsh/.zshrc"
 }
 
+# The reeve and yazi exports moved out of .zshrc into snippets the link map
+# installs only while their tool is present.
+@test "zshrc sources the link-gated export snippets with a null glob" {
+  local zshrc="$DOTFILES_DIR/config/zsh/.zshrc"
+  # (N) matters: on a machine without either tool the directory is absent, and a
+  # glob with no match aborts the shell before it draws a prompt.
+  grep -qF '.config/zsh/exports/*.zsh(N)' "$zshrc"
+
+  local snippets="$DOTFILES_DIR/config/zsh/exports"
+  [ -f "$snippets/reeve.zsh" ]
+  [ -f "$snippets/yazi.zsh" ]
+  # The inline export hardcoded a home directory; the snippets must not.
+  ! grep -rqE '/Users/[^/]+/' "$snippets"
+}
 # An exported secret is inherited by every command the shell runs.
 @test "no shell file exports a secret" {
   local hits
