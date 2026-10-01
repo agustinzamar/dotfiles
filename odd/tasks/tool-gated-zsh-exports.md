@@ -28,13 +28,14 @@ carries no `reeve`/`yazi`, so the gate is a declared fixture).
 ## Evidence
 
 - `make check` clean; `zsh -n` clean on `.zshrc` and both snippets.
-- `bats test/links.bats test/dot.bats test/manifest.bats`: 85 tests, 6 failures —
-  the same 6 as the pre-change baseline (83 tests, stashed this change) and none
-  of them new: four are the `dot link --all` sandbox rows blocked by the dangling
-  `claude` sources, two are the dot.bats guards that the committed
-  `config/.gitignore` turned red (`every source in the link map exists`,
-  `every tracked config file is wired into an install path`). Both new tests pass:
-  `export snippets are gated on their tool being installed` and
-  `zshrc sources the link-gated export snippets with a null glob`.
-- Not yet done: independent verification before commit; nothing committed.
+- Shipped as `43267b8` (feat(zsh): gate the reeve and yazi exports at link
+  time). The residual failures quoted above were later traced to `dot link
+  --all` being unimplemented plus the two stale `claude` rows — not to the
+  `claude` sources alone. Both are fixed in `d5ab2ad`; see
+  `link-gate-coherence.md`.
+- Independent verification went to the `gentle-ai-verify` role twice and failed
+  on the agent side both times (0 tool calls, "assistant reported an error"), so
+  the claims were verified inline instead: whole suite 202 tests / 180 pass / 22
+  fail, the 22 byte-identical to the stashed baseline (`agents.bats` 8,
+  `git.bats` 14), and the four touched suites 96/96.
 

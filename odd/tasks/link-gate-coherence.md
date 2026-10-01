@@ -41,6 +41,14 @@ different root cause than the dangling rows.
     is `mysql` (26.7.0_3, linked into `/opt/homebrew/bin`), so the block never
     fired and the PATH entry it would add is redundant.
 
+## Commits
+
+- `d5ab2ad` fix(link): implement the documented `dot link --all` (tasks 1-2)
+- `7124058` fix(doctor): honor the requirement gate when checking links (task 4)
+- `bcae6c3` test(dot): exempt config/.gitignore from the orphan guard (task 3)
+- `71248b4` chore(exports): retire the dead mysql-client block and fix the PATH
+  doc (task 5)
+
 ## Evidence
 
 - Whole suite: 202 tests, 180 pass, 22 fail — `agents.bats` (8) and `git.bats`
@@ -50,3 +58,10 @@ different root cause than the dangling rows.
 - `make check` clean; `shellcheck` clean on `bin/dot`, `install/links.sh`,
   `install/manifest.sh`; `shfmt -d` still flags the pre-existing `$((i+1))`
   spacing at `bin/dot:439`, untouched by this work.
+- Adversarial check of the new doctor semantics, in a throwaway $HOME with a
+  stubbed PATH: a gated row whose requirement IS present but whose symlink is
+  missing is still reported `broken:` (1 hit); with the requirement absent the
+  row is silent (0 hits); a row with no requirement is still reported (1 hit).
+- Independent verification was routed to the `gentle-ai-verify` role and failed
+  on the agent side twice (0 tool calls, "assistant reported an error"), so the
+  claims above were verified inline.
