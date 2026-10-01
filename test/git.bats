@@ -66,6 +66,12 @@ stub() {
 }
 
 # The only sanctioned way to run the CLI in this file.
+#
+# The git phase is not a top-level command: `git` is absent from TOP_COMMANDS,
+# so `dot git` answers "'git' is not a known command." and exits 1. The
+# supported entry point for a phase is `dot install <name>`, which
+# resolve_install_target maps to sub_git — the same path `dot install --all`
+# takes.
 dot_git() {
   env -i \
     HOME="$SCRATCH_HOME" \
@@ -73,7 +79,7 @@ dot_git() {
     GIT_CONFIG_NOSYSTEM=1 \
     PATH="$STUB_BIN:${EXTRA_BIN:+$EXTRA_BIN:}$REAL_BIN" \
     TERM=dumb \
-    "$DOT" git "$@"
+    "$DOT" install git "$@"
 }
 
 boxed_get() { git config --file "$SCRATCH_GITCONFIG" --get "$1" 2>/dev/null || true; }
