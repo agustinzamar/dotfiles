@@ -165,6 +165,21 @@ EOF
   rm -f "$ctx"
 }
 
+@test "real tree: superfile is an optional Filesystem package" {
+  local ctx json
+  ctx="$(mktemp)"
+  install_context_json "$ctx"
+  json="$(cat "$ctx")"
+  [ "$(jq '[.packages[] | select(.id == "superfile")] | length' <<<"$json")" -eq 1 ]
+  [ "$(jq -r '[.packages[] | select(.id == "superfile")][0].topic' <<<"$json")" == "core" ]
+  [ "$(jq -r '[.packages[] | select(.id == "superfile")][0].kind' <<<"$json")" == "brew" ]
+  [ "$(jq -r '[.packages[] | select(.id == "superfile")][0].area' <<<"$json")" == "terminal" ]
+  [ "$(jq -r '[.packages[] | select(.id == "superfile")][0].category' <<<"$json")" == "Filesystem" ]
+  [ "$(jq -r '[.packages[] | select(.id == "superfile")][0].default' <<<"$json")" == "false" ]
+  [ "$(jq -r '[.packages[] | select(.id == "superfile")][0].locked' <<<"$json")" == "false" ]
+  rm -f "$ctx"
+}
+
 @test "real tree: special topics become exactly one delegating row each" {
   local ctx json
   ctx="$(mktemp)"

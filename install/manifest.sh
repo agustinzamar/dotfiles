@@ -79,7 +79,7 @@ area_for_package() {
     # --- Git ---
     gh | lazygit | hunk) echo "git" ;;
     # --- Terminal / core CLI ---
-    eza | fd | yazi | ripgrep | grip | watch | btop | procs | topgrade | dust | dockutil | mole | 7zip | bat | jq | jless | yq | unar | duti | ghostty | neovim | font-jetbrains-mono-nerd-font | duti-defaults | 'we"ird\name') echo "terminal" ;;
+    eza | fd | yazi | superfile | spf | ripgrep | grip | watch | btop | procs | topgrade | dust | dockutil | mole | 7zip | bat | jq | jless | yq | unar | duti | ghostty | neovim | font-jetbrains-mono-nerd-font | duti-defaults | 'we"ird\name') echo "terminal" ;;
     # --- VS Code ---
     visual-studio-code | code) echo "vscode" ;;
     # --- AI ---
@@ -208,7 +208,7 @@ manifest_category() {
     # --- Monitoring ---
     btop | procs | watch) echo "Monitoring" ;;
     # --- Filesystem navigation ---
-    eza | fd | dust | yazi) echo "Filesystem" ;;
+    eza | fd | dust | yazi | superfile) echo "Filesystem" ;;
     # --- Terminals: emulator/multiplexer/font, prompts (oh-my-posh is the
     # active prompt; starship/powerlevel10k are dormant alternatives — config
     # lives in config/starship, config/p10k but .zshrc doesn't source them),

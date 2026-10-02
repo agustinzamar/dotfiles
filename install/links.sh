@@ -32,6 +32,9 @@ _links_table() {
 		yazi|config/yazi/yazi.toml|$HOME/.config/yazi/yazi.toml||terminal
 		yazi|config/yazi/keymap.toml|$HOME/.config/yazi/keymap.toml||terminal
 		yazi|config/yazi/theme.toml|$HOME/.config/yazi/theme.toml||terminal
+		superfile|config/superfile/config.toml|$HOME/Library/Application Support/superfile/config.toml||terminal|spf|macos
+		superfile|config/superfile/hotkeys.toml|$HOME/Library/Application Support/superfile/hotkeys.toml||terminal|spf|macos
+		superfile-exports|config/zsh/exports/superfile.zsh|$HOME/.config/zsh/exports/superfile.zsh||shell|spf|macos
 		linearmouse|config/linearmouse/linearmouse.json|$HOME/.config/linearmouse/linearmouse.json||desktop-linearmouse||macos
 		sketchybar|config/sketchybar|$HOME/.config/sketchybar||desktop-sketchybar||macos
 		paneru|config/paneru/init.lua|$HOME/.config/paneru/init.lua||desktop-paneru||macos

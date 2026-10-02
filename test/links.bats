@@ -35,6 +35,23 @@ requirement_walk() {
     _walk_links bat_row link_file'
 }
 
+# Run the superfile wrapper's real runtime path under zsh with a stub `spf`.
+# `zsh -n` only parses the file, so it cannot catch a runtime error such as an
+# assignment to zsh's read-only `status` parameter, nor prove the cd contract.
+# The box PATH carries the stub and nothing else; the script starts in $HOME so
+# that a non-cd outcome is deterministic.
+wrapper_run() {
+  local zsh_bin
+  zsh_bin=$(command -v zsh) || return 1
+  env -i HOME="$SCRATCH_HOME" PATH="$STUB_BIN:$REAL_BIN" \
+    "$zsh_bin" -f -c '
+      cd "$HOME" || exit 1
+      source "$1"
+      spf
+      print -r -- "rc=$?"
+      print -r -- "pwd=$PWD"' _ "$DOTFILES_DIR/config/zsh/exports/superfile.zsh"
+}
+
 # ---------------------------------------------------------------------------
 # The OS column (task 3.1)
 # ---------------------------------------------------------------------------
@@ -48,7 +65,10 @@ requirement_walk() {
     "$SCRATCH_HOME/Library/Application Support/Code/User/keybindings.json" \
     "$SCRATCH_HOME/.config/linearmouse/linearmouse.json" \
     "$SCRATCH_HOME/.config/sketchybar" \
-    "$SCRATCH_HOME/.config/paneru/init.lua" | sort)
+    "$SCRATCH_HOME/.config/paneru/init.lua" \
+    "$SCRATCH_HOME/Library/Application Support/superfile/config.toml" \
+    "$SCRATCH_HOME/Library/Application Support/superfile/hotkeys.toml" \
+    "$SCRATCH_HOME/.config/zsh/exports/superfile.zsh" | sort)
   [ "$declared" = "$expected" ]
 }
 
@@ -84,8 +104,10 @@ portable=$(links_sh '_links_table' | awk -F'|' '$7 == "" { print $3 }')
   ! grep -q '/Library/' <<<"$filtered"
   ! grep -q '^paneru|' <<<"$filtered"
   ! grep -q '^linearmouse|' <<<"$filtered"
+  ! grep -q '^superfile|' <<<"$filtered"
+  ! grep -q '^superfile-exports|' <<<"$filtered"
   grep -q "^zsh|config/zsh/.zshrc|$SCRATCH_HOME/.zshrc|" <<<"$filtered"
-  [ "$(wc -l <<<"$filtered")" -eq "$(($(wc -l <<<"$table") - 5))" ]
+  [ "$(wc -l <<<"$filtered")" -eq "$(($(wc -l <<<"$table") - 8))" ]
 }
 
 @test "all_links_raw keeps every row on debian and still strips the OS column" {
@@ -157,6 +179,83 @@ portable=$(links_sh '_links_table' | awk -F'|' '$7 == "" { print $3 }')
     = "$DOTFILES_DIR/config/vscode/settings.json" ]
   [ "$(readlink "$SCRATCH_HOME/.config/linearmouse/linearmouse.json")" \
     = "$DOTFILES_DIR/config/linearmouse/linearmouse.json" ]
+}
+
+# Assertions here use `[ ]`/`grep`, not `[[ ]]`: in bats a failing `[[ ]]` that
+# is not the final command does not fail the test, so a mid-test `[[ ]]` would
+# silently assert nothing.
+@test "superfile links require spf and macOS" {
+  box_family macos
+  run links_sh '_walk_links all_links link_file'
+  [ "$status" -eq 0 ]
+  [ -z "$(grep -F 'config/superfile/' <<<"$output")" ]
+  [ -z "$(grep -F 'superfile.zsh' <<<"$output")" ]
+
+  stub spf 'exit 0'
+  run links_sh '_walk_links all_links link_file'
+  [ "$status" -eq 0 ]
+  [ -n "$(grep -F 'config/superfile/config.toml' <<<"$output")" ]
+  [ -n "$(grep -F 'config/superfile/hotkeys.toml' <<<"$output")" ]
+  [ -n "$(grep -F 'config/zsh/exports/superfile.zsh' <<<"$output")" ]
+
+  box_family debian
+  run links_sh '_walk_links all_links link_file'
+  [ "$status" -eq 0 ]
+  [ -z "$(grep -F 'config/superfile/' <<<"$output")" ]
+  [ -z "$(grep -F 'superfile.zsh' <<<"$output")" ]
+}
+
+@test "dot link on macOS links superfile's native files when spf is available" {
+  box_family macos
+  stub spf 'exit 0'
+  run dot_cli link --all
+  [ "$status" -eq 0 ]
+  [ "$(readlink "$SCRATCH_HOME/Library/Application Support/superfile/config.toml")" \
+    = "$DOTFILES_DIR/config/superfile/config.toml" ]
+  [ "$(readlink "$SCRATCH_HOME/Library/Application Support/superfile/hotkeys.toml")" \
+    = "$DOTFILES_DIR/config/superfile/hotkeys.toml" ]
+  [ "$(readlink "$SCRATCH_HOME/.config/zsh/exports/superfile.zsh")" \
+    = "$DOTFILES_DIR/config/zsh/exports/superfile.zsh" ]
+}
+
+@test "superfile shell integration is a gated cd_on_quit wrapper" {
+  local wrapper="$DOTFILES_DIR/config/zsh/exports/superfile.zsh"
+  zsh -n "$wrapper"
+  grep -qF 'spf() {' "$wrapper"
+  grep -qF 'command spf "$@"' "$wrapper"
+  grep -qF 'superfile/lastdir' "$wrapper"
+}
+
+@test "superfile wrapper cds to the lastdir superfile wrote" {
+  box_family macos
+  local target="$SCRATCH_HOME/last-target"
+  local last_dir="$SCRATCH_HOME/Library/Application Support/superfile/lastdir"
+  mkdir -p "$target"
+  stub spf "mkdir -p '$(dirname "$last_dir")' && printf \"cd '%s'\\n\" '$target' > '$last_dir'"
+  run wrapper_run
+  [ "$output" = "rc=0
+pwd=$target" ]
+  # The wrapper consumes the file so a later shell does not re-enter it.
+  [ ! -e "$last_dir" ]
+}
+
+@test "superfile wrapper reads the XDG state path off macOS" {
+  box_family debian
+  local target="$SCRATCH_HOME/last-target"
+  local last_dir="$SCRATCH_HOME/.local/state/superfile/lastdir"
+  mkdir -p "$target"
+  stub spf "mkdir -p '$(dirname "$last_dir")' && printf \"cd '%s'\\n\" '$target' > '$last_dir'"
+  run wrapper_run
+  [ "$output" = "rc=0
+pwd=$target" ]
+}
+
+@test "superfile wrapper leaves the shell put when there is no lastdir file" {
+  box_family macos
+  stub spf 'exit 0'
+  run wrapper_run
+  [ "$output" = "rc=0
+pwd=$SCRATCH_HOME" ]
 }
 
 # ---------------------------------------------------------------------------

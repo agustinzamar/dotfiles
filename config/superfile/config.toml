@@ -1,0 +1,27 @@
+# Superfile configuration for the macOS-native config directory.
+# Keep the app's built-in theme and use the same editor as the rest of the dotfiles.
+theme = "catppuccin-macchiato"
+editor = "nvim"
+dir_editor = "nvim"
+
+# Let the shell wrapper return to the last directory when superfile exits.
+cd_on_quit = true
+
+# Navigation and preview defaults.
+default_directory = "."
+default_sort_type = 4
+sort_order_reversed = false
+case_sensitive_sort = false
+default_open_file_preview = true
+show_image_preview = true
+show_panel_footer_info = true
+show_select_icons = true
+zoxide_support = true
+
+# Keep startup quiet and preserve the terminal's transparent background.
+auto_check_update = false
+ignore_missing_fields = true
+nerdfont = true
+transparent_background = true
+sidebar_sections = ["home", "pinned", "disks"]
+sidebar_width = 20
