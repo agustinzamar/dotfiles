@@ -1,0 +1,7 @@
+{
+    "require": {
+        "laravel/cloud-cli": "^0.6",
+        "laravel/installer": "^5.32",
+        "laravel/valet": "^4.12"
+    }
+}
