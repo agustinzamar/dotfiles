@@ -51,4 +51,4 @@ Add superfile as an optional terminal file-manager alternative to Yazi, with tra
 - Known pre-existing limitation (not introduced here): bats does not enforce a failing `[[ ]]` that is not the final command, so older repo tests with mid-test `[[ ]]` assert less than they appear to.
 
 ## Next step
-Nothing is pushed yet: `main` is ahead of `origin/main`. The temporary `feat/superfile-alternative` branch is now redundant and can be deleted.
+Shipped. `main` was pushed to `origin/main` (`9f957ba..43338ef`) and the redundant `feat/superfile-alternative` branch was deleted. No follow-up pending.
