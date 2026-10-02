@@ -47,7 +47,8 @@ Add superfile as an optional terminal file-manager alternative to Yazi, with tra
   - RED/GREEN proof: removing the lastdir sourcing fails the two cd tests; restoring it passes.
   - `config/superfile/hotkeys.toml` key set equals v1.6.0 upstream (46/46, no extras); `config.toml` has no unknown v1.6.0 keys.
   - No stray backups or temporary diagnostic files remain.
+  - Work unit committed on `main` as `dcce373` (9 files, 291 insertions, 4 deletions); the working tree is clean.
 - Known pre-existing limitation (not introduced here): bats does not enforce a failing `[[ ]]` that is not the final command, so older repo tests with mid-test `[[ ]]` assert less than they appear to.
 
 ## Next step
-Commit the work unit on `feat/superfile-alternative` once the user authorizes it; nothing is committed yet.
+Nothing is pushed yet: `main` is ahead of `origin/main`. The temporary `feat/superfile-alternative` branch is now redundant and can be deleted.
