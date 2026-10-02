@@ -67,11 +67,6 @@ area_for_package() {
   case "$1" in
     # Area tokens used directly as link components resolve to themselves.
     base | shell | git | terminal | vscode | ai | ai-herdr | claude | dev | media | desktop | system | desktop-*) echo "$1" ;;
-    # Requirement-only token: reeve ships from the yetidevworks/reeve tap, which
-    # this manifest does not install, so no package row carries the id. It still
-    # needs an area: the drift guard resolves every links.sh requirement token
-    # through this table.
-    reeve) echo "dev" ;;
     # --- System settings (dot dock / dot macos apply_defaults scripts) ---
     dock | macos) echo "system" ;;
     # --- Shell (locked block; oh-my-posh is the active prompt) ---

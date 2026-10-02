@@ -309,8 +309,8 @@ setup() {
   zsh -n "$DOTFILES_DIR/config/zsh/.zshrc"
 }
 
-# The reeve and yazi exports moved out of .zshrc into snippets the link map
-# installs only while their tool is present.
+# The yazi export moved out of .zshrc into a snippet the link map installs
+# only while its tool is present.
 @test "zshrc sources the link-gated export snippets with a null glob" {
   local zshrc="$DOTFILES_DIR/config/zsh/.zshrc"
   # (N) matters: on a machine without either tool the directory is absent, and a
@@ -318,7 +318,6 @@ setup() {
   grep -qF '.config/zsh/exports/*.zsh(N)' "$zshrc"
 
   local snippets="$DOTFILES_DIR/config/zsh/exports"
-  [ -f "$snippets/reeve.zsh" ]
   [ -f "$snippets/yazi.zsh" ]
   # The inline export hardcoded a home directory; the snippets must not.
   ! grep -rqE '/Users/[^/]+/' "$snippets"

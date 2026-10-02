@@ -301,11 +301,11 @@ pwd=$SCRATCH_HOME" ]
   [[ "$output" == *"ln -s"* ]]
 }
 
-# The two exports that used to sit inline in .zshrc are now snippets gated at
+# The export that used to sit inline in .zshrc are now snippets gated at
 # link time by the requirement column in links.sh.
 @test "export snippets are gated on their tool being installed" {
   box_family macos
-  # The box PATH carries neither reeve nor yazi, so the walk links neither row.
+  # The box PATH carries no yazi, so the walk links no row.
   run links_sh '_walk_links all_links link_file'
   [ "$status" -eq 0 ]
   [[ "$output" != *"zsh/exports/"* ]]
@@ -315,12 +315,6 @@ pwd=$SCRATCH_HOME" ]
   run links_sh '_walk_links all_links link_file'
   [ "$status" -eq 0 ]
   [[ "$output" == *"$DOTFILES_DIR/config/zsh/exports/yazi.zsh"* ]]
-  [[ "$output" != *"$DOTFILES_DIR/config/zsh/exports/reeve.zsh"* ]]
-
-  stub reeve 'exit 0'
-  run links_sh '_walk_links all_links link_file'
-  [ "$status" -eq 0 ]
-  [[ "$output" == *"$DOTFILES_DIR/config/zsh/exports/reeve.zsh"* ]]
 }
 
 @test "link <name> survives the requirement lookup for a gated name" {
