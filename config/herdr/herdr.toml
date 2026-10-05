@@ -59,7 +59,7 @@ mouse_scroll_lines = 1
 status_indicators = "symbols"
 
 [ui.toast]
-delivery = "terminal"
+delivery = "herdr"
 
 [ui.toast.herdr]
 position = "top-right"

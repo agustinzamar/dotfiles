@@ -12,17 +12,23 @@
           "type": "session",
           "style": "plain",
           "foreground": "yellow",
-          "template": "{{ .UserName }}{{ if .SSHSession }}@{{ .HostName }}{{ end }}"
+          "template": "{{ if .SSHSession }}{{ .UserName }}@{{ .HostName }} {{ end }}"
         },
         {
           "type": "path",
           "style": "plain",
           "foreground": "blue",
-          "template": "  {{ .Path }}",
+          "template": "{{ .Path }}",
           "options": {
-            "style": "full"
+            "style": "folder"
           }
-        },
+        }
+      ]
+    },
+    {
+      "type": "prompt",
+      "alignment": "right",
+      "segments": [
         {
           "type": "git",
           "style": "plain",
@@ -35,40 +41,6 @@
             "branch_ahead_icon": "",
             "branch_behind_icon": "",
             "branch_gone_icon": ""
-          }
-        }
-      ]
-    },
-    {
-      "type": "prompt",
-      "alignment": "right",
-      "segments": [
-        {
-          "type": "executiontime",
-          "style": "plain",
-          "foreground": "yellow",
-          "template": " {{ .FormattedMs }}",
-          "options": {
-            "threshold": 3000,
-            "style": "austin"
-          }
-        },
-        {
-          "type": "node",
-          "style": "plain",
-          "foreground": "#b7cc85",
-          "template": "{{ if .Full }}  {{ .Full }}{{ end }}",
-          "options": {
-            "display_mode": "files"
-          }
-        },
-        {
-          "type": "php",
-          "style": "plain",
-          "foreground": "#a074c4",
-          "template": "{{ if .Full }}  {{ .Full }}{{ end }}",
-          "options": {
-            "display_mode": "files"
           }
         }
       ]

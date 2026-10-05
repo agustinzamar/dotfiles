@@ -1,0 +1,6 @@
+#!/bin/sh
+
+# Pi requires Node >=22.19.0; do not use the project's Node version.
+# Keep PATH and the working directory unchanged for project commands.
+exec "$HOME/.local/share/mise/installs/node/24.21.0/bin/node" \
+  /opt/homebrew/bin/pi "$@"

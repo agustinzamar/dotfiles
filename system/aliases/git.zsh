@@ -21,3 +21,17 @@ pr() {
     return 1
   fi
 }
+# New herdr worktree branched from the fresh remote default branch (herdr has no base-ref setting)
+hwt() {
+  if [ $# -eq 0 ]; then
+    echo "usage: hwt <branch> [herdr worktree create options]"
+    return 1
+  fi
+  local branch="$1"; shift
+  local base
+  base=$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null) || base="origin/main"
+  git fetch --quiet origin "${base#origin/}" || return 1
+  local root
+  root=$(git worktree list --porcelain | awk 'NR==1{sub(/^worktree /,""); print; exit}')
+  herdr worktree create --cwd "$root" --branch "$branch" --base "$base" "$@"
+}
