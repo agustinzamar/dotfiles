@@ -47,6 +47,7 @@ git|config/git/ignore|$HOME/.config/git/ignore||git|git
 	composer|config/composer/composer.json|$HOME/.composer/composer.json||dev
 	ai|config/ai/AGENTS.md|$HOME/.agents/AGENTS.md||ai
 	ai|config/ai/skills.json|$HOME/.agents/skills.json||ai
+	claude|config/claude/statusline-command.sh|$HOME/.claude/statusline-command.sh||ai
 	pi|config/pi/settings.json|$HOME/.pi/agent/settings.json||ai
 		opencode|config/opencode/opencode.jsonc|$HOME/.config/opencode/opencode.jsonc||ai
 	EOF
