@@ -126,3 +126,28 @@ debian_sh() {
   [[ "$output" == *"rustup"* ]] || [[ "$output" == *"Rust"* ]]
   [[ "$output" != *"apt-get install -y rustc"* ]]
 }
+
+@test "custom ids win over the macOS-only skip list" {
+  stub uname 'echo Linux'
+  stub apt-get 'exit 0'
+  for id in font-jetbrains-mono-nerd-font visual-studio-code claude-code@latest; do
+    run debian_sh "debian_is_custom $id"
+    [ "$status" -eq 0 ] || { echo "$id should be custom"; return 1; }
+  done
+}
+
+@test "a topic batch runs apt once and collapses skips to one line" {
+  stub uname 'echo Linux'
+  stub apt-get 'exit 0'
+  local dir="$BATS_TEST_TMPDIR/topics"
+  mkdir -p "$dir"
+  printf 'brew "fzf"\nbrew "sketchybar"\nbrew "oh-my-posh"\ncask "duti"\ntap "foo/bar"\n' >"$dir/fixture"
+  run debian_sh "debian_install_topic_file fixture $dir/fixture"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"fixture (Debian)"* ]]
+  [ "$(grep -c "apt-get install" <<<"$output")" -eq 1 ]
+  [[ "$output" == *"ohmyposh"* ]] || [[ "$output" == *"oh-my-posh"* ]]
+  [ "$(grep -c "skipping macOS-only" <<<"$output")" -eq 1 ]
+  [[ "$output" == *"sketchybar"* ]]
+  [[ "$output" == *"duti"* ]]
+}

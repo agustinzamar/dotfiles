@@ -57,21 +57,38 @@ run_step() {
     printf '\n'
     return 0
   fi
-  printf '🔧 %s...\n' "$label"
-  local output progress=false pid
-  if output=$(
-    "$@" 2>&1 &
-    pid=$!
-    while kill -0 "$pid" 2>/dev/null; do
-      progress=true
-      printf '.' >&2
-      sleep 1
+  # Interactive terminal: single-line spinner. Anywhere else (piped curl
+  # install, CI logs) spinner escapes would pollute the log, so run silent
+  # and only print the outcome.
+  if [[ -t 2 ]]; then
+    local tmp output status=0 cmd_pid i=0
+    tmp=$(mktemp "${TMPDIR:-/tmp}/dot-step.XXXXXX") || return 1
+    "$@" >"$tmp" 2>&1 &
+    cmd_pid=$!
+    local frames='|/-\'
+    while kill -0 "$cmd_pid" 2>/dev/null; do
+      printf '\r🔧 %s... %s' "$label" "${frames:$((i % 4)):1}" >&2
+      sleep 0.1
+      i=$((i + 1))
     done
-    local status=0
-    wait "$pid" || status=$?
-    if "$progress"; then printf '\n' >&2; fi
-    return "$status"
-  ); then
+    if wait "$cmd_pid"; then
+      status=0
+    else
+      status=$?
+    fi
+    output=$(cat "$tmp")
+    rm -f "$tmp"
+    if ((status == 0)); then
+      printf '\r✅ %s %s\n' "$label" "$success" >&2
+      return 0
+    fi
+    printf '\r❌ %s failed\n' "$label" >&2
+    [[ -n "$output" ]] && printf '%s\n' "$output" >&2
+    return 1
+  fi
+  printf '🔧 %s...\n' "$label"
+  local output
+  if output=$("$@" 2>&1); then
     printf '✅ %s %s\n' "$label" "$success"
     return 0
   fi

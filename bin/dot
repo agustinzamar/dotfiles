@@ -274,7 +274,6 @@ sub_bootstrap() {
 
 sub_brew() {
   if [[ "$(os_family)" == debian ]]; then
-    log "Installing apt packages (Debian backend)"
     debian_install_all_topics
     return $?
   fi

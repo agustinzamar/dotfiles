@@ -48,13 +48,17 @@ debian_apt_update() {
   fi
   local -a sudo=()
   _debian_set_sudo sudo
-  run_step "apt package lists" updated "${sudo[@]}" apt-get update
+  run_step "apt lists" updated "${sudo[@]}" apt-get update
   _debian_apt_updated=true
 }
 
 # Install apt packages idempotently. Empty input is a no-op so callers can
-# pass a computed list without guarding.
+# pass a computed list without guarding. The label keeps batched installs to
+# one output line (e.g. "apt (core)") instead of one per package.
+# _debian_apt_install <label> <pkg...>
 _debian_apt_install() {
+  local label=$1
+  shift
   (( $# )) || return 0
   debian_apt_update
   local -a sudo=()
@@ -62,7 +66,7 @@ _debian_apt_install() {
   # DEBIAN_FRONTEND=noninteractive keeps tzdata-style prompts from hanging a
   # piped curl install. Per-command env, not exported, so the user shell is
   # untouched.
-  run_step "apt packages ($*)" installed env DEBIAN_FRONTEND=noninteractive "${sudo[@]}" apt-get install -y "$@"
+  run_step "$label" installed env DEBIAN_FRONTEND=noninteractive "${sudo[@]}" apt-get install -y "$@"
 }
 
 # Map a Brewfile id to its apt package(s), one per line. Prints nothing and
@@ -167,12 +171,13 @@ debian_install_oh_my_posh() {
     return 0
   }
   debian_ensure_local_bin
-  log "Installing oh-my-posh"
   if "$DRY_RUN"; then
     echo "+ curl -fsSL https://ohmyposh.dev/install.sh | bash -s -- -d ~/.local/bin"
     return 0
   fi
-  curl -fsSL https://ohmyposh.dev/install.sh | bash -s -- -d "$HOME/.local/bin"
+  # Captured: the vendor script prints its own emoji progress block, which
+  # would otherwise spam the install log. Shown only on failure.
+  run_step "oh-my-posh" installed bash -c 'curl -fsSL https://ohmyposh.dev/install.sh | bash -s -- -d "$HOME/.local/bin"'
 }
 
 debian_install_opencode() {
@@ -180,12 +185,11 @@ debian_install_opencode() {
     echo '✅ opencode already installed'
     return 0
   }
-  log "Installing opencode"
   if "$DRY_RUN"; then
     echo "+ curl -fsSL https://opencode.ai/install | bash"
     return 0
   fi
-  curl -fsSL https://opencode.ai/install | bash
+  run_step "opencode" installed bash -c 'curl -fsSL https://opencode.ai/install | bash'
 }
 
 debian_install_mise() {
@@ -194,12 +198,11 @@ debian_install_mise() {
     return 0
   }
   debian_ensure_local_bin
-  log "Installing mise"
   if "$DRY_RUN"; then
     echo "+ curl -fsSL https://mise.run | sh"
     return 0
   fi
-  curl -fsSL https://mise.run | sh
+  run_step "mise" installed bash -c 'curl -fsSL https://mise.run | sh'
 }
 
 # cargo-based tools. Ensures a modern cargo exists (via rustup when apt's
@@ -221,15 +224,15 @@ debian_ensure_rust() {
   if is_executable rustc && is_executable cargo && _debian_rustc_at_least 1.95.0; then
     return 0
   fi
-  log "Installing Rust toolchain (rustup stable)"
   if "$DRY_RUN"; then
     echo "+ curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal"
     return 0
   fi
   if ! is_executable curl; then
-    _debian_apt_install curl ca-certificates
+    _debian_apt_install "apt" curl ca-certificates
   fi
-  run bash -c 'curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable'
+  # Captured: rustup prints its own progress; shown only on failure.
+  run_step "Rust toolchain" installed bash -c 'curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable' || return 1
   export PATH="$HOME/.cargo/bin:$PATH"
   hash -r 2>/dev/null || true
   if ! _debian_rustc_at_least 1.95.0; then
@@ -245,7 +248,6 @@ _debian_cargo_install() {
     return 0
   }
   debian_ensure_rust || return 1
-  log "Installing $binary (cargo $crate)"
   if "$DRY_RUN"; then
     echo "+ cargo install --locked $crate"
     return 0
@@ -261,7 +263,12 @@ debian_install_yazi() {
   }
   # Needs a C compiler plus file/image deps; apt set mirrors upstream docs
   # for Ubuntu (file, poppler, ffmpegthumbnailer already covered elsewhere).
-  _debian_apt_install file libmagic1 poppler-utils 2>/dev/null || _debian_apt_install file poppler-utils || true
+  # Only install what is actually missing so a repeat run stays quiet.
+  local -a need=() _p
+  for _p in file poppler-utils; do
+    dpkg -s "$_p" >/dev/null 2>&1 || need+=("$_p")
+  done
+  ((${#need[@]})) && _debian_apt_install "apt (yazi)" "${need[@]}" || true
   _debian_cargo_install yazi-fm yazi || return 1
   _debian_cargo_install yazi-cli ya 2>/dev/null || true
 }
@@ -291,15 +298,14 @@ _debian_go_install() {
     return 0
   fi
   if ! is_executable go; then
-    _debian_apt_install golang-go
+    _debian_apt_install "apt" golang-go
   fi
   debian_ensure_local_bin
-  log "Installing ${binary:-$module} (go install)"
   if "$DRY_RUN"; then
     echo "+ GOBIN=$gobin go install $module"
     return 0
   fi
-  run env GOBIN="$gobin" go install "$module"
+  run_step "${binary:-$module}" installed env GOBIN="$gobin" go install "$module"
 }
 
 debian_install_superfile() {
@@ -340,13 +346,6 @@ debian_install_hunk() {
     echo '✅ hunk already installed'
     return 0
   }
-  # hunk is distributed as a static binary via its install script; fall back
-  # to a note when the network install is unavailable.
-  log "Installing hunk"
-  if "$DRY_RUN"; then
-    echo "+ curl -fsSL https://raw.githubusercontent.com/charmbracelet/hunk/main/install.sh | bash (or vendor release)"
-    return 0
-  fi
   echo "⚠️ hunk has no apt package; install it from the vendor release, then re-run \`dot link\`" >&2
   return 0
 }
@@ -354,28 +353,39 @@ debian_install_hunk() {
 # JetBrainsMono Nerd Font for Ghostty. apt ships fonts-jetbrains-mono (no
 # Nerd glyphs); the Nerd build comes from GitHub releases into the user font
 # dir so no sudo is needed.
+# Fetch + unpack run under run_step's capture, so curl/unzip stay silent
+# unless they fail.
+_debian_fetch_nerd_font() {
+  local font_dir=$1 tmp
+  mkdir -p "$font_dir" || return 1
+  tmp=$(mktemp -d) || return 1
+  curl -fsSL -o "$tmp/JetBrainsMono.zip" \
+    "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip" || {
+    rm -rf "$tmp"
+    return 1
+  }
+  unzip -o -q "$tmp/JetBrainsMono.zip" -d "$font_dir" || {
+    rm -rf "$tmp"
+    return 1
+  }
+  rm -rf "$tmp"
+  command fc-cache -f "$font_dir"
+}
+
 debian_install_nerd_font() {
   if command fc-list 2>/dev/null | grep -qi "JetBrainsMono Nerd Font"; then
     echo '✅ JetBrainsMono Nerd Font already installed'
     return 0
   fi
-  log "Installing JetBrainsMono Nerd Font"
   if "$DRY_RUN"; then
     echo "+ download JetBrainsMono Nerd Font into ~/.local/share/fonts"
     return 0
   fi
-  local font_dir="$HOME/.local/share/fonts" tmp
-  run mkdir -p "$font_dir"
-  tmp=$(mktemp -d)
-  if curl -fsSL -o "$tmp/JetBrainsMono.zip" \
-    "https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip"; then
-    run unzip -o -q "$tmp/JetBrainsMono.zip" -d "$font_dir"
-    run command fc-cache -f "$font_dir"
-  else
-    echo "⚠️ nerd-font download failed; falling back to apt fonts-jetbrains-mono" >&2
-    _debian_apt_install fonts-jetbrains-mono || true
+  if run_step "JetBrainsMono Nerd Font" installed _debian_fetch_nerd_font "$HOME/.local/share/fonts"; then
+    return 0
   fi
-  rm -rf "$tmp"
+  echo "⚠️ nerd-font download failed; falling back to apt fonts-jetbrains-mono" >&2
+  _debian_apt_install "apt" fonts-jetbrains-mono || true
 }
 
 # VS Code on Ubuntu: prefer the Microsoft apt repo when it can be added,
@@ -385,7 +395,6 @@ debian_install_vscode() {
     echo '✅ VS Code already installed'
     return 0
   }
-  log "Installing VS Code"
   if "$DRY_RUN"; then
     echo "+ install code (Microsoft apt repo, else snap)"
     return 0
@@ -393,7 +402,7 @@ debian_install_vscode() {
   if is_executable snap; then
     local -a sudo=()
     _debian_set_sudo sudo
-    if run "${sudo[@]}" snap install code --classic; then
+    if run_step "VS Code" installed "${sudo[@]}" snap install code --classic; then
       return 0
     fi
   fi
@@ -401,15 +410,43 @@ debian_install_vscode() {
   return 0
 }
 
+# True when the id has a dedicated installer below (not apt, not a skip).
+# The topic batcher checks this before debian_is_macos_only so ids with a
+# real Debian path (nerd font, VS Code) are never swallowed by the skip list.
+debian_is_custom() {
+  case "$1" in
+    oh-my-posh | anomalyco/tap/opencode | opencode | mise | rust | \
+      yazi | superfile | spf | pay-respects | topgrade | jless | dust | \
+      yq | actionlint | act | herdr | hunk | font-jetbrains-mono-nerd-font | \
+      visual-studio-code | code | pi-coding-agent | \
+      claude-code@latest | codex | t3-code)
+      return 0
+      ;;
+    *) return 1 ;;
+  esac
+}
+
 # Dispatch one Brewfile id to apt or a custom installer. macOS-only ids are
 # skipped with a note. Returns non-zero only for a real install failure.
+# Kept for single-id installs; topic files go through the batched
+# debian_install_topic_file below so apt runs once per topic.
 debian_install_one() {
-  local id=$1 apt_pkgs
-  if apt_pkgs=$(debian_apt_package_for "$id" 2>/dev/null); then
-    # shellcheck disable=SC2086
-    _debian_apt_install $apt_pkgs
+  local id=$1 map p
+  local -a pkgs=()
+  if map=$(debian_apt_package_for "$id" 2>/dev/null); then
+    while IFS= read -r p; do
+      [[ -n "$p" ]] && pkgs+=("$p")
+    done <<<"$map"
+    _debian_apt_install "apt" "${pkgs[@]}"
     return $?
   fi
+  debian_install_one_custom "$id"
+}
+
+# Custom-installer half of debian_install_one, shared by the single-id and
+# batched paths.
+debian_install_one_custom() {
+  local id=$1
   case "$id" in
     oh-my-posh) debian_install_oh_my_posh ;;
     anomalyco/tap/opencode) debian_install_opencode ;;
@@ -452,10 +489,13 @@ debian_install_one() {
 }
 
 # Read one Brewfile topic and install every brew/cask id through the Debian
-# mapping. Comments/blank lines ignored, like read_package_file.
+# mapping. Comments/blank lines ignored, like read_package_file. apt packages
+# go in one call per topic and macOS-only skips collapse to one line, so a
+# topic reads as a handful of lines instead of dozens.
 debian_install_topic_file() {
-  local topic=$1 file=$2 line id failures=()
-  log "Installing $topic (Debian)"
+  local topic=$1 file=$2 line id failures=() skipped=()
+  local -a apt_pkgs=() customs=()
+  local map p
   while IFS= read -r line || [[ -n "$line" ]]; do
     line=${line%%#*}
     line=${line#"${line%%[![:space:]]*}"}
@@ -463,11 +503,31 @@ debian_install_topic_file() {
     [[ -n "$line" ]] || continue
     if [[ "$line" =~ ^(brew|cask)[[:space:]]+\"(.+)\"$ ]]; then
       id=${BASH_REMATCH[2]}
-      debian_install_one "$id" || failures+=("$id")
+      if map=$(debian_apt_package_for "$id" 2>/dev/null); then
+        while IFS= read -r p; do
+          [[ -n "$p" ]] && apt_pkgs+=("$p")
+        done <<<"$map"
+      elif debian_is_custom "$id"; then
+        customs+=("$id")
+      elif debian_is_macos_only "$id"; then
+        skipped+=("$id")
+      else
+        echo "⚠️ no Debian mapping for $id; skipping" >&2
+      fi
     elif [[ "$line" =~ ^tap[[:space:]] ]]; then
       continue # taps are Homebrew-only
     fi
   done <"$file"
+  log "Installing $topic (Debian)"
+  if ((${#apt_pkgs[@]})); then
+    _debian_apt_install "apt ($topic)" "${apt_pkgs[@]}" || failures+=("apt:$topic")
+  fi
+  for id in ${customs[@]+"${customs[@]}"}; do
+    debian_install_one_custom "$id" || failures+=("$id")
+  done
+  if ((${#skipped[@]})); then
+    echo "⊘ skipping macOS-only: ${skipped[*]}"
+  fi
   debian_install_bat_fd_shims || true
   if ((${#failures[@]})); then
     log "topic $topic failures: ${failures[*]}"
@@ -493,7 +553,7 @@ debian_install_all_topics() {
 # compiler toolchain deps, and the shell itself.
 debian_bootstrap() {
   log "Bootstrap: apt essentials (idempotent)"
-  _debian_apt_install ca-certificates curl wget tar unzip fontconfig \
+  _debian_apt_install "apt essentials" ca-certificates curl wget tar unzip fontconfig \
     git zsh build-essential sudo gnupg file poppler-utils 2>/dev/null ||
     debian_apt_update
   debian_ensure_local_bin || true
@@ -546,5 +606,5 @@ debian_install_php_extensions() {
     echo '✅ PHP extensions already loaded (redis, imagick)'
     return 0
   fi
-  _debian_apt_install "${want[@]}"
+  _debian_apt_install "apt (php)" "${want[@]}"
 }
