@@ -336,22 +336,31 @@ sub_zsh() {
 sub_code() {
   if is_executable code; then
     log "Installing VS Code extensions"
-    local installed extension present added
+    local installed extension present added failed
     present=0
     added=0
+    failed=0
     installed=$(code --list-extensions 2>/dev/null | tr '[:upper:]' '[:lower:]')
     while read -r extension; do
       if grep -qxF "$(tr '[:upper:]' '[:lower:]' <<<"$extension")" <<<"$installed"; then
         present=$((present + 1))
         continue
       fi
-      echo "-- $extension"
-      run code --install-extension "$extension"
-      added=$((added + 1))
+      # Quiet per extension (run stays silent on success): twenty `-- id`
+      # lines plus one summary is noise; failures still surface via run.
+      if run code --install-extension "$extension"; then
+        added=$((added + 1))
+      else
+        failed=$((failed + 1))
+      fi
     done < <(read_package_file "$DOTFILES_DIR/install/topics/code")
-    # Without this the step prints a heading and nothing else on a machine that
-    # already has every extension, which reads like it did no work.
+    # Without a summary a machine that already has every extension prints a
+    # heading and nothing else, which reads like it did no work.
     echo "$present already installed, $added added"
+    if ((failed > 0)); then
+      echo "$failed extension(s) failed (see above)" >&2
+      return 1
+    fi
   else
     echo "⚠️ VS Code not installed; skipping extension setup" >&2
   fi
@@ -398,11 +407,20 @@ sub_git() {
 
   # `|| continue` rather than `&&`: as a function body under `set -e`, a final
   # falsy test would abort the whole install run.
-  for key in "$HOME"/.ssh/id_*; do
-    case "$key" in *.pub | *.revoked) continue ;; esac
-    [[ -f "$key" ]] || continue
-    run ssh-add ${flags[@]+"${flags[@]}"} "$key"
-  done
+  # No agent, no registration: without one every key fails with
+  # "Could not open a connection to your authentication agent". Probe once
+  # (exit 2 = no agent, 127 = no ssh-add) instead of failing per key.
+  local agent_probe=0
+  ssh-add -l >/dev/null 2>&1 || agent_probe=$?
+  if ((agent_probe > 1)); then
+    echo "⊘ skipping ssh-add (no authentication agent running)"
+  else
+    for key in "$HOME"/.ssh/id_*; do
+      case "$key" in *.pub | *.revoked) continue ;; esac
+      [[ -f "$key" ]] || continue
+      run ssh-add ${flags[@]+"${flags[@]}"} "$key"
+    done
+  fi
 }
 
 sub_skills() {

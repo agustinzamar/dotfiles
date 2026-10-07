@@ -47,7 +47,9 @@ setup() {
 
   SSH_ADD_LOG="$SCRATCH/ssh-add.log"
   : >"$SSH_ADD_LOG"
-  stub ssh-add "printf '%s\n' \"\$*\" >>'$SSH_ADD_LOG'; exit 0"
+  # The -l agent probe answers 0 and stays out of the log: it is a readiness
+  # check, not a registration, and every assertion below counts registrations.
+  stub ssh-add "if [ \"\$1\" = \"-l\" ]; then exit 0; fi; printf '%s\n' \"\$*\" >>'$SSH_ADD_LOG'; exit 0"
 }
 
 teardown() {
@@ -267,5 +269,16 @@ seed_ssh_keys() {
   stub apt-get 'exit 0'
   run dot_git
   [ "$status" -eq 0 ]
+  [ ! -s "$SSH_ADD_LOG" ]
+}
+
+@test "no running agent skips registration with a note and still exits 0" {
+  seed_ssh_keys
+  stub uname 'echo Linux'
+  stub apt-get 'exit 0'
+  stub ssh-add "if [ \"\$1\" = \"-l\" ]; then echo 'Could not open a connection to your authentication agent.' >&2; exit 2; fi; printf '%s\n' \"\$*\" >>'$SSH_ADD_LOG'; exit 0"
+  run dot_git
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"no authentication agent"* ]]
   [ ! -s "$SSH_ADD_LOG" ]
 }

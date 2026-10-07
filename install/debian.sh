@@ -418,8 +418,7 @@ debian_is_custom() {
     oh-my-posh | anomalyco/tap/opencode | opencode | mise | rust | \
       yazi | superfile | spf | pay-respects | topgrade | jless | dust | \
       yq | actionlint | act | herdr | hunk | font-jetbrains-mono-nerd-font | \
-      visual-studio-code | code | pi-coding-agent | \
-      claude-code@latest | codex | t3-code)
+      visual-studio-code | code | pi-coding-agent)
       return 0
       ;;
     *) return 1 ;;
@@ -472,10 +471,6 @@ debian_install_one_custom() {
       else
         echo "⚠️ pi-coding-agent has no apt package; install it with npm/pnpm, then re-run" >&2
       fi
-      return 0
-      ;;
-    claude-code@latest | codex | t3-code)
-      echo "⚠️ $id is a macOS cask here; on Ubuntu install the vendor npm/native build, then re-run" >&2
       return 0
       ;;
     *) debian_is_macos_only "$id" && {
@@ -564,7 +559,10 @@ debian_bootstrap() {
 }
 
 # chsh to zsh when interactive and not already the shell. Never fails the
-# phase (containers often lack chsh or a login user).
+# phase and never blocks on a mid-install password prompt: plain chsh asks on
+# /dev/tty and dies with PAM noise when auth fails, so prefer non-interactive
+# sudo chsh (works with NOPASSWD sudo) and only fall back to plain chsh on a
+# real TTY. Anything else is one clean note, not a failure.
 debian_set_default_shell() {
   local zsh_bin
   zsh_bin=$(command -v zsh 2>/dev/null || true)
@@ -573,16 +571,24 @@ debian_set_default_shell() {
     echo '✅ zsh is already the default shell'
     return 0
   fi
-  log "Setting zsh as the default shell"
   if "$DRY_RUN"; then
     echo "+ chsh -s $zsh_bin"
     return 0
   fi
-  if run chsh -s "$zsh_bin"; then
-    echo "Default shell set to $zsh_bin (takes effect on next login)"
-  else
-    echo "⚠️ chsh failed; run \`chsh -s $zsh_bin\` manually" >&2
+  local -a sudo=()
+  _debian_set_sudo sudo
+  if ((${#sudo[@]})) && sudo -n true 2>/dev/null; then
+    if run "${sudo[@]}" chsh -s "$zsh_bin" "${USER:-$(id -un)}"; then
+      echo "Default shell set to $zsh_bin (takes effect on next login)"
+      return 0
+    fi
+  elif [[ -t 0 ]]; then
+    if run chsh -s "$zsh_bin"; then
+      echo "Default shell set to $zsh_bin (takes effect on next login)"
+      return 0
+    fi
   fi
+  echo "⚠️ default shell unchanged; run \`chsh -s $zsh_bin\` yourself (needs your password)" >&2
   return 0
 }
 

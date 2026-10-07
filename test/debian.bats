@@ -130,9 +130,20 @@ debian_sh() {
 @test "custom ids win over the macOS-only skip list" {
   stub uname 'echo Linux'
   stub apt-get 'exit 0'
-  for id in font-jetbrains-mono-nerd-font visual-studio-code claude-code@latest; do
+  for id in font-jetbrains-mono-nerd-font visual-studio-code; do
     run debian_sh "debian_is_custom $id"
     [ "$status" -eq 0 ] || { echo "$id should be custom"; return 1; }
+  done
+}
+
+@test "macOS casks skip silently with the rest" {
+  stub uname 'echo Linux'
+  stub apt-get 'exit 0'
+  for id in claude-code@latest codex t3-code; do
+    run debian_sh "debian_install_one $id"
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"skipping macOS-only"* ]]
+    [[ "$output" != *"no apt package"* ]]
   done
 }
 
