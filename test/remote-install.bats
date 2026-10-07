@@ -59,10 +59,11 @@ EOF
     chmod +x "$STUBS/$1"
   }
 
-  # Only meaningful on macOS — the download targets darwin assets.
-  if [ "$(uname -s)" != "Darwin" ]; then
-    skip "release-binary download targets darwin assets"
-  fi
+  # The download targets darwin assets on macOS and linux assets on Linux.
+  case "$(uname -s)" in
+    Darwin | Linux) ;;
+    *) skip "release-binary download targets darwin/linux assets" ;;
+  esac
 
   # A PATH without any system downloader, so the wget branch is reachable.
   make_no_curl_path() {
@@ -85,10 +86,12 @@ run_bootstrap() { # arguments become the script's "$@"
 }
 
 @test "bootstrap downloads the matching release binary and continues to install" {
-  case "$(uname -m)" in
-    arm64) asset="dot-tui-darwin-arm64" ;;
-    x86_64) asset="dot-tui-darwin-amd64" ;;
-    *) skip "unsupported arch: $(uname -m)" ;;
+  case "$(uname -s)-$(uname -m)" in
+    Darwin-arm64) asset="dot-tui-darwin-arm64" ;;
+    Darwin-x86_64) asset="dot-tui-darwin-amd64" ;;
+    Linux-x86_64) asset="dot-tui-linux-amd64" ;;
+    Linux-aarch64 | Linux-arm64) asset="dot-tui-linux-arm64" ;;
+    *) skip "unsupported platform: $(uname -s)-$(uname -m)" ;;
   esac
   make_downloader curl good
   run_bootstrap
@@ -104,7 +107,7 @@ run_bootstrap() { # arguments become the script's "$@"
   run env PATH="$NO_CURL_PATH" DOTFILES_DIR="$TARGET" URL_LOG="$URL_LOG" \
     bash "$SCRIPT"
   [ "$status" -eq 0 ]
-  grep -q "dot-tui-darwin-" "$URL_LOG"
+  grep -q "dot-tui-.*-" "$URL_LOG"
   [ -x "$TARGET/bin/dot-tui" ]
   [[ "$output" == *"DOT-STUB install"* ]]
 }

@@ -104,8 +104,12 @@ portable=$(links_sh '_links_table' | awk -F'|' '$7 == "" { print $3 }')
   ! grep -q '/Library/' <<<"$filtered"
   ! grep -q '^paneru|' <<<"$filtered"
   ! grep -q '^linearmouse|' <<<"$filtered"
-  ! grep -q '^superfile|' <<<"$filtered"
-  ! grep -q '^superfile-exports|' <<<"$filtered"
+  # superfile and vscode have Debian rows at XDG homes: the macOS Library
+  # rows are gone, the Debian rows stay.
+  ! grep -q 'Library/Application Support/superfile' <<<"$filtered"
+  grep -q "superfile|config/superfile/config.toml|$SCRATCH_HOME/.config/superfile/config.toml" <<<"$filtered"
+  grep -q "vscode|config/vscode/settings.json|$SCRATCH_HOME/.config/Code/User/settings.json" <<<"$filtered"
+  ! grep -q 'Library/Application Support/Code' <<<"$filtered"
   grep -q "^zsh|config/zsh/.zshrc|$SCRATCH_HOME/.zshrc|" <<<"$filtered"
   [ "$(wc -l <<<"$filtered")" -eq "$(($(wc -l <<<"$table") - 8))" ]
 }
@@ -158,8 +162,8 @@ portable=$(links_sh '_links_table' | awk -F'|' '$7 == "" { print $3 }')
   box_family debian
   LINK_VERBOSE=true run dot_cli link --all
   [ "$status" -eq 0 ]
-  [[ "$output" == *"skipping vscode: does not apply to this OS (debian)"* ]]
   [[ "$output" == *"skipping linearmouse: does not apply to this OS (debian)"* ]]
+  [[ "$output" == *"skipping paneru: does not apply to this OS (debian)"* ]]
 }
 
 @test "a second dot link on debian changes nothing and makes no backup" {
@@ -184,7 +188,7 @@ portable=$(links_sh '_links_table' | awk -F'|' '$7 == "" { print $3 }')
 # Assertions here use `[ ]`/`grep`, not `[[ ]]`: in bats a failing `[[ ]]` that
 # is not the final command does not fail the test, so a mid-test `[[ ]]` would
 # silently assert nothing.
-@test "superfile links require spf and macOS" {
+@test "superfile links require spf on either OS" {
   box_family macos
   run links_sh '_walk_links all_links link_file'
   [ "$status" -eq 0 ]
@@ -199,10 +203,18 @@ portable=$(links_sh '_links_table' | awk -F'|' '$7 == "" { print $3 }')
   [ -n "$(grep -F 'config/zsh/exports/superfile.zsh' <<<"$output")" ]
 
   box_family debian
+  rm -f "$STUB_BIN/spf"
   run links_sh '_walk_links all_links link_file'
   [ "$status" -eq 0 ]
   [ -z "$(grep -F 'config/superfile/' <<<"$output")" ]
   [ -z "$(grep -F 'superfile.zsh' <<<"$output")" ]
+
+  stub spf 'exit 0'
+  run links_sh '_walk_links all_links link_file'
+  [ "$status" -eq 0 ]
+  [ -n "$(grep -F 'config/superfile/config.toml' <<<"$output")" ]
+  [ -n "$(grep -F '.config/superfile/config.toml' <<<"$output")" ]
+  [ -n "$(grep -F 'config/zsh/exports/superfile.zsh' <<<"$output")" ]
 }
 
 @test "dot link on macOS links superfile's native files when spf is available" {

@@ -1,27 +1,30 @@
 # Dotfiles
 
-macOS dotfiles installed with Bash and Homebrew Bundle, driven by a single
-`dot` command.
+macOS and Ubuntu dotfiles installed with Bash, driven by a single `dot`
+command. macOS installs through Homebrew Bundle; Ubuntu installs through apt
+plus official upstream installers (see `install/debian.sh`).
 
 ## Install
 
 On a fresh machine, one line — clones to `~/dotfiles` and installs:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/agustinzamar/dotfiles/main/remote-install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/agustinzamar/dotfiles/main/remote-install.sh | bash -s -- --all
 ```
 
-It falls back to a tarball when git is not there yet, which is the case before
-the Xcode command line tools are installed.
+The trailing `--all` runs the headless full install (no interaction). It falls
+back to a tarball when git is not there yet — before the Xcode command line
+tools on macOS, or before `sudo apt-get install -y git curl` on Ubuntu
+(which the bootstrap tries first when sudo is available).
 
 That line runs whatever `main` serves at that moment. Open
-[`remote-install.sh`](remote-install.sh) before you pipe it — it is 67 lines —
-or skip the pipe entirely and clone, which does the same work:
+[`remote-install.sh`](remote-install.sh) before you pipe it — or skip the pipe
+entirely and clone, which does the same work:
 
 ```bash
 git clone git@github.com:agustinzamar/dotfiles.git ~/dotfiles
 cd ~/dotfiles
-bin/dot install
+bin/dot install --all     # headless; bare `bin/dot install` needs a TTY
 ```
 
 `config/zsh/.zshrc` puts `~/dotfiles/bin` on your `PATH`, so `dot` is available
@@ -38,8 +41,29 @@ non-TTY stdin fails fast and says so:
 dot install --all          # headless: every standard phase (AI stays opt-in)
 ```
 
-On a truly fresh machine the installer bootstraps what it needs (Xcode CLT,
-Homebrew, then Bun if the prebuilt binary is missing) before opening.
+On a truly fresh machine the installer bootstraps what it needs (Xcode CLT +
+Homebrew on macOS; apt essentials + zsh on Ubuntu) before opening.
+
+### Ubuntu
+
+`dot install --all` on Debian/Ubuntu installs the basics headlessly:
+
+- shell: `zsh` (set as default via `chsh`), `zinit`, `fzf`, `zoxide`, `eza`,
+  `oh-my-posh` prompt with the tracked theme
+- git stack: `git`, `gh`, `lazygit`, tracked git config + credential helper
+- terminal tools: `ripgrep`, `bat` (`batcat` shim), `fd` (`fdfind` shim),
+  `jq`, `yq`, `btop`, `yazi`, `superfile` (`spf`), `neovim`, `ghostty`,
+  `topgrade`, `pay-respects`, `jless`, `dust`
+- dev: `go`, `mise`, `python3`, `pipx`, `rust`, `php` + `composer`,
+  `shellcheck`, `shfmt`, `opencode` (official installer)
+- configs linked: `.zshrc`, `oh-my-posh`, `ghostty`, `yazi`, `git`, `mise`,
+  plus `vscode` at `~/.config/Code/User/` and `superfile` at
+  `~/.config/superfile/` (XDG homes, not `~/Library`)
+
+macOS-only pieces are skipped with a note (`sketchybar`, `linearmouse`,
+`rectangle`, `duti`, `dockutil`, `orbstack`, macOS casks). VS Code extensions
+install with `dot install code` once `code` exists (snap or the Microsoft
+`.deb`). `dot doctor` stays green without Homebrew.
 
 ## Topics
 

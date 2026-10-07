@@ -2,5 +2,15 @@
 
 # Pi requires Node >=22.19.0; do not use the project's Node version.
 # Keep PATH and the working directory unchanged for project commands.
-exec "$HOME/.local/share/mise/installs/node/24.21.0/bin/node" \
-  /opt/homebrew/bin/pi "$@"
+# Resolves the pi binary portably: mise-managed node first, then PATH, then
+# the known Homebrew/Linux install locations.
+_NODE="$HOME/.local/share/mise/installs/node/24.21.0/bin/node"
+[ -x "$_NODE" ] || _NODE="node"
+for _PI in "$HOME/.local/bin/pi" /opt/homebrew/bin/pi /home/linuxbrew/.linuxbrew/bin/pi; do
+  if [ -x "$_PI" ]; then
+    PI_BIN="$_PI"
+    break
+  fi
+done
+: "${PI_BIN:=$(command -v pi 2>/dev/null || echo /opt/homebrew/bin/pi)}"
+exec "$_NODE" "$PI_BIN" "$@"

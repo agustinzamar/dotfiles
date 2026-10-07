@@ -34,6 +34,8 @@ set -- ${args[@]+"${args[@]}"}
 . "$DOTFILES_DIR/install/git.sh"
 # shellcheck source=../install/php.sh
 . "$DOTFILES_DIR/install/php.sh"
+# shellcheck source=../install/debian.sh
+. "$DOTFILES_DIR/install/debian.sh"
 
 sub_help() {
   echo "Install (use \`dot install <name>\`):"
@@ -71,14 +73,17 @@ resolve_install_target() {
   fi
 }
 
-# Refuse an entry point that installs packages when this host has no Homebrew
-# to install them with. Refusing up front beats failing halfway through a phase
-# list, and beats a dry run that prints brew commands this machine can never
-# run. Only the package-installing entry points call this: `dot install macos`,
-# `code` and `duti` have their own installers and stay available everywhere.
+# Refuse an entry point that installs packages when this host has neither
+# Homebrew (macOS) nor apt (Debian/Ubuntu) to install them with. Refusing up
+# front beats failing halfway through a phase list. macOS and Debian install
+# through their own backend; anything else (unknown) has no backend.
+# `dot install macos`, `code` and `duti` have their own installers and stay
+# available everywhere.
 _reject_package_install() {
-  [[ "$(os_family)" != macos ]] || return 0
-  echo "refusing: \`dot $*\` installs packages with Homebrew, which this repo only supports on macOS (detected: $(os_family))." >&2
+  case "$(os_family)" in
+    macos | debian) return 0 ;;
+  esac
+  echo "refusing: \`dot $*\` installs packages, which this repo only supports on macOS (Homebrew) and Debian/Ubuntu (apt) (detected: $(os_family))." >&2
   echo "dot link, dot unlink, dot doctor and dot git work here." >&2
   return 1
 }
@@ -135,8 +140,10 @@ run_interactive_install() {
     return 1
   fi
 
-  # Known Homebrew/bun locations, prepended so subprocesses see them.
-  export PATH="$HOME/.bun/bin:/opt/homebrew/bin:/usr/local/bin:$PATH"
+  # Known Homebrew/bun/Linux locations, prepended so subprocesses see them.
+  # Covers macOS GUI PATH, Linuxbrew, and user installs (oh-my-posh, mise,
+  # opencode, cargo, go) that live in ~/.local/bin.
+  export PATH="$HOME/.local/bin:$HOME/.bun/bin:$HOME/go/bin:$HOME/.cargo/bin:/opt/homebrew/bin:/usr/local/bin:/home/linuxbrew/.linuxbrew/bin:/home/linuxbrew/.linuxbrew/sbin:$PATH"
 
   # Run headless install with --all (no TUI)
   local exit_code=0
@@ -225,6 +232,17 @@ install_topic() {
 }
 
 sub_bootstrap() {
+  case "$(os_family)" in
+    debian)
+      debian_bootstrap
+      return $?
+      ;;
+    macos) ;;
+    *)
+      echo "⚠️ bootstrap has no backend for $(os_family); skipping" >&2
+      return 0
+      ;;
+  esac
   log "Bootstrap: Xcode CLT + Homebrew (idempotent)"
 
   # Known-path checks, never PATH-dependent: a GUI-launched terminal on macOS
@@ -255,6 +273,11 @@ sub_bootstrap() {
 }
 
 sub_brew() {
+  if [[ "$(os_family)" == debian ]]; then
+    log "Installing apt packages (Debian backend)"
+    debian_install_all_topics
+    return $?
+  fi
   log "Installing Homebrew packages"
   local topic failures=()
   while read -r topic; do
@@ -272,6 +295,11 @@ sub_brew() {
 }
 
 sub_php() {
+  if [[ "$(os_family)" == debian ]]; then
+    log "PHP extensions (apt)"
+    debian_install_php_extensions
+    return $?
+  fi
   log "PHP extensions (pecl)"
   install_php_extensions
 }
@@ -289,14 +317,20 @@ sub_zsh() {
     run git clone --depth=1 https://github.com/zdharma-continuum/zinit.git "$zinit_home"
   fi
 
-  # Handle fzf post install script
-  local brew_prefix
-  brew_prefix=$(brew --prefix 2>/dev/null || true)
-  if [[ -n "$brew_prefix" && -x "$brew_prefix/opt/fzf/install" ]]; then
-    # --no-update-rc: --all would otherwise append a source line to ~/.zshrc,
-    # which is a symlink into this repo, so the installer edits a tracked file
-    # on every run. .zshrc sources ~/.fzf.zsh instead.
-    run_step "fzf key bindings" installed "$brew_prefix/opt/fzf/install" --all --no-update-rc --no-bash --no-fish
+  # Handle fzf post install script (macOS Homebrew layout only). On Debian
+  # fzf ships its key bindings with the apt package and needs no installer.
+  if [[ "$(os_family)" == macos ]]; then
+    local brew_prefix
+    brew_prefix=$(brew --prefix 2>/dev/null || true)
+    if [[ -n "$brew_prefix" && -x "$brew_prefix/opt/fzf/install" ]]; then
+      # --no-update-rc: --all would otherwise append a source line to ~/.zshrc,
+      # which is a symlink into this repo, so the installer edits a tracked file
+      # on every run. .zshrc sources ~/.fzf.zsh instead.
+      run_step "fzf key bindings" installed "$brew_prefix/opt/fzf/install" --all --no-update-rc --no-bash --no-fish
+    fi
+  fi
+  if [[ "$(os_family)" == debian ]]; then
+    debian_set_default_shell || true
   fi
 }
 
@@ -325,6 +359,10 @@ sub_code() {
 }
 
 sub_duti() {
+  if [[ "$(os_family)" != macos ]]; then
+    echo "⊘ skipping duti (macOS-only file-handler defaults)"
+    return 0
+  fi
   if is_executable duti; then
     log "Setting default apps for file types"
     # ponytail: only register apps that are actually installed. A stale LaunchServices
@@ -512,11 +550,19 @@ sub_unlink() {
 }
 
 sub_macos() {
+  if [[ "$(os_family)" != macos ]]; then
+    echo "⊘ skipping macOS defaults (not macOS)"
+    return 0
+  fi
   apply_defaults "$DOTFILES_DIR/system/defaults/macos.sh"
   echo "Some changes may require a logout or restart to take effect."
 }
 
 sub_dock() {
+  if [[ "$(os_family)" != macos ]]; then
+    echo "⊘ skipping Dock defaults (not macOS)"
+    return 0
+  fi
   apply_defaults "$DOTFILES_DIR/system/defaults/dock.sh"
 }
 
@@ -572,6 +618,11 @@ sub_update() {
   sub_link
   if is_executable topgrade; then
     run topgrade
+  elif [[ "$(os_family)" == debian ]]; then
+    local -a sudo=()
+    _debian_set_sudo sudo
+    run env DEBIAN_FRONTEND=noninteractive "${sudo[@]}" apt-get update
+    run env DEBIAN_FRONTEND=noninteractive "${sudo[@]}" apt-get upgrade -y
   else
     run brew update
     run brew upgrade
@@ -614,6 +665,13 @@ sub_clean() {
     # run_step captures output, so Mole's terminal sudo prompt would be
     # invisible and wait forever. Close stdin after the initial sudo prompt.
     run_step "Mole cleanup" complete mole clean </dev/null || return 1
+  fi
+  if [[ "$(os_family)" == debian ]]; then
+    local -a sudo=()
+    _debian_set_sudo sudo
+    run_step "apt cleanup" complete "${sudo[@]}" apt-get autoremove -y
+    run_step "apt clean" complete "${sudo[@]}" apt-get clean
+    return 0
   fi
   run_step "Homebrew cleanup" complete brew cleanup
 }

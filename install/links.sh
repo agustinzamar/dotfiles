@@ -21,6 +21,8 @@ declare -F os_family >/dev/null 2>&1 || . "$LINKS_DIR/platform.sh"
 
 # The map itself, OS column included. Never read directly outside this file:
 # every consumer goes through all_links (filtered) or all_links_raw (not).
+# VS Code and superfile declare one row per OS because their config homes
+# differ (Library on macOS, XDG on Linux).
 _links_table() {
   cat <<-EOF
 		zsh|config/zsh/.zshrc|$HOME/.zshrc||shell
@@ -34,11 +36,16 @@ _links_table() {
 		superfile|config/superfile/config.toml|$HOME/Library/Application Support/superfile/config.toml||terminal|spf|macos
 		superfile|config/superfile/hotkeys.toml|$HOME/Library/Application Support/superfile/hotkeys.toml||terminal|spf|macos
 		superfile-exports|config/zsh/exports/superfile.zsh|$HOME/.config/zsh/exports/superfile.zsh||shell|spf|macos
+		superfile|config/superfile/config.toml|$HOME/.config/superfile/config.toml||terminal|spf|debian
+		superfile|config/superfile/hotkeys.toml|$HOME/.config/superfile/hotkeys.toml||terminal|spf|debian
+		superfile-exports|config/zsh/exports/superfile.zsh|$HOME/.config/zsh/exports/superfile.zsh||shell|spf|debian
 		linearmouse|config/linearmouse/linearmouse.json|$HOME/.config/linearmouse/linearmouse.json||desktop-linearmouse||macos
 		sketchybar|config/sketchybar|$HOME/.config/sketchybar||desktop-sketchybar||macos
 		paneru|config/paneru/init.lua|$HOME/.config/paneru/init.lua||desktop-paneru||macos
 		vscode|config/vscode/settings.json|$HOME/Library/Application Support/Code/User/settings.json||vscode|code|macos
 		vscode|config/vscode/keybindings.json|$HOME/Library/Application Support/Code/User/keybindings.json||vscode|code|macos
+		vscode|config/vscode/settings.json|$HOME/.config/Code/User/settings.json||vscode|code|debian
+		vscode|config/vscode/keybindings.json|$HOME/.config/Code/User/keybindings.json||vscode|code|debian
 		hunk|config/hunk/config.toml|$HOME/.config/hunk/config.toml||git|hunk
 		lazygit|config/lazygit/config.yml|$HOME/.config/lazygit/config.yml||git|lazygit
 git|config/git/ignore|$HOME/.config/git/ignore||git|git

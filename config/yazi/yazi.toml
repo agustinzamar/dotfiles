@@ -21,7 +21,7 @@ prepend_previewers = [
 
 [opener]
 edit = [{ run = 'code "$1"', block = true }]
-open = [{ run = 'open "$1"', orphan = true }]
+open = [{ run = '(xdg-open "$1" || open "$1")', orphan = true }]
 
 [open]
 rules = [

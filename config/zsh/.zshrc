@@ -5,10 +5,16 @@ export DOTFILES_DIR="${${(%):-%N}:A:h:h:h}"
 
 # Basic shell environment. Inline here so zinit plugins find brewed binaries.
 export LANG=en_US.UTF-8
-export PATH="/opt/homebrew/sbin:$PATH"
-export PATH="/opt/homebrew/bin:$PATH"
+# Homebrew on macOS (only when present — never hardcode a missing prefix into
+# PATH). Linuxbrew lives under /home/linuxbrew on Ubuntu/WSL.
+[[ -d /opt/homebrew/sbin ]] && export PATH="/opt/homebrew/sbin:$PATH"
+[[ -d /opt/homebrew/bin ]] && export PATH="/opt/homebrew/bin:$PATH"
+[[ -d /usr/local/sbin ]] && export PATH="/usr/local/sbin:$PATH"
+[[ -d /home/linuxbrew/.linuxbrew/sbin ]] && export PATH="/home/linuxbrew/.linuxbrew/sbin:$PATH"
+[[ -d /home/linuxbrew/.linuxbrew/bin ]] && export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
 export PATH="${DOTFILES_DIR}/bin:$PATH"
-export PATH="$PATH:$HOME/.local/bin"
+export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.opencode/bin:$PATH"
 
 # App-specific exports (composer, mise, pnpm, ...). See system/.exports.
 source "$DOTFILES_DIR/system/.exports"
@@ -84,6 +90,19 @@ autoload -Uz edit-command-line
 zle -N edit-command-line
 bindkey '^x^e' edit-command-line
 
+# Portable clipboard: pbcopy on macOS, wl-copy/xclip/xsel on Linux.
+# Defines pbcopy as a function when the binary is missing so copy-command-line
+# and the catcopy/cpwd aliases keep working everywhere.
+if ! command -v pbcopy &>/dev/null; then
+  if command -v wl-copy &>/dev/null; then
+    pbcopy() { wl-copy; }
+  elif command -v xclip &>/dev/null; then
+    pbcopy() { xclip -selection clipboard; }
+  elif command -v xsel &>/dev/null; then
+    pbcopy() { xsel --clipboard --input; }
+  fi
+fi
+
 # Copy the current command line to the clipboard with Ctrl-X Ctrl-C
 copy-command-line() {
   print -n -- "$BUFFER" | pbcopy
@@ -155,8 +174,11 @@ for f in "${HOME}"/.dotfiles-custom/exports/*.zsh(N); do source "$f"; done
 for f in "${HOME}"/.dotfiles-custom/aliases/*.zsh(N) "${HOME}"/.dotfiles-custom/functions/*.zsh(N); do source "$f"; done
 
 # Last, so the prompt config wins over anything a tool init changed.
-# Theme is symlinked by `dot link ohmyposh`.
-eval "$(oh-my-posh init zsh --config "$HOME/.config/oh-my-posh/theme.omp.json")"
+# Theme is symlinked by `dot link ohmyposh`. Guarded: a fresh bootstrap shell
+# before oh-my-posh installs must still draw a prompt instead of erroring.
+if command -v oh-my-posh &>/dev/null; then
+  eval "$(oh-my-posh init zsh --config "$HOME/.config/oh-my-posh/theme.omp.json")"
+fi
 
 # Tool-gated exports. `dot link` symlinks a snippet into ~/.config/zsh/exports/
 # only while its tool is installed — the requirement column in install/links.sh

@@ -142,16 +142,23 @@ setup() {
 # The macos script calls `defaults write` and `sudo` directly instead of going
 # through `run`, so a dry run must stop short of sourcing it.
 @test "macos dry-run reports without sourcing" {
-  run "$DOT" install macos --dry-run
+  PATH="$MACOS_BIN:$PATH" run "$DOT" install macos --dry-run
   [ "$status" -eq 0 ]
   [[ "$output" == *"+ source system/defaults/macos.sh"* ]]
   [[ "$output" != *"sudo"* ]]
 }
 
 @test "macos sources the defaults file" {
-  run "$DOT" install macos --dry-run
+  PATH="$MACOS_BIN:$PATH" run "$DOT" install macos --dry-run
   [ "$status" -eq 0 ]
   [[ "$output" == *"+ source system/defaults/macos.sh"* ]]
+}
+
+@test "macos skips gracefully on debian" {
+  run "$DOT" install macos --dry-run
+  # On this host (debian) it skips; on macOS it would source. Accept either,
+  # but it must succeed and never apply macOS defaults on Linux.
+  [ "$status" -eq 0 ]
 }
 
 # duti reads a file with no final newline as an unterminated extra line and
@@ -267,7 +274,7 @@ setup() {
   printf '#!/bin/sh\nexit 1\n' > "$stub/brew"
   chmod +x "$stub/brew"
 
-  PATH="$stub:$PATH" run "$DOT" install brew
+  PATH="$MACOS_BIN:$stub:$PATH" run "$DOT" install brew
   [ "$status" -eq 1 ]
   [[ "$output" == *"topics that failed:"* ]]
   # Every topic was attempted rather than the run stopping at the first. Name
@@ -349,7 +356,7 @@ exit 0
 EOF
   chmod +x "$stub/brew"
 
-  BREW_LOG="$log" PATH="$stub:$PATH" run "$DOT" install brew
+  BREW_LOG="$log" PATH="$MACOS_BIN:$stub:$PATH" run "$DOT" install brew
   [ "$status" -eq 0 ]
   grep -q 'topics/core' "$log"
   ! grep -q 'topics/duti' "$log"
@@ -373,8 +380,8 @@ EOF
     echo "dock is back in the install loop; macos already sources it"
     return 1
   }
-  # Still reachable on its own.
-  run "$DOT" install dock --dry-run
+  # Still reachable on its own (macOS backend; on Debian it skips gracefully).
+  PATH="$MACOS_BIN:$PATH" run "$DOT" install dock --dry-run
   [ "$status" -eq 0 ]
   [[ "$output" == *"dock.sh"* ]]
 }

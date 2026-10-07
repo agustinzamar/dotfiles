@@ -194,7 +194,13 @@ topic_names() { topics | paste -sd, - | sed 's/,/, /g'; }
 topic_path() { [[ -f "$TOPIC_DIR/$1" ]]; }
 
 # Run a single Brewfile by absolute path, logging under the given label.
+# On Debian the same file is installed through the apt mapping in
+# install/debian.sh; on macOS it goes through `brew bundle` verbatim.
 run_topic_file() {
+  if [[ "$(os_family)" == debian ]]; then
+    debian_install_topic_file "$1" "$2"
+    return $?
+  fi
   log "Installing $1"
   run brew bundle --file="$2"
 }
