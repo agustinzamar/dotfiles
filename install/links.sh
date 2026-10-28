@@ -48,7 +48,6 @@ _links_table() {
 		vscode|config/vscode/keybindings.json|$HOME/.config/Code/User/keybindings.json||vscode|code|debian
 		hunk|config/hunk/config.toml|$HOME/.config/hunk/config.toml||git|hunk
 		lazygit|config/lazygit/config.yml|$HOME/.config/lazygit/config.yml||git|lazygit
-git|config/git/ignore|$HOME/.config/git/ignore||git|git
 	git|config/git/config|$HOME/.config/git/config||git|git
 	mise|config/mise/config.toml|$HOME/.config/mise/config.toml||dev
 	composer|config/composer/composer.json|$HOME/.composer/composer.json||dev
