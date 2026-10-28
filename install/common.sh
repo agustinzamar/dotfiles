@@ -130,7 +130,7 @@ seed_app_writable() {
     run mv "$target.tmp" "$target"
 }
 
-# Merge a tracked JSON fragment into a live JSON file the app also writes.
+# Merge a tracked JSON fragment into a live JSON or JSONC file the app also writes.
 # Only the keys in the fragment are owned by dot; every other key is kept.
 # Invalid live JSON is left untouched and reported.
 merge_json_file() {
@@ -139,14 +139,24 @@ merge_json_file() {
     echo "merge $source into $target"
     return 0
   fi
-  if ! command -v jq >/dev/null 2>&1; then
-    echo "skipping $target: jq is not installed" >&2
-    return 0
-  fi
+  local tool
+  for tool in jq perl; do
+    if ! command -v "$tool" >/dev/null 2>&1; then
+      echo "skipping $target: $tool is not installed" >&2
+      return 0
+    fi
+  done
   mkdir -p "$(dirname "$target")" || return 1
-  [[ -f "$target" ]] || printf '{}\n' >"$target"
+  # A leftover symlink (an older plain link) must never be written through:
+  # drop a dangling one, and the merge below replaces a live one with a file.
+  [[ -L "$target" && ! -e "$target" ]] && rm "$target"
+  [[ -e "$target" ]] || printf '{}\n' >"$target"
   temporary=$(mktemp "${target}.tmp.XXXXXX") || return 1
-  if ! jq -s '.[0] * .[1]' "$target" "$source" >"$temporary" 2>/dev/null; then
+  # Start from a copy so the merged file keeps the live file's permissions.
+  cp -p "$target" "$temporary" || return 1
+  # Apps write JSONC: strip full-line // comments and trailing commas first.
+  if ! perl -0pe 's#^[ \t]*//[^\n]*\n##mg; s#,(\s*[\]}])#$1#g' "$target" |
+    jq -s '.[0] * .[1]' - "$source" >"$temporary" 2>/dev/null; then
     echo "ERROR: could not merge into $target (invalid JSON?); left unchanged" >&2
     rm -f "$temporary"
     return 1

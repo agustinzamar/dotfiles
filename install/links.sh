@@ -53,7 +53,7 @@ _links_table() {
 	composer|config/composer/composer.json|$HOME/.composer/composer.json||dev
 	claude|config/claude/statusline-command.sh|$HOME/.claude/statusline-command.sh||ai
 	claude|config/claude/settings.json|$HOME/.claude/settings.json|json-merge|ai
-		opencode|config/opencode/opencode.jsonc|$HOME/.config/opencode/opencode.jsonc||ai
+		opencode|config/opencode/opencode.json|$HOME/.config/opencode/opencode.jsonc|json-merge|ai
 	EOF
 }
 

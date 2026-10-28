@@ -56,7 +56,7 @@ box_setup() {
   local tool path
   for tool in bash sh env git jq date sed grep awk basename dirname paste cat \
     ls mkdir rm mv cp ln readlink cmp sort uniq head tail tr cut wc find stat \
-    chmod mktemp xargs id tput; do
+    chmod mktemp xargs id tput perl; do
     if path=$(command -v "$tool" 2>/dev/null); then
       ln -sf "$path" "$REAL_BIN/$tool"
     fi

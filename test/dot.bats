@@ -932,3 +932,87 @@ JSON
   [ "$status" -ne 0 ]
   ! grep -q 'agents sync' <<<"$("$DOT" help)"
 }
+
+@test "json-merge link reads a live JSONC file with trailing commas" {
+  local home
+  home="$(mktemp -d)"
+  mkdir -p "$home/.claude"
+  printf '{\n  // local note\n  "model": "opus",\n  "hooks": { "Stop": [], },\n}\n' >"$home/.claude/settings.json"
+
+  HOME="$home" run "$DOT" link claude
+
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.model' "$home/.claude/settings.json")" = 'opus' ]
+  [ "$(jq -r '.statusLine.command' "$home/.claude/settings.json")" = 'bash ~/.claude/statusline-command.sh' ]
+}
+
+@test "json-merge link replaces a dangling symlink without writing into the repo" {
+  local home
+  home="$(mktemp -d)"
+  mkdir -p "$home/.claude"
+  ln -s "$DOTFILES_DIR/config/claude/does-not-exist.json" "$home/.claude/settings.json"
+
+  HOME="$home" run "$DOT" link claude
+
+  [ "$status" -eq 0 ]
+  [ ! -L "$home/.claude/settings.json" ]
+  [ ! -e "$DOTFILES_DIR/config/claude/does-not-exist.json" ]
+  [ "$(jq -r '.statusLine.command' "$home/.claude/settings.json")" = 'bash ~/.claude/statusline-command.sh' ]
+}
+
+@test "json-merge link turns a live symlink into a real file and keeps its keys" {
+  local home other
+  home="$(mktemp -d)"
+  other="$(mktemp -d)"
+  mkdir -p "$home/.claude"
+  printf '{"model":"opus"}\n' >"$other/settings.json"
+  ln -s "$other/settings.json" "$home/.claude/settings.json"
+
+  HOME="$home" run "$DOT" link claude
+
+  [ "$status" -eq 0 ]
+  [ ! -L "$home/.claude/settings.json" ]
+  [ "$(jq -r '.model' "$home/.claude/settings.json")" = 'opus' ]
+  [ "$(cat "$other/settings.json")" = '{"model":"opus"}' ]
+}
+
+@test "dot link opencode merges tracked keys and keeps gentle-ai agents" {
+  local home target
+  home="$(mktemp -d)"
+  target="$home/.config/opencode/opencode.jsonc"
+  mkdir -p "$(dirname "$target")"
+  cat >"$target" <<'JSONC'
+{
+  "default_agent": "gentle-orchestrator",
+  "agent": {
+    "general": { "model": "anthropic/claude-sonnet-5-5", "prompt": "managed", },
+    "sdd-apply": { "prompt": "managed" },
+  },
+  "permission": { "*": "allow", "bash": { "git push": "ask" } },
+}
+JSONC
+
+  HOME="$home" run "$DOT" link opencode
+
+  [ "$status" -eq 0 ]
+  [ ! -L "$target" ]
+  [ "$(jq -r '.default_agent' "$target")" = 'gentle-orchestrator' ]
+  [ "$(jq -r '.agent.general.prompt' "$target")" = 'managed' ]
+  [ "$(jq -r '.agent.general.model' "$target")" = 'openai/gpt-6-luna' ]
+  [ "$(jq -r '.agent["sdd-apply"].prompt' "$target")" = 'managed' ]
+  [ "$(jq -r '.permission.bash["git push"]' "$target")" = 'ask' ]
+  [ "$(jq -r '.mcp.atlassian.url' "$target")" = 'https://mcp.atlassian.com/v2/mcp' ]
+}
+
+@test "json-merge link keeps the live file permissions" {
+  local home
+  home="$(mktemp -d)"
+  mkdir -p "$home/.claude"
+  printf '{"model":"opus"}\n' >"$home/.claude/settings.json"
+  chmod 644 "$home/.claude/settings.json"
+
+  HOME="$home" run "$DOT" link claude
+
+  [ "$status" -eq 0 ]
+  [ "$(ls -l "$home/.claude/settings.json" | cut -c1-10)" = '-rw-r--r--' ]
+}
