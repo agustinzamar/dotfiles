@@ -38,6 +38,7 @@ if [[ ! -r "${ZINIT_HOME}/zinit.zsh" ]]; then
   autoload -Uz compinit && compinit -C
 else
   source "${ZINIT_HOME}/zinit.zsh"
+  zinit snippet OMZL::git.zsh
 
   # Oh My Zsh plugins (turbo, light mode)
   zinit wait lucid light-mode for \
