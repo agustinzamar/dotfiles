@@ -16,7 +16,6 @@ DOCK_APPS=(
   "/Applications/Zoom.app"
   "/Applications/Slack.app"
   "/Applications/Google Chrome.app"
-  "/Applications/Claude.app"
   "/Applications/OrbStack.app"
   "/Applications/Docker Desktop.app"
   "/Applications/Visual Studio Code.app"
