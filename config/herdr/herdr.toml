@@ -40,6 +40,7 @@ focus_pane_up = ["prefix+k"]
 new_tab = "prefix+t"
 
 new_worktree = "prefix+shift+n"
+open_worktree = "prefix+shift+o"
 remove_worktree = "prefix+shift+d"
 
 new_workspace = "prefix+n"
