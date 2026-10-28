@@ -81,12 +81,14 @@ portable=$(links_sh '_links_table' | awk -F'|' '$7 == "" { print $3 }')
    ! grep -q '/Library/' <<<"$portable"
 }
 
-@test "all_links strips the OS column and keeps every row on macOS" {
+@test "all_links strips the OS column and keeps every portable and macOS row on macOS" {
   box_family macos
-  local table filtered
-  table=$(links_sh '_links_table')
+  local applicable filtered
+  applicable=$(links_sh '_links_table' | awk -F'|' '$7 == "" || $7 == "macos"')
   filtered=$(links_sh 'all_links')
-  [ "$(wc -l <<<"$table")" -eq "$(wc -l <<<"$filtered")" ]
+  [ "$(wc -l <<<"$applicable")" -eq "$(wc -l <<<"$filtered")" ]
+  # Debian-only rows never reach a macOS host.
+  ! grep -qF '/.config/Code/User/' <<<"$filtered"
   # The six-field shape every positional reader (and the context JSON) expects.
   grep -qxF \
     "vscode|config/vscode/settings.json|$SCRATCH_HOME/Library/Application Support/Code/User/settings.json||vscode|code" \
