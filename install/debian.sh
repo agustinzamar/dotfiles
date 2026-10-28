@@ -48,7 +48,7 @@ debian_apt_update() {
   fi
   local -a sudo=()
   _debian_set_sudo sudo
-  run_step "apt lists" updated "${sudo[@]}" apt-get update
+  run_step "apt lists" updated ${sudo[@]+"${sudo[@]}"} apt-get update
   _debian_apt_updated=true
 }
 
@@ -66,7 +66,7 @@ _debian_apt_install() {
   # DEBIAN_FRONTEND=noninteractive keeps tzdata-style prompts from hanging a
   # piped curl install. Per-command env, not exported, so the user shell is
   # untouched.
-  run_step "$label" installed env DEBIAN_FRONTEND=noninteractive "${sudo[@]}" apt-get install -y "$@"
+  run_step "$label" installed env DEBIAN_FRONTEND=noninteractive ${sudo[@]+"${sudo[@]}"} apt-get install -y "$@"
 }
 
 # Map a Brewfile id to its apt package(s), one per line. Prints nothing and
@@ -402,7 +402,7 @@ debian_install_vscode() {
   if is_executable snap; then
     local -a sudo=()
     _debian_set_sudo sudo
-    if run_step "VS Code" installed "${sudo[@]}" snap install code --classic; then
+    if run_step "VS Code" installed ${sudo[@]+"${sudo[@]}"} snap install code --classic; then
       return 0
     fi
   fi
@@ -570,7 +570,7 @@ debian_set_default_shell() {
   local -a sudo=()
   _debian_set_sudo sudo
   if ((${#sudo[@]})) && sudo -n true 2>/dev/null; then
-    if run "${sudo[@]}" chsh -s "$zsh_bin" "${USER:-$(id -un)}"; then
+    if run ${sudo[@]+"${sudo[@]}"} chsh -s "$zsh_bin" "${USER:-$(id -un)}"; then
       echo "Default shell set to $zsh_bin (takes effect on next login)"
       return 0
     fi
