@@ -1016,3 +1016,10 @@ JSONC
   [ "$status" -eq 0 ]
   [ "$(ls -l "$home/.claude/settings.json" | cut -c1-10)" = '-rw-r--r--' ]
 }
+
+@test "every tracked OpenCode MCP entry is a named server with its own type" {
+  run jq -r '.mcp | to_entries[] | select((.value.type // "") | test("^(local|remote)$") | not) | .key' \
+    "$DOTFILES_DIR/config/opencode/opencode.json"
+  [ "$status" -eq 0 ]
+  [ -z "$output" ]
+}

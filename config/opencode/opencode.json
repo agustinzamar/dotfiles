@@ -59,27 +59,25 @@
       "type": "remote",
       "url": "https://mcp.context7.com/mcp"
     },
-    "servers": {
-      "engram": {
-        "command": [
-          "/opt/homebrew/bin/engram",
-          "mcp",
-          "--tools=agent"
-        ],
-        "type": "local"
-      },
-      "mercadopago-mcp-server": {
-        "type": "remote",
-        "url": "https://mcp.mercadopago.com/mcp"
-      },
-      "resend": {
-        "type": "remote",
-        "url": "https://mcp.resend.com/mcp"
-      },
-      "youtrack": {
-        "type": "remote",
-        "url": "https://proyectos-jujuy.youtrack.cloud/mcp"
-      }
+    "engram": {
+      "command": [
+        "/opt/homebrew/bin/engram",
+        "mcp",
+        "--tools=agent"
+      ],
+      "type": "local"
+    },
+    "mercadopago-mcp-server": {
+      "type": "remote",
+      "url": "https://mcp.mercadopago.com/mcp"
+    },
+    "resend": {
+      "type": "remote",
+      "url": "https://mcp.resend.com/mcp"
+    },
+    "youtrack": {
+      "type": "remote",
+      "url": "https://proyectos-jujuy.youtrack.cloud/mcp"
     }
   },
   "agent": {
