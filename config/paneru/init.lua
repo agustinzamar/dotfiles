@@ -5,7 +5,7 @@ paneru.setup {
     mouse_follows_focus = true,
   },
   padding = {
-    top = 8,
+    top = 0, -- Paneru already reserves the native menu bar height.
   },
   bindings = {
     ["window focus west"] = "alt - h",
@@ -21,16 +21,6 @@ paneru.setup {
 
     ["window grow"] = "alt - rightarrow",
     ["window shrink"] = "alt - leftarrow",
-
-    ["window virtualnum 1"] = "alt - 1",
-    ["window virtualnum 2"] = "alt - 2",
-    ["window virtualnum 3"] = "alt - 3",
-    ["window virtualnum 4"] = "alt - 4",
-    ["window virtualnum 5"] = "alt - 5",
-    ["window virtualnum 6"] = "alt - 6",
-    ["window virtualnum 7"] = "alt - 7",
-    ["window virtualnum 8"] = "alt - 8",
-    ["window virtualnum 9"] = "alt - 9",
 
     ["window virtualmovenum 1"] = "alt + shift - 1",
     ["window virtualmovenum 2"] = "alt + shift - 2",
