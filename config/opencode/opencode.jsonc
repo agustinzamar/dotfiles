@@ -188,6 +188,10 @@
           "mcp",
           "--tools=agent"
         ]
+      },
+      "mercadopago-mcp-server": {
+        "type": "remote",
+        "url": "https://mcp.mercadopago.com/mcp"
       }
     }
   },
