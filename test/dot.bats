@@ -527,7 +527,6 @@ EOF
   # Baseline links: zshrc, oh-my-posh, ghostty, yazi, hunk, lazygit, git.
   # starship is NOT a link row — it was a dormant alternative, never wired in.
   [[ "$output" == *"config/oh-my-posh"* ]]
-  [[ "$output" != *"AGENTS.md"* ]]
   [[ "$output" != *"herdr/config.toml"* ]]
 }
 
@@ -553,27 +552,6 @@ EOF
   run "$DOT" install link --dry-run
   [ "$status" -eq 1 ]
   [[ "$output" == *"dot link"* ]]
-}
-
-# A machine gets the agent CLIs from Homebrew and nothing else until asked, so
-# no install phase may reach the ai/ manifests or an agent's own config.
-@test "AI work never runs as part of an install phase" {
-  local phase
-  for phase in ai; do
-    grep -q "for phase in .*\b$phase\b" "$DOT" && {
-      echo "'$phase' is back in an install loop; ai/ must stay opt-in"
-      return 1
-    }
-  done
-    # The instructions file is gated by the `ai` component: without it selected,
-  # a bare `dot link` must not place AGENTS.md. With `ai` selected it now does
-  # (through all_links — the self-healing re-assert this plan adds); the install
-  # phase loop still never touches it.
-  local home
-  home="$(mktemp -d)"
-  HOME="$home" run "$DOT" --dry-run link
-  [ "$status" -eq 0 ]
-  [[ "$output" != *"AGENTS.md"* ]]
 }
 
 @test "link and unlink round-trip" {

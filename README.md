@@ -82,49 +82,17 @@ change, and `dot help` names it on the `install <topic>` line.
 
 ## AI agents
 
-Homebrew installs the agent CLIs (`install/topics/dev`). Everything they load on
-top lives in `ai/` and is opt-in: no install phase writes an agent's config,
-adds a plugin, or links the instructions file.
+Homebrew installs the agent CLIs (`install/topics/dev`). On top of that the repo
+only tracks the Claude Code status line:
 
 | Path | What it holds |
 | --- | --- |
-| `ai/AGENTS.md` | One instructions file for every agent |
-| `ai/skills.json` | Skill packages, by default installed with the skills CLI |
-| `ai/plugins.json` | Plugins, one command per agent |
-| `ai/skills/` | Single-file skills tracked here, linked into Claude Code |
 | `claude/statusline-command.sh` | Claude Code status line script, linked into `~/.claude` |
 | `claude/settings.json` | Claude Code settings keys owned by dot (the `statusLine`) |
 
 `dot agents sync` merges `claude/settings.json` into `~/.claude/settings.json`
 with `jq`: only the keys in the fragment are overwritten, everything Claude Code
 or plugins wrote stays. Invalid live JSON is left untouched and reported.
-
-Every skill entry installs once for every agent that wants it. Entries that
-share a source and the default command collapse into one skills CLI call with
-repeated `--skill` and `--agent` flags. An entry can instead name a per-agent
-command, because the same upstream sometimes ships as a skill package for one
-CLI and as a plugin for another:
-
-```json
-{ "source": "shadcn/ui",
-  "skill": "shadcn",
-  "install": { "claude-code": "claude plugin install superpowers" } }
-```
-
-`install.<agent>` overrides the default command; `agents` narrows which agents
-want the entry at all. Every command installs globally and unattended, and each
-CLI is idempotent, so these are safe to re-run:
-
-```bash
-dot ai                             # every agent CLI found on this machine
-dot ai opencode --plugins          # one agent, plugins only
-```
-
-An `install` value is a shell command, run as you, with network access. That
-makes these two files the trust boundary of this repo — more than the install
-one-liner, which only fetches code you can read here. Read every command you
-paste in, from a README or anywhere else, and treat a change to them like a
-change to a script, not like a change to a config value.
 
 ## Usage
 
@@ -133,11 +101,10 @@ change to a script, not like a change to a config value.
 | Command | What it does |
 | --- | --- |
 | `install` | Opens the interactive installer (tools, then config links) — requires a TTY |
-| `install --all` | Install every standard phase headlessly (AI stays opt-in) |
+| `install --all` | Install every standard phase headlessly |
 | `link` | Repair links for the baseline components (base/shell/git/terminal) |
 | `link --all` | Force-link every valid config explicitly |
 | `link <name>` | Force-link one config (`ghostty`, `paneru`, `yazi`, …) |
-| `ai [agent]` | Install AI skills and plugins (opt-in, never part of `install`) |
 | `unlink` | Remove symlinks that point into this repo |
 | `doctor` | Check required tools and symlinks |
 | `update` | Pull this repo, re-link configs, then upgrade packages (`topgrade`, else `brew`) |

@@ -311,7 +311,7 @@ EOF
 }
 
 # ---------------------------------------------------------------------------
-# AI assets manifest (install/ai.sh, ai/skills.json, ai/plugins.json)
+# npm topic exclusion
 # ---------------------------------------------------------------------------
 
 @test "npm is excluded from brew parsing in package_rows" {
