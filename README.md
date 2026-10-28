@@ -92,6 +92,12 @@ adds a plugin, or links the instructions file.
 | `ai/skills.json` | Skill packages, by default installed with the skills CLI |
 | `ai/plugins.json` | Plugins, one command per agent |
 | `ai/skills/` | Single-file skills tracked here, linked into Claude Code |
+| `claude/statusline-command.sh` | Claude Code status line script, linked into `~/.claude` |
+| `claude/settings.json` | Claude Code settings keys owned by dot (the `statusLine`) |
+
+`dot agents sync` merges `claude/settings.json` into `~/.claude/settings.json`
+with `jq`: only the keys in the fragment are overwritten, everything Claude Code
+or plugins wrote stays. Invalid live JSON is left untouched and reported.
 
 Every skill entry installs once for every agent that wants it. Entries that
 share a source and the default command collapse into one skills CLI call with

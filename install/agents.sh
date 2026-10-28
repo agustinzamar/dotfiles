@@ -8,6 +8,7 @@
 SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" 2>/dev/null && pwd -P) || exit 1
 REPO_ROOT=$(cd "$SCRIPT_DIR/.." 2>/dev/null && pwd -P) || exit 1
 SOURCE="${SOURCE:-$REPO_ROOT/config/ai/AGENTS.md}"
+CLAUDE_SETTINGS_SOURCE="${CLAUDE_SETTINGS_SOURCE:-$REPO_ROOT/config/claude/settings.json}"
 
 [ -f "$SOURCE" ] || {
   echo "gentle-ai: missing source: $SOURCE" >&2
@@ -165,6 +166,40 @@ merge_target() {
   return 0
 }
 
+# Merge the tracked Claude settings fragment into the live settings.json.
+# Claude Code and other tools (plugins, gentle-ai hooks) write that file, so it
+# is never symlinked: only the keys in the fragment are owned by dot, and every
+# other key is preserved. Invalid live JSON is left untouched and reported.
+merge_claude_settings() {
+  local target="$HOME/.claude/settings.json" temporary
+
+  if "${DRY_RUN:-false}"; then
+    echo "would merge: $target"
+    return 0
+  fi
+
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "skipping $target: jq is not installed" >&2
+    return 0
+  fi
+
+  mkdir -p "$(dirname "$target")" || return 1
+  [[ -f "$target" ]] || printf '{}\n' >"$target"
+
+  temporary=$(mktemp "${target}.tmp.XXXXXX") || return 1
+  if ! jq -s '.[0] * .[1]' "$target" "$CLAUDE_SETTINGS_SOURCE" >"$temporary" 2>/dev/null; then
+    echo "ERROR: could not merge $target (invalid JSON?); left unchanged" >&2
+    rm -f "$temporary"
+    return 1
+  fi
+
+  if cmp -s "$temporary" "$target"; then
+    rm -f "$temporary"
+  else
+    mv "$temporary" "$target"
+  fi
+}
+
 # Run merge on all managed targets.
 sync_all_targets() {
   local targets=(
@@ -177,6 +212,7 @@ sync_all_targets() {
   for target in "${targets[@]}"; do
     merge_target "$target" || failures=$((failures + 1))
   done
+  merge_claude_settings || failures=$((failures + 1))
   _pi_normalize_markers || failures=$((failures + 1))
   return "$failures"
 }

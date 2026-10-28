@@ -44,7 +44,7 @@ sub_help() {
   echo "   install <topic> [--dry-run] Install a topic: $(topic_names)"
   echo
   echo "Commands:"
-  echo "   agents sync [--dry-run] Refresh agent instruction files from the repository"
+  echo "   agents sync [--dry-run] Refresh agent instructions and Claude settings from the repository"
   echo "   doctor                  Check that required tools and symlinks are in place"
   echo "   help                    This help message"
   echo "   unlink [--dry-run]      Remove symlinks that point into this repo"
@@ -697,7 +697,7 @@ sub_edit() {
   sh -c "${VISUAL:-code} $DOTFILES_DIR"
 }
 
-# dot agents sync — refresh agent instruction files from the repository source.
+# dot agents sync — refresh agent instruction files and Claude settings from the repository source.
 sub_agents() {
   local cmd="${1:-}"
   case "$cmd" in
