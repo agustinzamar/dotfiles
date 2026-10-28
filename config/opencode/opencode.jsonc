@@ -23,7 +23,7 @@
       "description": "General unstructured queries and auxiliary fallback tasks",
       "hidden": true,
       "mode": "subagent",
-      "model": "anthropic/claude-sonnet-5-5",
+      "model": "openai/gpt-6-luna",
       "permission": {
         "task": "deny"
       },
