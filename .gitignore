@@ -17,7 +17,7 @@
 .superpowers/
 docs/
 
-# Local Pi runtime state
+# Local agent runtime state
 .atl/
 .pi/
 .omo/

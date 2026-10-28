@@ -450,8 +450,10 @@ EOF
 @test "every tracked config file is wired into an install path" {
   # Consumed directly by their own install/*.sh, not through links.sh.
   local handled="config/git/config"
+  # Merged key-by-key into ~/.claude/settings.json by install/agents.sh.
+  handled="$handled config/claude/settings.json"
   # Repo metadata, not a config to install: a nested ignore file that keeps the
-  # local Pi runtime state under config/ untracked.
+  # local agent runtime state under config/ untracked.
   handled="$handled config/.gitignore"
   # Installed via `herdr plugin link` (see herdr.toml), not the dot map.
   # Run by hand (Mission Control "new desktop" helper), so there is no config to

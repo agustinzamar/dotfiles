@@ -31,7 +31,6 @@ brew "swiftformat"
 
 # --- Agents and terminal ---
 brew "anomalyco/tap/opencode"
-brew "pi-coding-agent"
 
 cask "claude-code@latest"
 cask "codex"

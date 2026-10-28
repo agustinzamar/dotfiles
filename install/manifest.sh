@@ -78,7 +78,7 @@ area_for_package() {
     # --- VS Code ---
     visual-studio-code | code) echo "vscode" ;;
     # --- AI ---
-    opencode | anomalyco/tap/opencode | pi-coding-agent | claude-code@latest | codex | t3-code) echo "ai" ;;
+    opencode | anomalyco/tap/opencode | claude-code@latest | codex | t3-code) echo "ai" ;;
     herdr) echo "ai-herdr" ;;
     # --- Dev ---
     make | go | mise | python@3.14 | pipx | rust | shellcheck | shfmt | bats-core | act | sshpass | phpstorm | actionlint | swiftformat | composer | php | orbstack) echo "dev" ;;
@@ -187,7 +187,7 @@ manifest_category() {
     # --- VS Code extensions (`code` delegates to dot install code) ---
     code) echo "Editors" ;;
     # --- AI agents and AI apps ---
-    claude-code@latest | codex | t3-code | anomalyco/tap/opencode | pi-coding-agent | claude | chatgpt | herdr) echo "AI" ;;
+    claude-code@latest | codex | t3-code | anomalyco/tap/opencode | claude | chatgpt | herdr) echo "AI" ;;
     # --- Browsers ---
     google-chrome | firefox | brave-browser) echo "Browsers" ;;
     # --- Communication ---

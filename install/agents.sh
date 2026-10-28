@@ -213,54 +213,7 @@ sync_all_targets() {
     merge_target "$target" || failures=$((failures + 1))
   done
   merge_claude_settings || failures=$((failures + 1))
-  _pi_normalize_markers || failures=$((failures + 1))
   return "$failures"
-}
-
-# Normalize PI agent close-marker mismatches.
-# Open markers use pi-codegraph-tool or pi-codegraph-guidance, but close
-# markers should be just pi-codegraph. If a close says -tool or -guidance,
-# rewrite it to the generic pi-codegraph form for consistency.
-# Scope: only the 23 files listed in the design spec, all under
-# $HOME/.pi/agent/agents/. Idempotent — already-correct files are unchanged.
-_pi_normalize_markers() {
-  local pi_dir="$HOME/.pi/agent/agents"
-  [[ -d "$pi_dir" ]] || return 0
-
-  local files=(
-    gentle-ai-explore gentle-ai-verify gentle-ai-worker
-    jd-fix-agent jd-judge-a jd-judge-b
-    review-readability review-reliability review-resilience review-risk
-    sdd-apply sdd-archive sdd-design sdd-explore sdd-init sdd-onboard
-    sdd-proposal sdd-research sdd-spec sdd-status sdd-sync sdd-tasks
-    sdd-verify
-  )
-
-  local f name changed=0
-  for name in "${files[@]}"; do
-    f="$pi_dir/$name.md"
-    [[ -f "$f" ]] || continue
-
-    local file_changed=false
-
-    # Close markers that include -tool or -guidance are mismatched: normalize
-    # them to the generic pi-codegraph form.
-    if grep -qF '<!-- /gentle-ai:pi-codegraph-tool -->' "$f"; then
-      sed -i '' 's|<!-- /gentle-ai:pi-codegraph-tool -->|<!-- /gentle-ai:pi-codegraph -->|g' "$f"
-      file_changed=true
-    fi
-    if grep -qF '<!-- /gentle-ai:pi-codegraph-guidance -->' "$f"; then
-      sed -i '' 's|<!-- /gentle-ai:pi-codegraph-guidance -->|<!-- /gentle-ai:pi-codegraph -->|g' "$f"
-      file_changed=true
-    fi
-
-    $file_changed && changed=$((changed + 1))
-  done
-
-  if ((changed > 0)); then
-    echo "PI markers normalized in $changed file(s)"
-  fi
-  return 0
 }
 
 # When run directly (not sourced), sync all targets.

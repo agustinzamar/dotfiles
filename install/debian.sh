@@ -418,7 +418,7 @@ debian_is_custom() {
     oh-my-posh | anomalyco/tap/opencode | opencode | mise | rust | \
       yazi | superfile | spf | pay-respects | topgrade | jless | dust | \
       yq | actionlint | act | herdr | hunk | font-jetbrains-mono-nerd-font | \
-      visual-studio-code | code | pi-coding-agent)
+      visual-studio-code | code)
       return 0
       ;;
     *) return 1 ;;
@@ -465,14 +465,6 @@ debian_install_one_custom() {
     hunk) debian_install_hunk ;;
     font-jetbrains-mono-nerd-font) debian_install_nerd_font ;;
     visual-studio-code | code) debian_install_vscode ;;
-    pi-coding-agent)
-      if is_executable pi; then
-        echo '✅ pi already installed'
-      else
-        echo "⚠️ pi-coding-agent has no apt package; install it with npm/pnpm, then re-run" >&2
-      fi
-      return 0
-      ;;
     *) debian_is_macos_only "$id" && {
       echo "⊘ skipping macOS-only $id on Debian"
       return 0
