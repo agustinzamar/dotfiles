@@ -450,8 +450,6 @@ EOF
 @test "every tracked config file is wired into an install path" {
   # Consumed directly by their own install/*.sh, not through links.sh.
   local handled="config/git/config"
-  # Merged key-by-key into ~/.claude/settings.json by install/agents.sh.
-  handled="$handled config/claude/settings.json"
   # Repo metadata, not a config to install: a nested ignore file that keeps the
   # local agent runtime state under config/ untracked.
   handled="$handled config/.gitignore"
@@ -847,3 +845,90 @@ STUB
 }
 
 # End of setup_file
+
+# ---------------------------------------------------------------------------
+# json-merge links: dot owns only the keys in the tracked fragment
+# ---------------------------------------------------------------------------
+
+@test "dot link claude merges the tracked statusLine into Claude settings" {
+  local home
+  home="$(mktemp -d)"
+  mkdir -p "$home/.claude"
+  cat >"$home/.claude/settings.json" <<'JSON'
+{
+  "model": "opus",
+  "hooks": { "Stop": [] },
+  "statusLine": { "type": "command", "command": "bash /Users/someone/.claude/statusline-command.sh" }
+}
+JSON
+
+  HOME="$home" run "$DOT" link claude
+
+  [ "$status" -eq 0 ]
+  [ ! -L "$home/.claude/settings.json" ]
+  [ "$(jq -r '.statusLine.command' "$home/.claude/settings.json")" = 'bash ~/.claude/statusline-command.sh' ]
+  [ "$(jq -r '.statusLine.type' "$home/.claude/settings.json")" = 'command' ]
+  [ "$(jq -r '.model' "$home/.claude/settings.json")" = 'opus' ]
+  [ "$(jq -c '.hooks' "$home/.claude/settings.json")" = '{"Stop":[]}' ]
+  # The status line script is still a plain symlink.
+  [ "$(readlink "$home/.claude/statusline-command.sh")" = "$DOTFILES_DIR/config/claude/statusline-command.sh" ]
+}
+
+@test "dot link claude creates Claude settings when missing" {
+  local home
+  home="$(mktemp -d)"
+
+  HOME="$home" run "$DOT" link claude
+
+  [ "$status" -eq 0 ]
+  [ "$(jq -r '.statusLine.command' "$home/.claude/settings.json")" = 'bash ~/.claude/statusline-command.sh' ]
+}
+
+@test "json-merge link is idempotent" {
+  local home first
+  home="$(mktemp -d)"
+  HOME="$home" run "$DOT" link claude
+  first=$(cat "$home/.claude/settings.json")
+
+  HOME="$home" run "$DOT" link claude
+
+  [ "$status" -eq 0 ]
+  [ "$(cat "$home/.claude/settings.json")" = "$first" ]
+}
+
+@test "json-merge link leaves invalid JSON untouched and fails" {
+  local home
+  home="$(mktemp -d)"
+  mkdir -p "$home/.claude"
+  printf '{ not json' >"$home/.claude/settings.json"
+
+  HOME="$home" run "$DOT" link claude
+
+  [ "$status" -ne 0 ]
+  [ "$(cat "$home/.claude/settings.json")" = '{ not json' ]
+}
+
+@test "dot link claude --dry-run does not modify Claude settings" {
+  local home
+  home="$(mktemp -d)"
+  mkdir -p "$home/.claude"
+  printf '{"model":"opus"}\n' >"$home/.claude/settings.json"
+
+  HOME="$home" run "$DOT" link claude --dry-run
+
+  [ "$status" -eq 0 ]
+  [ "$(cat "$home/.claude/settings.json")" = '{"model":"opus"}' ]
+}
+
+@test "doctor does not report a json-merge target as a broken link" {
+  local home
+  home="$(mktemp -d)"
+  HOME="$home" run "$DOT" doctor
+  [[ "$output" != *"broken: $home/.claude/settings.json"* ]]
+}
+
+@test "agents is no longer a dot command" {
+  run "$DOT" agents sync
+  [ "$status" -ne 0 ]
+  ! grep -q 'agents sync' <<<"$("$DOT" help)"
+}

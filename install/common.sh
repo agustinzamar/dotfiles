@@ -130,6 +130,34 @@ seed_app_writable() {
     run mv "$target.tmp" "$target"
 }
 
+# Merge a tracked JSON fragment into a live JSON file the app also writes.
+# Only the keys in the fragment are owned by dot; every other key is kept.
+# Invalid live JSON is left untouched and reported.
+merge_json_file() {
+  local source="$1" target="$2" temporary
+  if "$DRY_RUN"; then
+    echo "merge $source into $target"
+    return 0
+  fi
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "skipping $target: jq is not installed" >&2
+    return 0
+  fi
+  mkdir -p "$(dirname "$target")" || return 1
+  [[ -f "$target" ]] || printf '{}\n' >"$target"
+  temporary=$(mktemp "${target}.tmp.XXXXXX") || return 1
+  if ! jq -s '.[0] * .[1]' "$target" "$source" >"$temporary" 2>/dev/null; then
+    echo "ERROR: could not merge into $target (invalid JSON?); left unchanged" >&2
+    rm -f "$temporary"
+    return 1
+  fi
+  if cmp -s "$temporary" "$target"; then
+    rm -f "$temporary"
+  else
+    mv "$temporary" "$target"
+  fi
+}
+
 # link_file <repo-relative-source> <absolute-target> [mode]
 link_file() {
   local source="$DOTFILES_DIR/$1" target=$2 mode=${3:-} current backup
@@ -142,6 +170,11 @@ link_file() {
       echo "missing source: $source" >&2
       return 1
     fi
+  fi
+
+  if [[ "$mode" == json-merge ]]; then
+    merge_json_file "$source" "$target"
+    return
   fi
 
   current=$(readlink "$target" 2>/dev/null || true)

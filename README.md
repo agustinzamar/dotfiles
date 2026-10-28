@@ -90,9 +90,10 @@ only tracks the Claude Code status line:
 | `claude/statusline-command.sh` | Claude Code status line script, linked into `~/.claude` |
 | `claude/settings.json` | Claude Code settings keys owned by dot (the `statusLine`) |
 
-`dot agents sync` merges `claude/settings.json` into `~/.claude/settings.json`
-with `jq`: only the keys in the fragment are overwritten, everything Claude Code
-or plugins wrote stays. Invalid live JSON is left untouched and reported.
+`dot link claude` links the script and merges `claude/settings.json` into
+`~/.claude/settings.json` with `jq` (link mode `json-merge`): only the keys in
+the fragment are overwritten, everything Claude Code or plugins wrote stays.
+Invalid live JSON is left untouched and reported.
 
 ## Usage
 

@@ -53,6 +53,7 @@ git|config/git/ignore|$HOME/.config/git/ignore||git|git
 	mise|config/mise/config.toml|$HOME/.config/mise/config.toml||dev
 	composer|config/composer/composer.json|$HOME/.composer/composer.json||dev
 	claude|config/claude/statusline-command.sh|$HOME/.claude/statusline-command.sh||ai
+	claude|config/claude/settings.json|$HOME/.claude/settings.json|json-merge|ai
 		opencode|config/opencode/opencode.jsonc|$HOME/.config/opencode/opencode.jsonc||ai
 	EOF
 }
