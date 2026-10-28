@@ -186,3 +186,6 @@ fi
 # owns that gate — so the glob is empty on a machine without them. Sources live
 # in config/zsh/exports/.
 for f in "${HOME}"/.config/zsh/exports/*.zsh(N); do source "$f"; done
+
+# Keep the managed OpenCode launcher ahead of Homebrew after all PATH changes.
+export PATH="$HOME/.gentle-ai/bin:$PATH"
