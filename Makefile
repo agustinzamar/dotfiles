@@ -8,7 +8,7 @@ SHELL := /bin/bash
 # with, so a bare `dot` is not found.
 DOT := $(DOTFILES_DIR)/bin/dot
 
-SCRIPTS := bin/dot install/*.sh system/defaults/*.sh remote-install.sh
+SCRIPTS := bin/dot bin/rex-worktree install/*.sh system/defaults/*.sh remote-install.sh
 
 # Everything else is `dot <command>` — this file only carries the first-init
 # entry point and the lint targets CI runs.

@@ -119,6 +119,24 @@ dot install --dry-run
 dot link --dry-run
 ```
 
+### Git worktrees with Rex
+
+Run `rex-worktree <branch>` inside a Git repository to create a branch from
+the current `HEAD` and open its worktree in a new Rex session:
+
+```bash
+rex-worktree feature/login
+```
+
+Worktrees share one root: `~/Worktrees/<repo>/<branch>`. For example, the command
+above in `jujuy-models` creates `~/Worktrees/jujuy-models/feature/login` and a Rex
+session named `jujuy-models-feature/login`. The repository name comes from the
+main worktree, including when you run the command from a linked worktree.
+
+Git and Rex must already be installed. Existing branches and destinations are
+not reused or overwritten. A Rex failure returns a nonzero status and keeps
+the new branch and worktree. Run `rex-worktree --help` for usage.
+
 ### The installer (two steps)
 
 The installer has two steps. **Step 1** lists every package as its own row,

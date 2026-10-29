@@ -1,5 +1,5 @@
 #!/bin/bash
-# Claude Code status line: dir | git branch | model | context | effort
+# Claude Code status line: dir | git branch | model | context | effort | month cost
 # Nerd Font icons (same font as the oh-my-posh theme). Model, context and effort
 # are colored by value: model family, context green->yellow->orange->red,
 # effort low->max. Directory and branch stay neutral.
@@ -11,6 +11,31 @@ model=$(echo "$input" | jq -r '.model.display_name // empty')
 model_id=$(echo "$input" | jq -r '.model.id // empty')
 used=$(echo "$input" | jq -r '.context_window.used_percentage // empty')
 effort=$(echo "$input" | jq -r '.effort.level // empty')
+
+# Month spending (Claude Code only) from ccusage. It is too slow to run on every
+# render, so show the cached value and refresh it in the background every 5 min.
+cost_cache="$HOME/.cache/claude-statusline/month-cost"
+cost_lock="$cost_cache.lock"
+mkdir -p "$(dirname "$cost_cache")"
+cache_age=999999
+[ -f "$cost_cache" ] && cache_age=$(( $(date +%s) - $(stat -f %m "$cost_cache") ))
+# A stale lock (crashed refresh) is cleared after 2 min
+[ -d "$cost_lock" ] && [ $(( $(date +%s) - $(stat -f %m "$cost_lock") )) -gt 120 ] && rmdir "$cost_lock" 2>/dev/null
+if { [ "$cache_age" -gt 300 ] || [ "$(cut -d' ' -f1 "$cost_cache" 2>/dev/null)" != "$(date +%Y-%m)" ]; } \
+  && mkdir "$cost_lock" 2>/dev/null; then
+  (
+    cd "$HOME" || exit
+    total=$(pnpm dlx ccusage@latest claude monthly --json --since "$(date +%Y%m01)" 2>/dev/null \
+      | jq -r '.totals.totalCost // empty')
+    [ -n "$total" ] && printf '%s %s\n' "$(date +%Y-%m)" "$total" > "$cost_cache.tmp" \
+      && mv "$cost_cache.tmp" "$cost_cache"
+    rmdir "$cost_lock"
+  ) >/dev/null 2>&1 &
+fi
+month_cost=""
+if [ "$(cut -d' ' -f1 "$cost_cache" 2>/dev/null)" = "$(date +%Y-%m)" ]; then
+  month_cost=$(cut -d' ' -f2 "$cost_cache" | awk '{ printf "%.2f", $1 }')
+fi
 
 fg() { printf '\033[38;5;%sm' "$1"; }
 GRAY=$'\033[90m'
@@ -29,7 +54,6 @@ ICON_BRANCH=$(printf '\xef\x90\x98')   # U+F418 git branch
 ICON_MODEL=$(printf '\xef\x8b\x9b')    # U+F2DB microchip
 ICON_CTX=$(printf '\xef\x83\xa4')      # U+F0E4 gauge
 ICON_EFFORT=$(printf '\xef\x83\xa7')   # U+F0E7 bolt
-
 out=""
 
 # Current directory (last path component)
@@ -77,6 +101,11 @@ if [ -n "$effort" ]; then
     *)      c="" ;;
   esac
   out="${out}${SEP}${c}${ICON_EFFORT} ${effort}${RESET}"
+fi
+
+# Current month spending (USD)
+if [ -n "$month_cost" ]; then
+  out="${out}${SEP}\$${month_cost}"
 fi
 
 printf '%s\n' "$out"

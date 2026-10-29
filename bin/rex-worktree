@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+usage() {
+  cat <<'HELP'
+Usage: rex-worktree <branch>
+
+Create a new branch from HEAD in ~/Worktrees/<repo>/<branch>, then open
+a Rex session named <repo>-<branch> in that worktree.
+
+Run inside a Git repository. Git and Rex must already be installed.
+Existing branches and destinations are not reused or overwritten.
+If Rex fails, the new branch and worktree are kept.
+
+Options:
+  -h, --help    Show this help
+HELP
+}
+
+if [[ $# -eq 1 && ($1 == --help || $1 == -h) ]]; then
+  usage
+  exit 0
+fi
+if [[ $# -ne 1 ]]; then
+  usage >&2
+  exit 1
+fi
+
+for tool in git rex; do
+  if ! command -v "$tool" >/dev/null 2>&1; then
+    printf 'Error: %s is required.\n' "$tool" >&2
+    exit 1
+  fi
+done
+
+branch=$1
+git rev-parse --show-toplevel >/dev/null
+git check-ref-format --branch "$branch" >/dev/null
+main_worktree=$(git worktree list --porcelain | sed -n '1s/^worktree //p')
+repo=$(basename "$main_worktree")
+destination="$HOME/Worktrees/$repo/$branch"
+
+if [[ -e "$destination" || -L "$destination" ]]; then
+  printf 'Error: destination already exists: %s\n' "$destination" >&2
+  exit 1
+fi
+
+mkdir -p "$(dirname "$destination")"
+git worktree add -b "$branch" "$destination"
+if rex new "$repo-$branch" -c "$destination"; then
+  exit 0
+else
+  status=$?
+  printf 'Rex failed. Worktree kept at %s\n' "$destination" >&2
+  exit "$status"
+fi
